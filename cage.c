@@ -41,12 +41,11 @@ struct cg_server {
 	struct wl_list keyboards;
 
 	struct wlr_output_layout *output_layout;
-	struct wl_list outputs;
+	struct cg_output *output;
 	struct wl_listener new_output;
 };
 
 struct cg_output {
-	struct wl_list link;
 	struct cg_server *server;
 	struct wlr_output *wlr_output;
 	struct wl_listener frame;
@@ -79,8 +78,7 @@ static void
 center_view(struct cg_view *view)
 {
 	struct cg_server *server = view->server;
-	struct cg_output *tiny_output = wl_container_of(server->outputs.next, tiny_output, link);
-	struct wlr_output *output = tiny_output->wlr_output;
+	struct wlr_output *output = server->output->wlr_output;
 	int output_width, output_height;
 
 	wlr_output_effective_resolution(output, &output_width, &output_height);
@@ -489,15 +487,22 @@ static void
 output_destroy_notify(struct wl_listener *listener, void *data)
 {
         struct cg_output *output = wl_container_of(listener, output, destroy);
+	struct cg_server *server = output->server;
 
-        wl_list_remove(&output->link);
         wl_list_remove(&output->destroy.link);
         wl_list_remove(&output->frame.link);
         free(output);
+	server->output = NULL;
+
+	/* Since there is no use in continuing without our (single)
+	 * output, terminate. */
+	wl_display_terminate(server->wl_display);
 }
 
 /* This event is raised by the backend when a new output (aka a
- * display or monitor) becomes available. */
+ * display or monitor) becomes available. A kiosk requires only a
+ * single output, hence we do nothing in case subsequent outputs
+ * become available. */
 static void
 server_new_output(struct wl_listener *listener, void *data)
 {
@@ -513,20 +518,17 @@ server_new_output(struct wl_listener *listener, void *data)
 		wlr_output_set_mode(wlr_output, mode);
 	}
 
-	struct cg_output *output = calloc(1, sizeof(struct cg_output));
-	output->wlr_output = wlr_output;
-	output->server = server;
-	output->frame.notify = output_frame;
-	wl_signal_add(&wlr_output->events.frame, &output->frame);
-	output->destroy.notify = output_destroy_notify;
-	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
-	wl_list_insert(&server->outputs, &output->link);
-
-	/* Adds this to the output layout. The add_auto function
-	 * arranges outputs from left-to-right in the order they
-	 * appear. A more sophisticated compositor would let the user
-	 * configure the arrangement of outputs in the layout. */
+	server->output = calloc(1, sizeof(struct cg_output));
+	server->output->wlr_output = wlr_output;
+	server->output->server = server;
+	server->output->frame.notify = output_frame;
+	wl_signal_add(&wlr_output->events.frame, &server->output->frame);
+	server->output->destroy.notify = output_destroy_notify;
+	wl_signal_add(&wlr_output->events.destroy, &server->output->destroy);
 	wlr_output_layout_add_auto(server->output_layout, wlr_output);
+
+	/* Disconnect the signal now, because we only use one static output. */
+	wl_list_remove(&server->new_output.link);
 }
 
 /* Called when the surface is mapped, or ready to display
@@ -636,8 +638,8 @@ main(int argc, char *argv[])
 	wlr_data_device_manager_create(server.wl_display);
 
 	/* Configure a listener to be notified when new outputs are
-	 * available on the backend. */
-	wl_list_init(&server.outputs);
+	 * available on the backend. We use this only to detect the
+	 * first output and ignore subsequent outputs. */
 	server.new_output.notify = server_new_output;
 	wl_signal_add(&server.backend->events.new_output, &server.new_output);
 
