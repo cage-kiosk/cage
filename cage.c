@@ -613,8 +613,7 @@ sig_handler(int signal)
 int
 main(int argc, char *argv[])
 {
-	// TODO: add support for arguments to APPLICATION.
-	if (argc != 2) {
+	if (argc < 2) {
 		printf("Usage: %s APPLICATION\n", argv[0]);
 		return 1;
 	}
@@ -706,7 +705,7 @@ main(int argc, char *argv[])
 	setenv("WAYLAND_DISPLAY", socket, true);
 
 	if (fork() == 0) {
-		execl("/bin/sh", "/bin/sh", "-c", argv[1], (void *)NULL);
+		execvp(argv[1], (char * const *) argv + 1);
 	}
 
 	wl_display_run(server.wl_display);
