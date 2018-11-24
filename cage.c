@@ -542,6 +542,10 @@ xdg_surface_map(struct wl_listener *listener, void *data)
 	/* If this is our "root" view, maximize it. Otherwise, center
 	   the "child". */
 	if (view->xdg_surface->toplevel->parent == NULL) {
+		int output_width, output_height;
+		struct cg_output *output = view->server->output;
+		wlr_output_effective_resolution(output->wlr_output, &output_width, &output_height);
+		wlr_xdg_toplevel_set_size(view->xdg_surface, output_width, output_height);
 		wlr_xdg_toplevel_set_maximized(view->xdg_surface, true);
 	} else {
 		center_view(view);	
