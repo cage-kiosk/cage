@@ -287,18 +287,18 @@ seat_request_cursor(struct wl_listener *listener, void *data)
  * coordinates lx and ly (in output Layout Coordinates). If so, it sets the
  * surface pointer to that wlr_surface and the sx and sy coordinates to the
  * coordinates relative to that surface's top-left corner. */
-static bool view_at(struct cg_view *view,
-	double lx, double ly,
-	struct wlr_surface **surface,
-	double *sx, double *sy)
+static bool
+view_at(struct cg_view *view, double lx, double ly,
+	struct wlr_surface **surface, double *sx, double *sy)
 {
 	double view_sx = lx - view->x;
 	double view_sy = ly - view->y;
 
 	double _sx, _sy;
 	struct wlr_surface *_surface = NULL;
-	_surface = wlr_xdg_surface_surface_at(
-			view->xdg_surface, view_sx, view_sy, &_sx, &_sy);
+	_surface = wlr_xdg_surface_surface_at(view->xdg_surface,
+					      view_sx, view_sy,
+					      &_sx, &_sy);
 
 	if (_surface != NULL) {
 		*sx = _sx;
@@ -312,15 +312,18 @@ static bool view_at(struct cg_view *view,
 
 /* This iterates over all of our surfaces and attempts to find one under the
  * cursor. This relies on server->views being ordered from top-to-bottom. */
-static struct cg_view *desktop_view_at(
-		struct cg_server *server, double lx, double ly,
-		struct wlr_surface **surface, double *sx, double *sy) {
+static struct cg_view *
+desktop_view_at(struct cg_server *server, double lx, double ly,
+		struct wlr_surface **surface, double *sx, double *sy)
+{
 	struct cg_view *view;
+
 	wl_list_for_each(view, &server->views, link) {
 		if (view_at(view, lx, ly, surface, sx, sy)) {
 			return view;
 		}
 	}
+
 	return NULL;
 }
 
@@ -336,18 +339,19 @@ process_cursor_motion(struct cg_server *server, uint32_t time)
 					       server->cursor->x, server->cursor->y,
 					       &surface, &sx, &sy);
 
+	/* If desktop_view_at returns a view, there is also a
+	   surface. There cannot be a surface without a view,
+	   either. It's both or nothing. */
 	if (!view) {
 		wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "left_ptr", server->cursor);
-	}
-	if (surface) {
+		wlr_seat_pointer_clear_focus(seat);
+	} else {
 		wlr_seat_pointer_notify_enter(seat, surface, sx, sy);
 
 		bool focus_changed = seat->pointer_state.focused_surface != surface;
 		if (!focus_changed) {
 			wlr_seat_pointer_notify_motion(seat, time, sx, sy);
 		}
-	} else {
-		wlr_seat_pointer_clear_focus(seat);
 	}
 }
 
@@ -390,7 +394,9 @@ server_cursor_button(struct wl_listener *listener, void *data)
 		double sx, sy;
 		struct wlr_surface *surface;
 		struct cg_view *view = desktop_view_at(server,
-				server->cursor->x, server->cursor->y, &surface, &sx, &sy);
+						       server->cursor->x,
+						       server->cursor->y,
+						       &surface, &sx, &sy);
 		if (view) {
 			focus_view(view);
 		}
