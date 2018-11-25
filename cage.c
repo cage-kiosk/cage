@@ -249,6 +249,10 @@ server_new_input(struct wl_listener *listener, void *data)
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
 		wlr_cursor_attach_input_device(server->cursor, device);
+
+		/* Place the cursor in the center of the screen and make it visible. */
+		wlr_cursor_warp_absolute(server->cursor, NULL, .5, .5);
+		wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "left_ptr", server->cursor);
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
 		wlr_log(WLR_DEBUG, "Touch input is not yet implemented");
