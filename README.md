@@ -26,14 +26,21 @@ Notable omissions from Cage, to be added in a future version:
 
 ## Building and running Cage
 
-You can build Cage by simply running `make`. It requires wayland,
-wlroots and xkbcommon to be installed.
+You can build Cage with the [meson](https://mesonbuild.com/) build
+system. It requires wayland, wlroots and xkbcommon to be
+installed. Simply execute the following steps to build Cage:
 
-You can run Cage by running `./cage APPLICATION`. If you run it from
-within an existing X11 or Wayland session, wlroots will open a virtual
-output as a window in your existing session. If you run it at a TTY,
-it'll run with the KMS+DRM backend. In debug mode (`make debug`),
-press Alt+Esc to quit.
+```
+$ meson build
+$ ninja -C build
+```
+
+You can run Cage by running `./build/cage APPLICATION`. If you run it
+from within an existing X11 or Wayland session, it will open in a
+virtual output as a window in your existing session. If you run it at
+a TTY, it'll run with the KMS+DRM backend. In debug mode (default
+build type with Meson), press Alt+Esc to quit. To build a release
+build, use `meson build --buildtype=release`.
 
 Cage is based on the annotated source of
 [TinyWL](https://gist.github.com/ddevault/ae4d1cdcca97ffeb2c35f0878d75dc17).

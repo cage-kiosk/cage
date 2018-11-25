@@ -5,6 +5,9 @@
  *
  * See the LICENSE file accompanying this file.
  */
+
+#define _POSIX_C_SOURCE 200112L
+
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
