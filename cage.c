@@ -26,7 +26,6 @@
 struct cg_server {
 	struct wl_display *wl_display;
 	struct wlr_backend *backend;
-	struct wlr_renderer *renderer;
 
 	struct wl_listener new_xdg_surface;
 	struct wl_list views;
@@ -427,7 +426,6 @@ server_cursor_axis(struct wl_listener *listener, void *data)
  * top-level frame handler to the per-surface render function. */
 struct render_data {
 	struct wlr_output *output;
-	struct wlr_renderer *renderer;
 	struct cg_view *view;
 	struct timespec *when;
 };
@@ -464,7 +462,7 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 	float matrix[9];
 	enum wl_output_transform transform = wlr_output_transform_invert(surface->current.transform);
 	wlr_matrix_project_box(matrix, &box, transform, 0, output->transform_matrix);
-	wlr_render_texture_with_matrix(rdata->renderer, texture, matrix, 1);
+	wlr_render_texture_with_matrix(surface->renderer, texture, matrix, 1);
 	wlr_surface_send_frame_done(surface, rdata->when);
 }
 
@@ -474,7 +472,7 @@ static void
 output_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, frame);
-	struct wlr_renderer *renderer = output->server->renderer;
+	struct wlr_renderer *renderer = wlr_backend_get_renderer(output->server->backend);
 
 	if (!wlr_output_make_current(output->wlr_output, NULL)) {
 		wlr_log(WLR_DEBUG, "Cannot make damage output current");
@@ -500,7 +498,6 @@ output_frame(struct wl_listener *listener, void *data)
 		struct render_data rdata = {
 			.output = output->wlr_output,
 			.view = view,
-			.renderer = renderer,
 			.when = &now,
 		};
 		wlr_xdg_surface_for_each_surface(view->xdg_surface, render_surface, &rdata);
@@ -659,12 +656,12 @@ main(int argc, char *argv[])
  
 	server.wl_display = wl_display_create();
 	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
-	server.renderer = wlr_backend_get_renderer(server.backend);
-	wlr_renderer_init_wl_display(server.renderer, server.wl_display);
+	struct wlr_renderer *renderer = wlr_backend_get_renderer(server.backend);
+	wlr_renderer_init_wl_display(renderer, server.wl_display);
 	server.output_layout = wlr_output_layout_create();
 
-	wlr_compositor_create(server.wl_display, server.renderer);
-	wlr_linux_dmabuf_v1_create(server.wl_display, server.renderer);
+	wlr_compositor_create(server.wl_display, renderer);
+	wlr_linux_dmabuf_v1_create(server.wl_display, renderer);
 	wlr_data_device_manager_create(server.wl_display);
 
 	/* Configure a listener to be notified when new outputs are
