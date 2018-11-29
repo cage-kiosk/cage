@@ -77,6 +77,25 @@ struct cg_keyboard {
 
 struct cg_server server = {0};
 
+static inline bool
+is_fullscreen_view(struct cg_view *view)
+{
+	struct wlr_xdg_surface *parent = view->xdg_surface->toplevel->parent;
+	/* FIXME: role is 0? */
+	return parent == NULL; /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL */
+}
+
+static void
+maximize_view(struct cg_view *view)
+{
+	int output_width, output_height;
+	struct cg_output *output = view->server->output;
+
+	wlr_output_effective_resolution(output->wlr_output, &output_width, &output_height);
+	wlr_xdg_toplevel_set_size(view->xdg_surface, output_width, output_height);
+	wlr_xdg_toplevel_set_maximized(view->xdg_surface, true);
+}
+
 static void
 center_view(struct cg_view *view)
 {
@@ -110,8 +129,9 @@ focus_view(struct cg_view *view)
 		wlr_xdg_toplevel_set_activated(previous, false);
 	}
 
-	/* Move the view to the front, but only if it isn't the "root" view. */
-	if (view->xdg_surface->toplevel->parent != NULL) {
+	/* Move the view to the front, but only if it isn't the
+	   fullscreen view. */
+	if (!is_fullscreen_view(view)) {
 		wl_list_remove(&view->link);
 		wl_list_insert(&server->views, &view->link);
 	}
@@ -563,14 +583,8 @@ xdg_surface_map(struct wl_listener *listener, void *data)
 	struct cg_view *view = wl_container_of(listener, view, map);
 	view->mapped = true;
 	
-	/* If this is our "root" view, maximize it. Otherwise, center
-	   the "child". */
-	if (view->xdg_surface->toplevel->parent == NULL) {
-		int output_width, output_height;
-		struct cg_output *output = view->server->output;
-		wlr_output_effective_resolution(output->wlr_output, &output_width, &output_height);
-		wlr_xdg_toplevel_set_size(view->xdg_surface, output_width, output_height);
-		wlr_xdg_toplevel_set_maximized(view->xdg_surface, true);
+	if (is_fullscreen_view(view)) {
+		maximize_view(view);
 	} else {
 		center_view(view);	
 	}
@@ -594,14 +608,14 @@ xdg_surface_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_view *view = wl_container_of(listener, view, destroy);
 	/* We only listen for events on toplevels, so this is safe. */
-	struct wlr_xdg_surface *parent = view->xdg_surface->toplevel->parent;
 	struct cg_server *server = view->server;
+	bool terminate = is_fullscreen_view(view);
 
 	wl_list_remove(&view->link);
 	free(view);
 
-	/* If this was our "root" toplevel surface, exit. */
-	if (parent == NULL /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL FIXME: role is 0?*/) {
+	/* If this was our fullscreen view, exit. */
+	if (terminate) {
 		wl_display_terminate(server->wl_display);
 	}
 }
