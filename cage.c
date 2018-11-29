@@ -85,6 +85,15 @@ is_fullscreen_view(struct cg_view *view)
 	return parent == NULL; /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL */
 }
 
+static inline bool
+have_dialogs_open(struct cg_server *server)
+{
+	/* We only need to test if there is more than a single
+	   element. We don't need to know the entire length of the
+	   list. */
+	return server->views.next != server->views.prev;
+}
+
 static void
 maximize_view(struct cg_view *view)
 {
@@ -415,8 +424,9 @@ server_cursor_button(struct wl_listener *listener, void *data)
 
 	wlr_seat_pointer_notify_button(server->seat,
 				       event->time_msec, event->button, event->state);
-	if (event->state == WLR_BUTTON_PRESSED) {
-		/* Focus that client if the button was pressed. */
+	if (event->state == WLR_BUTTON_PRESSED && !have_dialogs_open(server)) {
+		/* Focus that client if the button was pressed and
+		   there are no open dialogs. */
 		double sx, sy;
 		struct wlr_surface *surface;
 		struct cg_view *view = desktop_view_at(server,
