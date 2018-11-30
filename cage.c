@@ -59,9 +59,7 @@ struct cg_view {
 	struct cg_server *server;
 	struct wlr_xdg_surface *xdg_surface;
 	struct wl_listener map;
-	struct wl_listener unmap;
 	struct wl_listener destroy;
-	bool mapped;
 	int x, y;
 };
 
@@ -469,6 +467,10 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 	struct cg_view *view = rdata->view;
 	struct wlr_output *output = rdata->output;
 
+	if (!wlr_surface_has_buffer(surface)) {
+		return;
+	}
+
 	struct wlr_texture *texture = wlr_surface_get_texture(surface);
 	if (!texture) {
 		wlr_log(WLR_DEBUG, "Cannot obtain surface texture");
@@ -522,9 +524,6 @@ output_frame(struct wl_listener *listener, void *data)
 
 	struct cg_view *view;
 	wl_list_for_each_reverse(view, &output->server->views, link) {
-		if (!view->mapped) {
-			continue;
-		}
 		struct render_data rdata = {
 			.output = output->wlr_output,
 			.view = view,
@@ -585,13 +584,11 @@ server_new_output(struct wl_listener *listener, void *data)
 	wl_list_remove(&server->new_output.link);
 }
 
-/* Called when the surface is mapped, or ready to display
-   on-screen. */
+/* Called when the surface is mapped. */
 static void
 xdg_surface_map(struct wl_listener *listener, void *data)
 {
 	struct cg_view *view = wl_container_of(listener, view, map);
-	view->mapped = true;
 	
 	if (is_fullscreen_view(view)) {
 		maximize_view(view);
@@ -600,15 +597,6 @@ xdg_surface_map(struct wl_listener *listener, void *data)
 	}
 
 	focus_view(view);
-}
-
-/* Called when the surface is unmapped, and should no longer be
-   shown. */
-static void
-xdg_surface_unmap(struct wl_listener *listener, void *data)
-{
-	struct cg_view *view = wl_container_of(listener, view, unmap);
-	view->mapped = false;
 }
 
 /* Called when the surface is destroyed and should never be shown
@@ -648,8 +636,6 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
 
 	view->map.notify = xdg_surface_map;
 	wl_signal_add(&xdg_surface->events.map, &view->map);
-	view->unmap.notify = xdg_surface_unmap;
-	wl_signal_add(&xdg_surface->events.unmap, &view->unmap);
 	view->destroy.notify = xdg_surface_destroy;
 	wl_signal_add(&xdg_surface->events.destroy, &view->destroy);
 
