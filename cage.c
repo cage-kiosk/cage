@@ -651,6 +651,8 @@ sig_handler(int signal)
 int
 main(int argc, char *argv[])
 {
+	int ret = 0;
+
 	if (argc < 2) {
 		printf("Usage: %s APPLICATION\n", argv[0]);
 		return 1;
@@ -665,14 +667,48 @@ main(int argc, char *argv[])
 	signal(SIGTERM, sig_handler);
  
 	server.wl_display = wl_display_create();
+	if (!server.wl_display) {
+		wlr_log(WLR_ERROR, "Could not allocate a Wayland display");
+		return 1;
+	}
+
 	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
+	if (!server.backend) {
+		wlr_log(WLR_ERROR, "Unable to create the wlroots backend");
+		ret = 1;
+		goto end;
+	}
+
 	struct wlr_renderer *renderer = wlr_backend_get_renderer(server.backend);
 	wlr_renderer_init_wl_display(renderer, server.wl_display);
-	server.output_layout = wlr_output_layout_create();
 
-	wlr_compositor_create(server.wl_display, renderer);
-	wlr_linux_dmabuf_v1_create(server.wl_display, renderer);
-	wlr_data_device_manager_create(server.wl_display);
+	server.output_layout = wlr_output_layout_create();
+	if (!server.output_layout) {
+		wlr_log(WLR_ERROR, "Unable to create output layout");
+		ret = 1;
+		goto end;
+	}
+
+	struct wlr_compositor *compositor = wlr_compositor_create(server.wl_display, renderer);
+	if (!compositor) {
+		wlr_log(WLR_ERROR, "Unable to create the wlroots compositor");
+		ret = 1;
+		goto end;
+	}
+
+	struct wlr_linux_dmabuf_v1 *dmabuf = wlr_linux_dmabuf_v1_create(server.wl_display, renderer);
+	if (!dmabuf) {
+		wlr_log(WLR_ERROR, "Unable to create the linux-dmabuf interface");
+		ret = 1;
+		goto end;
+	}
+
+	struct wlr_data_device_manager *data_device_mgr = wlr_data_device_manager_create(server.wl_display);
+	if (!data_device_mgr) {
+		wlr_log(WLR_ERROR, "Unable to create the data device manager");
+		ret = 1;
+		goto end;
+	}
 
 	/* Configure a listener to be notified when new outputs are
 	 * available on the backend. We use this only to detect the
@@ -680,30 +716,25 @@ main(int argc, char *argv[])
 	server.new_output.notify = server_new_output;
 	wl_signal_add(&server.backend->events.new_output, &server.new_output);
 
-	wl_list_init(&server.views);
 	struct wlr_xdg_shell *xdg_shell = wlr_xdg_shell_create(server.wl_display);
+	if (!xdg_shell) {
+		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
+		ret = 1;
+		goto end;
+	}
+	wl_list_init(&server.views);
 	server.new_xdg_surface.notify = server_new_xdg_surface;
 	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_surface);
 
 	/* Creates a cursor, which is a wlroots utility for tracking
 	 * the cursor image shown on screen. */
 	server.cursor = wlr_cursor_create();
+	if (!server.cursor) {
+		wlr_log(WLR_ERROR, "Unable to create cursor");
+		ret = 1;
+		goto end;
+	}
 	wlr_cursor_attach_output_layout(server.cursor, server.output_layout);
-
-	/* Creates an xcursor manager, another wlroots utility which
-	 * loads up Xcursor themes to source cursor images from and
-	 * makes sure that cursor images are available at all scale
-	 * factors on the screen (necessary for HiDPI support). We add
-	 * a cursor theme at scale factor 1 to begin with. */
-	server.cursor_mgr = wlr_xcursor_manager_create(NULL, 24);
-	wlr_xcursor_manager_load(server.cursor_mgr, 1);
-
-	/* wlr_cursor *only* displays an image on screen. It does not
-	 * move around when the pointer moves. However, we can attach
-	 * input devices to it, and it will generate aggregate events
-	 * for all of them. In these events, we can choose how we want
-	 * to process them, forwarding them to clients and moving the
-	 * cursor around. */
 	server.cursor_motion.notify = server_cursor_motion;
 	wl_signal_add(&server.cursor->events.motion, &server.cursor_motion);
 	server.cursor_motion_absolute.notify = server_cursor_motion_absolute;
@@ -713,11 +744,9 @@ main(int argc, char *argv[])
 	server.cursor_axis.notify = server_cursor_axis;
 	wl_signal_add(&server.cursor->events.axis, &server.cursor_axis);
 
-	/* Configures a seat, which is a single "seat" at which a user
-	 * sits and operates the computer. This conceptually includes
-	 * up to one keyboard, pointer, touch, and drawing tablet
-	 * device. We also rig up a listener to let us know when new
-	 * input devices are available on the backend. */
+	server.cursor_mgr = wlr_xcursor_manager_create(NULL, 24);
+	wlr_xcursor_manager_load(server.cursor_mgr, 1);
+
 	wl_list_init(&server.keyboards);
 	server.new_input.notify = server_new_input;
 	wl_signal_add(&server.backend->events.new_input, &server.new_input);
@@ -728,28 +757,42 @@ main(int argc, char *argv[])
 	const char *socket = wl_display_add_socket_auto(server.wl_display);
 	if (!socket) {
 		wlr_log_errno(WLR_ERROR, "Unable to open Wayland socket");
-		wlr_backend_destroy(server.backend);
-		wl_display_destroy(server.wl_display);
-		return 1;
+		ret = 1;
+	        goto end;
 	}
 
 	if (!wlr_backend_start(server.backend)) {
 		wlr_log(WLR_ERROR, "Unable to start the wlroots backend");
-		wlr_backend_destroy(server.backend);
-		wl_display_destroy(server.wl_display);
-		return 1;
+		ret = 1;
+		goto end;
 	}
 
-	setenv("WAYLAND_DISPLAY", socket, true);
+	int rc = setenv("WAYLAND_DISPLAY", socket, true);
+	if (rc < 0) {
+		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY.",
+			      "Clients may not be able to connect");
+	}
 
 	if (fork() == 0) {
 		execvp(argv[1], (char * const *) argv + 1);
 	}
 
 	wl_display_run(server.wl_display);
-
 	wl_display_destroy_clients(server.wl_display);
+
+end:
+	wlr_xcursor_manager_destroy(server.cursor_mgr);
+	if (server.cursor) {
+		wlr_cursor_destroy(server.cursor);
+	}
+	wlr_xdg_shell_destroy(xdg_shell);
+	wlr_data_device_manager_destroy(data_device_mgr);
+	wlr_linux_dmabuf_v1_destroy(dmabuf);
+	wlr_compositor_destroy(compositor);
+	wlr_output_layout_destroy(server.output_layout);
 	wlr_backend_destroy(server.backend);
+	/* This function is not null-safe, but we only ever get here
+	   with a proper wl_display. */
 	wl_display_destroy(server.wl_display);
-	return 0;
+	return ret;
 }
