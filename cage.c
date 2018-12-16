@@ -74,8 +74,6 @@ struct cg_keyboard {
 	struct wl_listener destroy;
 };
 
-struct cg_server server = {0};
-
 static inline bool
 is_fullscreen_view(struct cg_view *view)
 {
@@ -660,15 +658,26 @@ spawn_primary_client(char *argv[], pid_t *pid_out)
 	return true;
 }
 
-static void
-sig_handler(int signal)
+static int
+handle_signal(int signal, void *data)
 {
-	wl_display_terminate(server.wl_display);
+	struct wl_display *display = data;
+
+	switch (signal) {
+	case SIGINT:
+		/* Fallthrough */
+	case SIGTERM:
+		wl_display_terminate(display);
+		return 0;
+	default:
+		return 1;
+	}
 }
 
 int
 main(int argc, char *argv[])
 {
+	struct cg_server server = {0};
 	int ret = 0;
 
 	if (argc < 2) {
@@ -682,13 +691,15 @@ main(int argc, char *argv[])
 	wlr_log_init(WLR_ERROR, NULL);
 #endif
 
-	signal(SIGTERM, sig_handler);
- 
 	server.wl_display = wl_display_create();
 	if (!server.wl_display) {
 		wlr_log(WLR_ERROR, "Could not allocate a Wayland display");
 		return 1;
 	}
+
+	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
+	wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
+	wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
 	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
 	if (!server.backend) {
