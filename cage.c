@@ -10,6 +10,7 @@
 
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
@@ -642,6 +643,23 @@ server_new_xdg_surface(struct wl_listener *listener, void *data)
 	wl_list_insert(&server->views, &view->link);
 }
 
+static bool
+spawn_primary_client(char *argv[], pid_t *pid_out)
+{
+	pid_t pid = fork();
+	if (pid == 0) {
+		execvp(argv[0], argv);
+		_exit(1);
+	} else if (pid == -1) {
+		wlr_log_errno(WLR_ERROR, "Unable to fork");
+		return false;
+	}
+
+	*pid_out = pid;
+	wlr_log(WLR_DEBUG, "Child process created with pid %d", pid);
+	return true;
+}
+
 static void
 sig_handler(int signal)
 {
@@ -773,12 +791,16 @@ main(int argc, char *argv[])
 			      "Clients may not be able to connect");
 	}
 
-	if (fork() == 0) {
-		execvp(argv[1], (char * const *) argv + 1);
+	pid_t pid;
+	if (!spawn_primary_client(argv + 1, &pid)) {
+		ret = 1;
+		goto end;
 	}
 
 	wl_display_run(server.wl_display);
 	wl_display_destroy_clients(server.wl_display);
+
+	waitpid(pid, NULL, 0);
 
 end:
 	wlr_xcursor_manager_destroy(server.cursor_mgr);
