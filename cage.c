@@ -678,6 +678,12 @@ int
 main(int argc, char *argv[])
 {
 	struct cg_server server = {0};
+	struct wl_event_loop *event_loop = NULL;
+	struct wlr_renderer *renderer = NULL;
+	struct wlr_compositor *compositor = NULL;
+	struct wlr_linux_dmabuf_v1 *dmabuf = NULL;
+	struct wlr_data_device_manager *data_device_mgr = NULL;
+	struct wlr_xdg_shell *xdg_shell = NULL;
 	int ret = 0;
 
 	if (argc < 2) {
@@ -697,7 +703,7 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
+	event_loop = wl_display_get_event_loop(server.wl_display);
 	wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
 	wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
@@ -708,7 +714,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	struct wlr_renderer *renderer = wlr_backend_get_renderer(server.backend);
+	renderer = wlr_backend_get_renderer(server.backend);
 	wlr_renderer_init_wl_display(renderer, server.wl_display);
 
 	server.output_layout = wlr_output_layout_create();
@@ -718,21 +724,21 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	struct wlr_compositor *compositor = wlr_compositor_create(server.wl_display, renderer);
+	compositor = wlr_compositor_create(server.wl_display, renderer);
 	if (!compositor) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots compositor");
 		ret = 1;
 		goto end;
 	}
 
-	struct wlr_linux_dmabuf_v1 *dmabuf = wlr_linux_dmabuf_v1_create(server.wl_display, renderer);
+	dmabuf = wlr_linux_dmabuf_v1_create(server.wl_display, renderer);
 	if (!dmabuf) {
 		wlr_log(WLR_ERROR, "Unable to create the linux-dmabuf interface");
 		ret = 1;
 		goto end;
 	}
 
-	struct wlr_data_device_manager *data_device_mgr = wlr_data_device_manager_create(server.wl_display);
+	data_device_mgr = wlr_data_device_manager_create(server.wl_display);
 	if (!data_device_mgr) {
 		wlr_log(WLR_ERROR, "Unable to create the data device manager");
 		ret = 1;
@@ -745,7 +751,7 @@ main(int argc, char *argv[])
 	server.new_output.notify = server_new_output;
 	wl_signal_add(&server.backend->events.new_output, &server.new_output);
 
-	struct wlr_xdg_shell *xdg_shell = wlr_xdg_shell_create(server.wl_display);
+	xdg_shell = wlr_xdg_shell_create(server.wl_display);
 	if (!xdg_shell) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
 		ret = 1;
