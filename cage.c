@@ -18,7 +18,6 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
-#include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -681,7 +680,6 @@ main(int argc, char *argv[])
 	struct wl_event_loop *event_loop = NULL;
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
-	struct wlr_linux_dmabuf_v1 *dmabuf = NULL;
 	struct wlr_data_device_manager *data_device_mgr = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
 	int ret = 0;
@@ -727,13 +725,6 @@ main(int argc, char *argv[])
 	compositor = wlr_compositor_create(server.wl_display, renderer);
 	if (!compositor) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots compositor");
-		ret = 1;
-		goto end;
-	}
-
-	dmabuf = wlr_linux_dmabuf_v1_create(server.wl_display, renderer);
-	if (!dmabuf) {
-		wlr_log(WLR_ERROR, "Unable to create the linux-dmabuf interface");
 		ret = 1;
 		goto end;
 	}
@@ -826,7 +817,6 @@ end:
 	}
 	wlr_xdg_shell_destroy(xdg_shell);
 	wlr_data_device_manager_destroy(data_device_mgr);
-	wlr_linux_dmabuf_v1_destroy(dmabuf);
 	wlr_compositor_destroy(compositor);
 	wlr_output_layout_destroy(server.output_layout);
 	wlr_backend_destroy(server.backend);
