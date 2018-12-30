@@ -20,6 +20,7 @@
 #include "server.h"
 #include "view.h"
 
+#define DEFAULT_XCURSOR "left_ptr"
 #define XCURSOR_SIZE 24
 
 static inline bool
@@ -353,7 +354,6 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time)
 	   surface. There cannot be a surface without a view,
 	   either. It's both or nothing. */
 	if (!view) {
-		// wlr_xcursor_manager_set_cursor_image(seat->cursor_mgr, DEFAULT_XCURSOR, seat->cursor);
 		wlr_seat_pointer_clear_focus(wlr_seat);
 	} else {
 		wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);

@@ -169,8 +169,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 			wlr_output->name,
 			wlr_output->scale);
 	}
-	wlr_xcursor_manager_set_cursor_image(server->seat->xcursor_manager, DEFAULT_XCURSOR,
-					     server->seat->cursor);
 
 	/* Place the cursor in the center of the screen. */
 	wlr_cursor_warp(server->seat->cursor, NULL, wlr_output->width / 2, wlr_output->height / 2);
