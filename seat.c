@@ -20,7 +20,6 @@
 #include "server.h"
 #include "view.h"
 
-#define DEFAULT_XCURSOR "left_ptr"
 #define XCURSOR_SIZE 24
 
 static inline bool
@@ -451,20 +450,6 @@ cg_seat_create(struct cg_server *server)
 			return NULL;
 		}
 	}
-
-	float scale = 1.f; // TODO: segault because server->output->wlr_output->scale does not exist yet;
-	if (wlr_xcursor_manager_load(seat->xcursor_manager, scale)) {
-		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f",
-			server->output->wlr_output->name,
-			server->output->wlr_output->scale);
-	}
-
-	wlr_xcursor_manager_set_cursor_image(seat->xcursor_manager, DEFAULT_XCURSOR, seat->cursor);
-
-	// TODO: warp to the center?
-	/* /\* Place the cursor in the center of the screen and make it visible. *\/ */
-	/* wlr_cursor_warp_absolute(seat->cursor, NULL, .5, .5); */
-	wlr_cursor_warp(seat->cursor, NULL, seat->cursor->x, seat->cursor->y);
 
 	seat->cursor_motion.notify = handle_cursor_motion;
 	wl_signal_add(&seat->cursor->events.motion, &seat->cursor_motion);

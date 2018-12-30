@@ -163,4 +163,15 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	/* Disconnect the signal now, because we only use one static output. */
 	wl_list_remove(&server->new_output.link);
+
+	if (wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
+		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f",
+			wlr_output->name,
+			wlr_output->scale);
+	}
+	wlr_xcursor_manager_set_cursor_image(server->seat->xcursor_manager, DEFAULT_XCURSOR,
+					     server->seat->cursor);
+
+	/* Place the cursor in the center of the screen. */
+	wlr_cursor_warp(server->seat->cursor, NULL, wlr_output->width / 2, wlr_output->height / 2);
 }
