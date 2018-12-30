@@ -52,12 +52,24 @@ server_protos = declare_dependency(
 )
 
 cage_sources = [
-  'cage.c'
+  'cage.c',
+  'output.c',
+  'seat.c',
+  'view.c',
+  'xdg_shell.c',
+]
+
+cage_headers = [
+  'output.h',
+  'seat.h',
+  'server.h',
+  'view.h',
+  'xdg_shell.h',
 ]
 
 executable(
   meson.project_name(),
-  cage_sources,
+  cage_sources + cage_headers,
   dependencies: [
     server_protos,
     wayland_server,
