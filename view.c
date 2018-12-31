@@ -57,6 +57,13 @@ view_is_primary(struct cg_view *view)
 }
 
 void
+view_unmap(struct cg_view *view)
+{
+	wl_list_remove(&view->link);
+	view->wlr_surface = NULL;
+}
+
+void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
 	view->wlr_surface = surface;
@@ -67,6 +74,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 		view_center(view);	
 	}
 
+	wl_list_insert(&view->server->views, &view->link);
 	seat_set_focus(view->server->seat, view);
 }
 
@@ -76,7 +84,6 @@ view_destroy(struct cg_view *view)
 	struct cg_server *server = view->server;
 	bool terminate = view_is_primary(view);
 
-	wl_list_remove(&view->link);
 	free(view);
 
 	/* If this was our primary view, exit. */
@@ -91,7 +98,6 @@ cg_view_create(struct cg_server *server)
 	struct cg_view *view = calloc(1, sizeof(struct cg_view));
 
 	view->server = server;
-	wl_list_insert(&server->views, &view->link);
 	return view;
 }
 

@@ -25,6 +25,7 @@ struct cg_view {
 	};
 
 	struct wl_listener destroy;
+	struct wl_listener unmap;
 	struct wl_listener map;
 	// TODO: allow applications to go to fullscreen from maximized?
 	// struct wl_listener request_fullscreen;
@@ -39,6 +40,7 @@ void view_activate(struct cg_view *view, bool activate);
 void view_maximize(struct cg_view *view);
 void view_center(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
+void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);
 struct cg_view *cg_view_create(struct cg_server *server);

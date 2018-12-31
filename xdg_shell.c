@@ -42,6 +42,13 @@ is_primary(struct cg_view *view)
 }
 
 static void
+handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
+{
+	struct cg_view *view = wl_container_of(listener, view, unmap);
+	view_unmap(view);
+}
+
+static void
 handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 {
 	struct cg_view *view = wl_container_of(listener, view, map);
@@ -61,16 +68,14 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	struct cg_server *server = wl_container_of(listener, server, new_xdg_shell_surface);
 	struct wlr_xdg_surface *xdg_surface = data;
 
-	if (xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
-		return;
-	}
-
 	struct cg_view *view = cg_view_create(server);
 	view->type = CAGE_XDG_SHELL_VIEW;
 	view->xdg_surface = xdg_surface;
 
 	view->map.notify = handle_xdg_shell_surface_map;
 	wl_signal_add(&xdg_surface->events.map, &view->map);
+	view->unmap.notify = handle_xdg_shell_surface_unmap;
+	wl_signal_add(&xdg_surface->events.unmap, &view->unmap);
 	view->destroy.notify = handle_xdg_shell_surface_destroy;
 	wl_signal_add(&xdg_surface->events.destroy, &view->destroy);
 
