@@ -28,9 +28,13 @@ maximize(struct cg_view *view, int output_width, int output_height)
 }
 
 static void
-get_geometry(struct cg_view *view, struct wlr_box *geom)
+get_geometry(struct cg_view *view, int *width_out, int *height_out)
 {
-	wlr_xdg_surface_get_geometry(view->xdg_surface, geom);
+	struct wlr_box geom;
+
+	wlr_xdg_surface_get_geometry(view->xdg_surface, &geom);
+	*width_out = geom.width;
+	*height_out = geom.height;
 }
 
 static bool

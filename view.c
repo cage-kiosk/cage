@@ -43,11 +43,11 @@ view_center(struct cg_view *view)
 	int output_width, output_height;
 	wlr_output_effective_resolution(output, &output_width, &output_height);
 
-	struct wlr_box geom;
-	view->get_geometry(view, &geom);
+	int width, height;
+	view->get_geometry(view, &width, &height);
 
-	view->x = (output_width - geom.width) / 2;
-	view->y = (output_height - geom.height) / 2;
+	view->x = (output_width - width) / 2;
+	view->y = (output_height - height) / 2;
 }
 
 bool

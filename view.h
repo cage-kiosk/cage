@@ -32,7 +32,7 @@ struct cg_view {
 
 	void (*activate)(struct cg_view *view, bool activate);
 	void (*maximize)(struct cg_view *view, int output_width, int output_height);
-	void (*get_geometry)(struct cg_view *view, struct wlr_box *geom);
+	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
 	bool (*is_primary)(struct cg_view *view);
 };
 
