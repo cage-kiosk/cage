@@ -51,6 +51,9 @@ server_protos = declare_dependency(
   sources: server_protos_headers,
 )
 
+conf_data = configuration_data()
+conf_data.set10('CAGE_HAS_XWAYLAND', get_option('xwayland'))
+
 cage_sources = [
   'cage.c',
   'output.c',
@@ -60,12 +63,20 @@ cage_sources = [
 ]
 
 cage_headers = [
+  configure_file(input: 'config.h.in',
+		 output: 'config.h',
+		 configuration: conf_data),
   'output.h',
   'seat.h',
   'server.h',
   'view.h',
   'xdg_shell.h',
 ]
+
+if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
+  cage_sources += 'xwayland.c'
+  cage_headers += 'xwayland.h'
+endif
 
 executable(
   meson.project_name(),
@@ -78,3 +89,12 @@ executable(
   ],
   install: true,
 )
+
+summary = [
+	'',
+	'Cage @0@'.format(meson.project_version()),
+	'',
+	'    xwayland: @0@'.format(conf_data.get('CAGE_HAS_XWAYLAND', false)),
+	''
+]
+message('\n'.join(summary))

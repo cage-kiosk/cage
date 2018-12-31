@@ -8,6 +8,8 @@
 
 #define _POSIX_C_SOURCE 200112L
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <wayland-server.h>
@@ -19,6 +21,9 @@
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
+#if CAGE_HAS_XWAYLAND
+#include <wlr/xwayland.h>
+#endif
 
 #include "output.h"
 #include "server.h"
@@ -76,6 +81,11 @@ view_for_each_surface(struct cg_view *view, struct render_data *rdata,
 	case CAGE_XDG_SHELL_VIEW:
 		wlr_xdg_surface_for_each_surface(view->xdg_surface, iterator, rdata);
 		break;
+#ifdef CAGE_HAS_XWAYLAND
+	case CAGE_XWAYLAND_VIEW:
+		wlr_surface_for_each_surface(view->wlr_surface, iterator, rdata);
+		break;
+#endif
 	default:
 		wlr_log(WLR_ERROR, "Unrecognized view type: %d", view->type);
 	}

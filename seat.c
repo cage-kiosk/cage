@@ -6,6 +6,8 @@
  * See the LICENSE file accompanying this file.
  */
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
@@ -14,14 +16,14 @@
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
+#if CAGE_HAS_XWAYLAND
+#include <wlr/xwayland.h>
+#endif
 
 #include "output.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
-
-#define DEFAULT_XCURSOR "left_ptr"
-#define XCURSOR_SIZE 24
 
 static inline bool
 have_dialogs_open(struct cg_server *server)
@@ -52,6 +54,13 @@ view_at(struct cg_view *view, double lx, double ly,
 						      view_sx, view_sy,
 						      &_sx, &_sy);
 		break;
+#ifdef CAGE_HAS_XWAYLAND
+	case CAGE_XWAYLAND_VIEW:
+		_surface = wlr_surface_surface_at(view->wlr_surface,
+						  view_sx, view_sy,
+						  &_sx, &_sy);
+		break;
+#endif
 	default:
 		wlr_log(WLR_ERROR, "Unrecognized view type: %d", view->type);
 	}
@@ -500,6 +509,13 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	if (prev_view == view || !view) {
 		return;
 	}
+
+#if CAGE_HAS_XWAYLAND
+	if (view->type == CAGE_XWAYLAND_VIEW &&
+	    !wlr_xwayland_or_surface_wants_focus(view->xwayland_surface)) {
+		return;
+	}
+#endif
 
 	if (prev_view) {
 		view_activate(prev_view, false);

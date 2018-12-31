@@ -1,6 +1,8 @@
 #ifndef CG_VIEW_H
 #define CG_VIEW_H
 
+#include "config.h"
+
 #include <stdbool.h>
 #include <wayland-server.h>
 #include <wlr/types/wlr_box.h>
@@ -11,6 +13,9 @@
 
 enum cg_view_type {
 	CAGE_XDG_SHELL_VIEW,
+#ifdef CAGE_HAS_XWAYLAND
+	CAGE_XWAYLAND_VIEW,
+#endif
 };
 
 struct cg_view {
@@ -22,6 +27,9 @@ struct cg_view {
 	enum cg_view_type type;
 	union {
 		struct wlr_xdg_surface *xdg_surface;
+#ifdef CAGE_HAS_XWAYLAND
+		struct wlr_xwayland_surface *xwayland_surface;
+#endif
 	};
 
 	struct wl_listener destroy;
