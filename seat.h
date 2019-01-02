@@ -10,6 +10,9 @@
 #include "server.h"
 #include "view.h"
 
+#define DEFAULT_XCURSOR "left_ptr"
+#define XCURSOR_SIZE 24
+
 struct cg_seat {
 	struct wlr_seat *seat;
 	struct cg_server *server;

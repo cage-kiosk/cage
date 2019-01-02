@@ -43,17 +43,24 @@ view_center(struct cg_view *view)
 	int output_width, output_height;
 	wlr_output_effective_resolution(output, &output_width, &output_height);
 
-	struct wlr_box geom;
-	view->get_geometry(view, &geom);
+	int width, height;
+	view->get_geometry(view, &width, &height);
 
-	view->x = (output_width - geom.width) / 2;
-	view->y = (output_height - geom.height) / 2;
+	view->x = (output_width - width) / 2;
+	view->y = (output_height - height) / 2;
 }
 
 bool
 view_is_primary(struct cg_view *view)
 {
 	return view->is_primary(view);
+}
+
+void
+view_unmap(struct cg_view *view)
+{
+	wl_list_remove(&view->link);
+	view->wlr_surface = NULL;
 }
 
 void
@@ -67,6 +74,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 		view_center(view);	
 	}
 
+	wl_list_insert(&view->server->views, &view->link);
 	seat_set_focus(view->server->seat, view);
 }
 
@@ -76,7 +84,6 @@ view_destroy(struct cg_view *view)
 	struct cg_server *server = view->server;
 	bool terminate = view_is_primary(view);
 
-	wl_list_remove(&view->link);
 	free(view);
 
 	/* If this was our primary view, exit. */
@@ -91,7 +98,6 @@ cg_view_create(struct cg_server *server)
 	struct cg_view *view = calloc(1, sizeof(struct cg_view));
 
 	view->server = server;
-	wl_list_insert(&server->views, &view->link);
 	return view;
 }
 

@@ -1,12 +1,14 @@
 /*
  * Cage: A Wayland kiosk.
  * 
- * Copyright (C) 2018 Jente Hidskes
+ * Copyright (C) 2018-2019 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
 
 #define _POSIX_C_SOURCE 200112L
+
+#include "config.h"
 
 #include <signal.h>
 #include <stdio.h>
@@ -17,15 +19,24 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
+#if CAGE_HAS_XWAYLAND
+#include <wlr/types/wlr_xcursor_manager.h>
+#endif
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
+#if CAGE_HAS_XWAYLAND
+#include <wlr/xwayland.h>
+#endif
 
 #include "output.h"
 #include "seat.h"
 #include "server.h"
 #include "xdg_shell.h"
+#if CAGE_HAS_XWAYLAND
+#include "xwayland.h"
+#endif
 
 static bool
 spawn_primary_client(char *argv[], pid_t *pid_out)
@@ -69,6 +80,9 @@ main(int argc, char *argv[])
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_mgr = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
+#if CAGE_HAS_XWAYLAND
+	struct wlr_xwayland *xwayland = NULL;
+#endif
 	int ret = 0;
 
 	if (argc < 2) {
@@ -146,6 +160,31 @@ main(int argc, char *argv[])
 	server.new_xdg_shell_surface.notify = handle_xdg_shell_surface_new;
 	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
 
+#if CAGE_HAS_XWAYLAND
+	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
+	server.new_xwayland_surface.notify = handle_xwayland_surface_new;
+	wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
+
+	struct wlr_xcursor_manager *xcursor_manager =
+		wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
+	if (!xcursor_manager) {
+		wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
+	        ret = 1;
+		goto end;
+	}
+	if (wlr_xcursor_manager_load(xcursor_manager, 1)) {
+		wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
+	}
+	struct wlr_xcursor *xcursor =
+		wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
+	if (xcursor) {
+		struct wlr_xcursor_image *image = xcursor->images[0];
+		wlr_xwayland_set_cursor(xwayland, image->buffer,
+					image->width * 4, image->width, image->height,
+					image->hotspot_x, image->hotspot_y);
+	}
+#endif
+
 	const char *socket = wl_display_add_socket_auto(server.wl_display);
 	if (!socket) {
 		wlr_log_errno(WLR_ERROR, "Unable to open Wayland socket");
@@ -165,6 +204,12 @@ main(int argc, char *argv[])
 			      "Clients may not be able to connect");
 	}
 
+#if CAGE_HAS_XWAYLAND
+	if (xwayland) {
+		wlr_xwayland_set_seat(xwayland, server.seat->seat);
+	}
+#endif
+
 	pid_t pid;
 	if (!spawn_primary_client(argv + 1, &pid)) {
 		ret = 1;
@@ -178,6 +223,10 @@ main(int argc, char *argv[])
 
 end:
 	cg_seat_destroy(server.seat);
+#if CAGE_HAS_XWAYLAND
+	wlr_xwayland_destroy(xwayland);
+	wlr_xcursor_manager_destroy(xcursor_manager);
+#endif
 	wlr_xdg_shell_destroy(xdg_shell);
 	wlr_data_device_manager_destroy(data_device_mgr);
 	wlr_compositor_destroy(compositor);
