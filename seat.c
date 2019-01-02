@@ -506,7 +506,7 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct cg_view *prev_view = seat_get_focus(seat);
 
-	if (prev_view == view || !view) {
+	if (!view || prev_view == view) {
 		return;
 	}
 
