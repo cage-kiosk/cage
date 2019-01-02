@@ -1,0 +1,6 @@
+#ifndef CG_CONFIG_H
+#define CG_CONFIG_H
+
+#mesondefine CAGE_HAS_XWAYLAND
+
+#endif
