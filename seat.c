@@ -47,25 +47,7 @@ view_at(struct cg_view *view, double lx, double ly,
 	double view_sy = ly - view->y;
 
 	double _sx, _sy;
-	struct wlr_surface *_surface = NULL;
-	switch (view->type) {
-	case CAGE_XDG_SHELL_VIEW:
-		_surface = wlr_xdg_surface_surface_at(view->xdg_surface,
-						      view_sx, view_sy,
-						      &_sx, &_sy);
-		break;
-#ifdef CAGE_HAS_XWAYLAND
-	case CAGE_XWAYLAND_VIEW:
-		_surface = wlr_surface_surface_at(view->wlr_surface,
-						  view_sx, view_sy,
-						  &_sx, &_sy);
-		break;
-#endif
-	default:
-		wlr_log(WLR_ERROR, "Unrecognized view type: %d", view->type);
-	}
-
-
+	struct wlr_surface *_surface = view_wlr_surface_at(view, view_sx, view_sy, &_sx, &_sy);
 	if (_surface != NULL) {
 		*sx = _sx;
 		*sy = _sy;

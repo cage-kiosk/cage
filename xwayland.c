@@ -41,6 +41,12 @@ for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator,
 	wlr_surface_for_each_surface(view->wlr_surface, iterator, data);
 }
 
+static struct wlr_surface *
+wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
+{
+	return wlr_surface_surface_at(view->wlr_surface, sx, sy, sub_x, sub_y);
+}
+
 static bool
 is_primary(struct cg_view *view)
 {
@@ -90,5 +96,6 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 	view->maximize = maximize;
 	view->get_geometry = get_geometry;
 	view->for_each_surface = for_each_surface;
+	view->wlr_surface_at = wlr_surface_at;
 	view->is_primary = is_primary;
 }

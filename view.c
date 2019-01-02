@@ -57,6 +57,12 @@ view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator
 	view->for_each_surface(view, iterator, data);
 }
 
+struct wlr_surface *
+view_wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
+{
+	return view->wlr_surface_at(view, sx, sy, sub_x, sub_y);
+}
+
 bool
 view_is_primary(struct cg_view *view)
 {
