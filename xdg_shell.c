@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018 Jente Hidskes
+ * Copyright (C) 2018-2019 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
@@ -35,6 +35,13 @@ get_geometry(struct cg_view *view, int *width_out, int *height_out)
 	wlr_xdg_surface_get_geometry(view->xdg_surface, &geom);
 	*width_out = geom.width;
 	*height_out = geom.height;
+}
+
+static void
+for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator,
+		 void *data)
+{
+	wlr_xdg_surface_for_each_surface(view->xdg_surface, iterator, data);
 }
 
 static bool
@@ -86,5 +93,6 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	view->activate = activate;
 	view->maximize = maximize;
 	view->get_geometry = get_geometry;
+	view->for_each_surface = for_each_surface;
 	view->is_primary = is_primary;
 }

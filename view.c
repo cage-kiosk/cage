@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018 Jente Hidskes
+ * Copyright (C) 2018-2019 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
@@ -48,6 +48,13 @@ view_center(struct cg_view *view)
 
 	view->x = (output_width - width) / 2;
 	view->y = (output_height - height) / 2;
+}
+
+void
+view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator,
+		      void *data)
+{
+	view->for_each_surface(view, iterator, data);
 }
 
 bool

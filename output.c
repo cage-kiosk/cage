@@ -74,24 +74,6 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 }
 
 static void
-view_for_each_surface(struct cg_view *view, struct render_data *rdata,
-		      wlr_surface_iterator_func_t iterator)
-{
-	switch(view->type) {
-	case CAGE_XDG_SHELL_VIEW:
-		wlr_xdg_surface_for_each_surface(view->xdg_surface, iterator, rdata);
-		break;
-#ifdef CAGE_HAS_XWAYLAND
-	case CAGE_XWAYLAND_VIEW:
-		wlr_surface_for_each_surface(view->wlr_surface, iterator, rdata);
-		break;
-#endif
-	default:
-		wlr_log(WLR_ERROR, "Unrecognized view type: %d", view->type);
-	}
-}
-
-static void
 handle_output_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, frame);
@@ -122,7 +104,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 	struct cg_view *view;
 	wl_list_for_each_reverse(view, &output->server->views, link) {
 		rdata.view = view;
-		view_for_each_surface(view, &rdata, render_surface);
+		view_for_each_surface(view, render_surface, &rdata);
 	}
 
 	wlr_renderer_end(renderer);

@@ -34,6 +34,13 @@ get_geometry(struct cg_view *view, int *width_out, int *height_out)
 	*height_out = view->xwayland_surface->surface->current.height;
 }
 
+static void
+for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator,
+		 void *data)
+{
+	wlr_surface_for_each_surface(view->wlr_surface, iterator, data);
+}
+
 static bool
 is_primary(struct cg_view *view)
 {
@@ -82,5 +89,6 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 	view->activate = activate;
 	view->maximize = maximize;
 	view->get_geometry = get_geometry;
+	view->for_each_surface = for_each_surface;
 	view->is_primary = is_primary;
 }
