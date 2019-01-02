@@ -19,6 +19,10 @@ $ meson build
 $ ninja -C build
 ```
 
+Cage comes with compile-time support for XWayland. To enable this,
+first make sure that your version of wlroots is compiled with this
+option. Then, add `-Dxwayland=true` to the `meson` command above.
+
 You can run Cage by running `./build/cage APPLICATION`. If you run it
 from within an existing X11 or Wayland session, it will open in a
 virtual output as a window in your existing session. If you run it at
