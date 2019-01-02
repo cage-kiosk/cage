@@ -3,26 +3,10 @@
 This is Cage, a Wayland kiosk. A kiosk runs a single, maximized
 application.
 
-User input such as moving, resizing, minimizing and unmaximizing
-windows is ignored. Dialogs are supported, although they too cannot be
-resized nor moved. Instead, dialogs are simply centered on the
-screen. There is no configuration for Cage.  When the application is
-closed, Cage closes as well.
-
-Cage supports a single, static output. It does not support hotplugging
-nor rotation. Input-wise, Cage supports pointer input, keyboard input
-and (soon) touch input. Copy and paste works as well.
-
-Cage does not support Xwayland, nor any protocols other than
-xdg-shell.  That is, there is no support for panels, virtual
-keyboards, screen capture, primary selection, etc.  Open a PR if you
-want to see support for some of these; they can likely be added
-without much work. Cage fulfills my needs in its current state.
-
-Notable omissions from Cage, to be added in a future version:
-- Damage tracking, which tracks which parts of the screen are changing
-  and minimizes redraws accordingly.
-- HiDPI support.
+This README is only relevant for development resources and
+instructions. For a description of Cage and installation instructions
+for end-users, please see [its project
+page](https://hjdskes.nl/projects/cage).
 
 ## Building and running Cage
 
