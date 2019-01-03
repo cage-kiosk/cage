@@ -60,7 +60,9 @@ view_at(struct cg_view *view, double lx, double ly,
 
 /* This iterates over all of our surfaces and attempts to find one
  * under the cursor. This relies on server->views being ordered from
- * top-to-bottom. */
+ * top-to-bottom. If desktop_view_at returns a view, there is also a
+ * surface. There cannot be a surface without a view, either. It's
+ * both or nothing. */
 static struct cg_view *
 desktop_view_at(struct cg_server *server, double lx, double ly,
 		struct wlr_surface **surface, double *sx, double *sy)
@@ -341,9 +343,6 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time)
 					       seat->cursor->x, seat->cursor->y,
 					       &surface, &sx, &sy);
 
-	/* If desktop_view_at returns a view, there is also a
-	   surface. There cannot be a surface without a view,
-	   either. It's both or nothing. */
 	if (!view) {
 		wlr_seat_pointer_clear_focus(wlr_seat);
 	} else {
