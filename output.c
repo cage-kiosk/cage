@@ -21,9 +21,6 @@
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
-#if CAGE_HAS_XWAYLAND
-#include <wlr/xwayland.h>
-#endif
 
 #include "output.h"
 #include "server.h"
