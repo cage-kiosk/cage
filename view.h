@@ -13,7 +13,7 @@
 
 enum cg_view_type {
 	CAGE_XDG_SHELL_VIEW,
-#ifdef CAGE_HAS_XWAYLAND
+#if CAGE_HAS_XWAYLAND
 	CAGE_XWAYLAND_VIEW,
 #endif
 };
@@ -27,7 +27,7 @@ struct cg_view {
 	enum cg_view_type type;
 	union {
 		struct wlr_xdg_surface *xdg_surface;
-#ifdef CAGE_HAS_XWAYLAND
+#if CAGE_HAS_XWAYLAND
 		struct wlr_xwayland_surface *xwayland_surface;
 #endif
 	};

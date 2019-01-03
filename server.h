@@ -6,7 +6,7 @@
 #include <wayland-server.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_output_layout.h>
-#ifdef CAGE_HAS_XWAYLAND
+#if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
 #endif
 
