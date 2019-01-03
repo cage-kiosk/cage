@@ -82,6 +82,7 @@ main(int argc, char *argv[])
 	struct wlr_xdg_shell *xdg_shell = NULL;
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xwayland *xwayland = NULL;
+	struct wlr_xcursor_manager *xcursor_manager = NULL;
 #endif
 	int ret = 0;
 
@@ -165,8 +166,7 @@ main(int argc, char *argv[])
 	server.new_xwayland_surface.notify = handle_xwayland_surface_new;
 	wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
 
-	struct wlr_xcursor_manager *xcursor_manager =
-		wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
+	xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
 	if (!xcursor_manager) {
 		wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
 	        ret = 1;
