@@ -19,11 +19,11 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_output_layout.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
-#include <wlr/types/wlr_data_device.h>
-#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
