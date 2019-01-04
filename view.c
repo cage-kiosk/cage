@@ -97,6 +97,9 @@ view_destroy(struct cg_view *view)
 	struct cg_server *server = view->server;
 	bool terminate = view_is_primary(view);
 
+	if (view->wlr_surface != NULL) {
+		view_unmap(view);
+	}
 	free(view);
 
 	/* If this was our primary view, exit. */
