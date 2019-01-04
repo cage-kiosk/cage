@@ -102,9 +102,15 @@ view_destroy(struct cg_view *view)
 	}
 	free(view);
 
-	/* If this was our primary view, exit. */
+	/* If this was our primary view, exit. Otherwise, focus the
+	   previous (i.e., next highest in the stack) view. Since
+	   we're still here, we know there is at least one view in the
+	   list. */
 	if (terminate) {
 		wl_display_terminate(server->wl_display);
+	} else {
+		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
+		seat_set_focus(server->seat, prev);
 	}
 }
 
