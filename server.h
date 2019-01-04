@@ -5,6 +5,7 @@
 
 #include <wayland-server.h>
 #include <wlr/backend.h>
+#include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_output_layout.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -21,6 +22,7 @@ struct cg_server {
 	struct wl_list views;
 
 	struct cg_seat *seat;
+	struct wlr_idle *idle;
 
 	struct wlr_output_layout *output_layout;
 	struct cg_output *output;
