@@ -1,5 +1,5 @@
-#ifndef XWAYLAND_H
-#define XWAYLAND_H
+#ifndef CG_XWAYLAND_H
+#define CG_XWAYLAND_H
 
 #include <wayland-server.h>
 
