@@ -9,6 +9,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <linux/input-event-codes.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_cursor.h>
@@ -79,6 +80,26 @@ desktop_view_at(struct cg_server *server, double lx, double ly,
 }
 
 static void
+press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device,
+		    uint32_t time, uint32_t button, uint32_t state,
+		    double lx, double ly)
+{
+	struct cg_server *server = seat->server;
+
+	if (state == WLR_BUTTON_PRESSED && !have_dialogs_open(server)) {
+		/* Focus that client if the button was pressed and
+		   there are no open dialogs. */
+		double sx, sy;
+		struct wlr_surface *surface;
+		struct cg_view *view = desktop_view_at(server, lx, ly,
+						       &surface, &sx, &sy);
+		if (view) {
+			seat_set_focus(seat, view);
+		}
+	}
+}
+
+static void
 update_capabilities(struct cg_seat *seat) {
 	uint32_t caps = 0;
 
@@ -87,6 +108,9 @@ update_capabilities(struct cg_seat *seat) {
 	}
 	if (!wl_list_empty(&seat->pointers)) {
 		caps |= WL_SEAT_CAPABILITY_POINTER;
+	}
+	if (!wl_list_empty(&seat->touch)) {
+		caps |= WL_SEAT_CAPABILITY_TOUCH;
 	}
 	wlr_seat_set_capabilities(seat->seat, caps);
 
@@ -98,6 +122,37 @@ update_capabilities(struct cg_seat *seat) {
 						     DEFAULT_XCURSOR,
 						     seat->cursor);
 	}
+}
+
+static void
+handle_touch_destroy(struct wl_listener *listener, void *data) {
+	struct cg_touch *touch = wl_container_of(listener, touch, destroy);
+	struct cg_seat *seat = touch->seat;
+
+	wl_list_remove(&touch->link);
+	wlr_cursor_detach_input_device(seat->cursor, touch->device);
+	wl_list_remove(&touch->destroy.link);
+	free(touch);
+
+	update_capabilities(seat);
+}
+
+static void
+handle_new_touch(struct cg_seat *seat, struct wlr_input_device *device)
+{
+	struct cg_touch *touch = calloc(1, sizeof(struct cg_touch));
+	if (!touch) {
+		wlr_log(WLR_ERROR, "Cannot allocate touch");
+		return;
+	}
+
+	touch->seat = seat;
+	touch->device = device;
+	wlr_cursor_attach_input_device(seat->cursor, device);
+
+	wl_list_insert(&seat->touch, &touch->link);
+	touch->destroy.notify = handle_touch_destroy;
+	wl_signal_add(&touch->device->events.destroy, &touch->destroy);
 }
 
 static void
@@ -263,8 +318,8 @@ handle_new_input(struct wl_listener *listener, void *data)
 		handle_new_pointer(seat, device);
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
-		wlr_log(WLR_DEBUG, "Touch input is not implemented");
-		return;
+		handle_new_touch(seat, device);
+		break;
 	case WLR_INPUT_DEVICE_SWITCH:
 		wlr_log(WLR_DEBUG, "Switch input is not implemented");
 		return;
@@ -298,6 +353,91 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_touch_down(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, touch_down);
+	struct wlr_event_touch_down *event = data;
+
+	double lx, ly;
+	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device,
+					     event->x, event->y, &lx, &ly);
+
+	double sx, sy;
+	struct wlr_surface *surface;
+	struct cg_view *view = desktop_view_at(seat->server, lx, ly,
+					       &surface, &sx, &sy);
+
+	uint32_t serial = 0;
+	if (view) {
+		serial = wlr_seat_touch_notify_down(seat->seat, surface,
+						    event->time_msec, event->touch_id,
+						    sx, sy);
+	}
+
+	if (serial && wlr_seat_touch_num_points(seat->seat) == 1) {
+		seat->touch_id = event->touch_id;
+		seat->touch_x = lx;
+		seat->touch_y = ly;
+		press_cursor_button(seat, event->device, event->time_msec,
+				    BTN_LEFT, WLR_BUTTON_PRESSED, lx, ly);
+	}
+}
+
+static void
+handle_touch_up(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, touch_up);
+	struct wlr_event_touch_up *event = data;
+
+	if (!wlr_seat_touch_get_point(seat->seat, event->touch_id)) {
+		return;
+	}
+
+	if (wlr_seat_touch_num_points(seat->seat) == 1) {
+		press_cursor_button(seat, event->device, event->time_msec,
+				    BTN_LEFT, WLR_BUTTON_RELEASED,
+				    seat->touch_x, seat->touch_y);
+	}
+
+	wlr_seat_touch_notify_up(seat->seat, event->time_msec, event->touch_id);
+}
+
+static void
+handle_touch_motion(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, touch_motion);
+	struct wlr_event_touch_motion *event = data;
+
+	if (!wlr_seat_touch_get_point(seat->seat, event->touch_id)) {
+		return;
+	}
+
+	double lx, ly;
+	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device,
+					     event->x, event->y, &lx, &ly);
+
+	double sx, sy;
+	struct wlr_surface *surface;
+	struct cg_view *view = desktop_view_at(seat->server, lx, ly,
+					       &surface, &sx, &sy);
+
+	if (view) {
+		wlr_seat_touch_point_focus(seat->seat, surface,
+					   event->time_msec, event->touch_id, sx, sy);
+		wlr_seat_touch_notify_motion(seat->seat, event->time_msec,
+					     event->touch_id, sx, sy);
+	} else {
+		wlr_seat_touch_point_clear_focus(seat->seat, event->time_msec,
+						 event->touch_id);
+	}
+
+	if (event->touch_id == seat->touch_id) {
+		seat->touch_x = lx;
+		seat->touch_y = ly;
+	}
+}
+
+static void
 handle_cursor_axis(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_axis);
@@ -312,24 +452,13 @@ static void
 handle_cursor_button(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_button);
-	struct cg_server *server = seat->server;
 	struct wlr_event_pointer_button *event = data;
 
-	wlr_seat_pointer_notify_button(seat->seat,
-				       event->time_msec, event->button, event->state);
-	if (event->state == WLR_BUTTON_PRESSED && !have_dialogs_open(server)) {
-		/* Focus that client if the button was pressed and
-		   there are no open dialogs. */
-		double sx, sy;
-		struct wlr_surface *surface;
-		struct cg_view *view = desktop_view_at(server,
-						       seat->cursor->x,
-						       seat->cursor->y,
-						       &surface, &sx, &sy);
-		if (view) {
-			seat_set_focus(seat, view);
-		}
-	}
+	wlr_seat_pointer_notify_button(seat->seat, event->time_msec,
+				       event->button, event->state);
+	press_cursor_button(seat, event->device, event->time_msec,
+			    event->button, event->state,
+			    seat->cursor->x, seat->cursor->y);
 }
 
 static void
@@ -389,6 +518,10 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_for_each_safe(pointer, pointer_tmp, &seat->pointers, link) {
 		handle_pointer_destroy(&pointer->destroy, NULL);
 	}
+	struct cg_touch *touch, *touch_tmp;
+	wl_list_for_each_safe(touch, touch_tmp, &seat->touch, link) {
+		handle_touch_destroy(&touch->destroy, NULL);
+	}
 	wl_list_remove(&seat->new_input.link);
 
 	wlr_xcursor_manager_destroy(seat->xcursor_manager);
@@ -399,6 +532,9 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&seat->cursor_motion_absolute.link);
 	wl_list_remove(&seat->cursor_button.link);
 	wl_list_remove(&seat->cursor_axis.link);
+	wl_list_remove(&seat->touch_down.link);
+	wl_list_remove(&seat->touch_up.link);
+	wl_list_remove(&seat->touch_motion.link);
 	wl_list_remove(&seat->request_set_cursor.link);
 }
 
@@ -450,11 +586,19 @@ cg_seat_create(struct cg_server *server)
 	seat->cursor_axis.notify = handle_cursor_axis;
 	wl_signal_add(&seat->cursor->events.axis, &seat->cursor_axis);
 
+	seat->touch_down.notify = handle_touch_down;
+	wl_signal_add(&seat->cursor->events.touch_down, &seat->touch_down);
+	seat->touch_up.notify = handle_touch_up;
+	wl_signal_add(&seat->cursor->events.touch_up, &seat->touch_up);
+	seat->touch_motion.notify = handle_touch_motion;
+	wl_signal_add(&seat->cursor->events.touch_motion, &seat->touch_motion);
+
 	seat->request_set_cursor.notify = handle_request_set_cursor;
 	wl_signal_add(&seat->seat->events.request_set_cursor, &seat->request_set_cursor);
 
 	wl_list_init(&seat->keyboards);
 	wl_list_init(&seat->pointers);
+	wl_list_init(&seat->touch);
 
 	seat->new_input.notify = handle_new_input;
 	wl_signal_add(&server->backend->events.new_input, &seat->new_input);

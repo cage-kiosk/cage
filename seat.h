@@ -20,6 +20,7 @@ struct cg_seat {
 
 	struct wl_list keyboards;
 	struct wl_list pointers;
+	struct wl_list touch;
 	struct wl_listener new_input;
 
 	struct wlr_cursor *cursor;
@@ -28,6 +29,14 @@ struct cg_seat {
 	struct wl_listener cursor_motion_absolute;
 	struct wl_listener cursor_button;
 	struct wl_listener cursor_axis;
+
+	int32_t touch_id;
+	double touch_x;
+	double touch_y;
+	struct wl_listener touch_down;
+	struct wl_listener touch_up;
+	struct wl_listener touch_motion;
+
 	struct wl_listener request_set_cursor;
 };
 
@@ -43,6 +52,14 @@ struct cg_keyboard {
 
 struct cg_pointer {
 	struct wl_list link; // seat::pointers
+	struct cg_seat *seat;
+	struct wlr_input_device *device;
+
+	struct wl_listener destroy;
+};
+
+struct cg_touch {
+	struct wl_list link; // seat::touch
 	struct cg_seat *seat;
 	struct wlr_input_device *device;
 
