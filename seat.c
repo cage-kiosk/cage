@@ -26,7 +26,7 @@
 #include "server.h"
 #include "view.h"
 
-static inline bool
+bool
 have_dialogs_open(struct cg_server *server)
 {
 	/* We only need to test if there is more than a single

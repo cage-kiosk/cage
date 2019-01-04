@@ -70,5 +70,6 @@ struct cg_seat *cg_seat_create(struct cg_server *server);
 void cg_seat_destroy(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);
+bool have_dialogs_open(struct cg_server *server);
 
 #endif

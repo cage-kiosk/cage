@@ -26,6 +26,15 @@
 #include "server.h"
 #include "view.h"
 
+static void
+render_overlay(struct wlr_renderer *renderer, struct wlr_output *output, int width, int height)
+{
+	struct wlr_box box = { .width = width, .height = height };
+	float color[4] = { 0.0, 0.0, 0.0, 0.3 };
+
+	wlr_render_rect(renderer, &box, color, output->transform_matrix);
+}
+
 /* Used to move all of the data necessary to render a surface from the
  * top-level frame handler to the per-surface render function. */
 struct render_data {
@@ -102,6 +111,12 @@ handle_output_frame(struct wl_listener *listener, void *data)
 	wl_list_for_each_reverse(view, &output->server->views, link) {
 		rdata.view = view;
 		view_for_each_surface(view, render_surface, &rdata);
+		/* If we have dialogs open and this view is not the
+		   top of the stack, draw an overlay. */
+		if (have_dialogs_open(output->server) &&
+		    view->link.prev != &output->server->views) {
+			render_overlay(renderer, output->wlr_output, width, height);
+		}
 	}
 
 	wlr_renderer_end(renderer);
