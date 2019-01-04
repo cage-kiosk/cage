@@ -20,6 +20,7 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_output_layout.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -151,6 +152,13 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
+	server.idle = wlr_idle_create(server.wl_display);
+	if (!server.idle) {
+		wlr_log(WLR_ERROR, "Unable to create the idle tracker");
+		ret = 1;
+		goto end;
+	}
+
 	xdg_shell = wlr_xdg_shell_create(server.wl_display);
 	if (!xdg_shell) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
@@ -228,6 +236,9 @@ end:
 	wlr_xcursor_manager_destroy(xcursor_manager);
 #endif
 	wlr_xdg_shell_destroy(xdg_shell);
+	if (server.idle) {
+		wlr_idle_destroy(server.idle);
+	}
 	wlr_data_device_manager_destroy(data_device_mgr);
 	wlr_compositor_destroy(compositor);
 	wlr_output_layout_destroy(server.output_layout);
