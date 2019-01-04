@@ -85,6 +85,10 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	struct cg_server *server = wl_container_of(listener, server, new_xdg_shell_surface);
 	struct wlr_xdg_surface *xdg_surface = data;
 
+	if (xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		return;
+	}
+
 	struct cg_view *view = cg_view_create(server);
 	view->type = CAGE_XDG_SHELL_VIEW;
 	view->xdg_surface = xdg_surface;
