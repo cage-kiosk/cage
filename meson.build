@@ -56,6 +56,7 @@ conf_data.set10('CAGE_HAS_XWAYLAND', get_option('xwayland'))
 
 cage_sources = [
   'cage.c',
+  'idle_inhibit_v1.c',
   'output.c',
   'seat.c',
   'view.c',
@@ -66,6 +67,7 @@ cage_headers = [
   configure_file(input: 'config.h.in',
 		 output: 'config.h',
 		 configuration: conf_data),
+  'idle_inhibit_v1.h',
   'output.h',
   'seat.h',
   'server.h',

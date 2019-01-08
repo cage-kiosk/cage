@@ -21,6 +21,7 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle.h>
+#include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -31,6 +32,7 @@
 #include <wlr/xwayland.h>
 #endif
 
+#include "idle_inhibit_v1.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -159,6 +161,16 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
+	server.idle_inhibit_v1 = wlr_idle_inhibit_v1_create(server.wl_display);
+	if (!server.idle_inhibit_v1) {
+		wlr_log(WLR_ERROR, "Cannot create the idle inhibitor");
+		ret = 1;
+		goto end;
+	}
+	server.new_idle_inhibitor_v1.notify = handle_idle_inhibitor_v1_new;
+	wl_signal_add(&server.idle_inhibit_v1->events.new_inhibitor, &server.new_idle_inhibitor_v1);
+	wl_list_init(&server.inhibitors);
+		
 	xdg_shell = wlr_xdg_shell_create(server.wl_display);
 	if (!xdg_shell) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
@@ -236,6 +248,7 @@ end:
 	wlr_xcursor_manager_destroy(xcursor_manager);
 #endif
 	wlr_xdg_shell_destroy(xdg_shell);
+	wlr_idle_inhibit_v1_destroy(server.idle_inhibit_v1);
 	if (server.idle) {
 		wlr_idle_destroy(server.idle);
 	}
