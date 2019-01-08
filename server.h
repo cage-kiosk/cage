@@ -6,6 +6,7 @@
 #include <wayland-server.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_idle.h>
+#include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -23,6 +24,9 @@ struct cg_server {
 
 	struct cg_seat *seat;
 	struct wlr_idle *idle;
+	struct wlr_idle_inhibit_manager_v1 *idle_inhibit_v1;
+	struct wl_listener new_idle_inhibitor_v1;
+	struct wl_list inhibitors;
 
 	struct wlr_output_layout *output_layout;
 	struct cg_output *output;
