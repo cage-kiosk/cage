@@ -24,7 +24,7 @@ view_activate(struct cg_view *view, bool activate)
 	view->activate(view, activate);
 }
 
-void
+static void
 view_maximize(struct cg_view *view)
 {
 	struct cg_output *output = view->server->output;
@@ -34,7 +34,7 @@ view_maximize(struct cg_view *view)
 	view->maximize(view, output_width, output_height);
 }
 
-void
+static void
 view_center(struct cg_view *view)
 {
 	struct cg_server *server = view->server;

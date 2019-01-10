@@ -52,8 +52,6 @@ struct cg_view {
 };
 
 void view_activate(struct cg_view *view, bool activate);
-void view_maximize(struct cg_view *view);
-void view_center(struct cg_view *view);
 void view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data);
 struct wlr_surface *view_wlr_surface_at(struct cg_view *view, double sx, double sy,
 					double *sub_x, double *sub_y);
