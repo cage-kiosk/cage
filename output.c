@@ -40,15 +40,14 @@ render_overlay(struct wlr_renderer *renderer, struct wlr_output *output, int wid
 struct render_data {
 	struct wlr_output_layout *output_layout;
 	struct wlr_output *output;
-	struct cg_view *view;
 	struct timespec *when;
+	double x, y;
 };
 
 static void
 render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 {
 	struct render_data *rdata = data;
-	struct cg_view *view = rdata->view;
 	struct wlr_output *output = rdata->output;
 
 	if (!wlr_surface_has_buffer(surface)) {
@@ -63,7 +62,7 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 
 	double ox = 0, oy = 0;
 	wlr_output_layout_output_coords(rdata->output_layout, output, &ox, &oy);
-	ox += view->x + sx, oy += view->y + sy;
+	ox += rdata->x + sx, oy += rdata->y + sy;
 
 	struct wlr_box box = {
 		.x = ox * output->scale,
@@ -109,7 +108,8 @@ handle_output_frame(struct wl_listener *listener, void *data)
 
 	struct cg_view *view;
 	wl_list_for_each_reverse(view, &output->server->views, link) {
-		rdata.view = view;
+		rdata.x = view->x;
+		rdata.y = view->y;
 		view_for_each_surface(view, render_surface, &rdata);
 		/* If we have dialogs open and this view is not the
 		   top of the stack, draw an overlay. */
