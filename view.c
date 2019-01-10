@@ -70,6 +70,16 @@ view_is_primary(struct cg_view *view)
 }
 
 void
+view_position(struct cg_view *view)
+{
+	if (view_is_primary(view)) {
+		view_maximize(view);
+	} else {
+		view_center(view);
+	}
+}
+
+void
 view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
@@ -81,11 +91,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 {
 	view->wlr_surface = surface;
 
-	if (view_is_primary(view)) {
-		view_maximize(view);
-	} else {
-		view_center(view);	
-	}
+	view_position(view);
 
 	wl_list_insert(&view->server->views, &view->link);
 	seat_set_focus(view->server->seat, view);

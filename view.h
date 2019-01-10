@@ -58,6 +58,7 @@ void view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t ite
 struct wlr_surface *view_wlr_surface_at(struct cg_view *view, double sx, double sy,
 					double *sub_x, double *sub_y);
 bool view_is_primary(struct cg_view *view);
+void view_position(struct cg_view *view);
 void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);

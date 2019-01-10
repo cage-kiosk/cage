@@ -11,6 +11,7 @@ struct cg_output {
 	struct wlr_output *wlr_output;
 
 	struct wl_listener frame;
+	struct wl_listener mode;
 	struct wl_listener destroy;
 };
 

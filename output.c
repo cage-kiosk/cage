@@ -124,6 +124,17 @@ handle_output_frame(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_output_mode(struct wl_listener *listener, void *data)
+{
+	struct cg_output *output = wl_container_of(listener, output, mode);
+
+	struct cg_view *view;
+	wl_list_for_each(view, &output->server->views, link) {
+		view_position(view);
+	}
+}
+
+static void
 handle_output_destroy(struct wl_listener *listener, void *data)
 {
         struct cg_output *output = wl_container_of(listener, output, destroy);
@@ -160,6 +171,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	server->output->frame.notify = handle_output_frame;
 	wl_signal_add(&wlr_output->events.frame, &server->output->frame);
+	server->output->mode.notify = handle_output_mode;
+	wl_signal_add(&wlr_output->events.mode, &server->output->mode);
 	server->output->destroy.notify = handle_output_destroy;
 	wl_signal_add(&wlr_output->events.destroy, &server->output->destroy);
 
