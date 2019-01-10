@@ -37,8 +37,7 @@ view_maximize(struct cg_view *view)
 static void
 view_center(struct cg_view *view)
 {
-	struct cg_server *server = view->server;
-	struct wlr_output *output = server->output->wlr_output;
+	struct wlr_output *output = view->server->output->wlr_output;
 
 	int output_width, output_height;
 	wlr_output_effective_resolution(output, &output_width, &output_height);
