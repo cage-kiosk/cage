@@ -15,6 +15,7 @@
 #include <wayland-server.h>
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -79,6 +80,25 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 }
 
 static void
+drag_icons_for_each_surface(struct cg_server *server, wlr_surface_iterator_func_t iterator,
+			    void *data)
+{
+	struct render_data *rdata = data;
+
+	struct cg_drag_icon *drag_icon;
+	wl_list_for_each(drag_icon, &server->seat->drag_icons, link) {
+		if (!drag_icon->wlr_drag_icon->mapped) {
+			continue;
+		}
+		rdata->x = drag_icon->x;
+		rdata->y = drag_icon->y;
+		wlr_surface_for_each_surface(drag_icon->wlr_drag_icon->surface,
+					     iterator,
+					     data);
+	}
+}
+
+static void
 handle_output_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, frame);
@@ -118,6 +138,8 @@ handle_output_frame(struct wl_listener *listener, void *data)
 			render_overlay(renderer, output->wlr_output, width, height);
 		}
 	}
+
+	drag_icons_for_each_surface(output->server, render_surface, &rdata);
 
 	wlr_renderer_end(renderer);
 	wlr_output_swap_buffers(output->wlr_output, NULL, NULL);

@@ -13,6 +13,7 @@
 #include <wayland-server.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_surface.h>
@@ -26,6 +27,8 @@
 #include "seat.h"
 #include "server.h"
 #include "view.h"
+
+static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 
 bool
 have_dialogs_open(struct cg_server *server)
@@ -496,6 +499,11 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time)
 		}
 	}
 
+	struct cg_drag_icon *drag_icon;
+	wl_list_for_each(drag_icon, &seat->drag_icons, link) {
+		drag_icon_update_position(drag_icon);
+	}
+
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
 
@@ -519,6 +527,57 @@ handle_cursor_motion(struct wl_listener *listener, void *data)
 	wlr_cursor_move(seat->cursor, event->device, event->delta_x, event->delta_y);
 	process_cursor_motion(seat, event->time_msec);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+}
+
+static void
+drag_icon_update_position(struct cg_drag_icon *drag_icon)
+{
+	struct wlr_drag_icon *wlr_icon = drag_icon->wlr_drag_icon;
+	struct cg_seat *seat = drag_icon->seat;
+
+	if (wlr_icon->is_pointer) {
+		drag_icon->x = seat->cursor->x;
+		drag_icon->y = seat->cursor->y;
+	} else {
+		struct wlr_touch_point *point =
+			wlr_seat_touch_get_point(seat->seat, wlr_icon->touch_id);
+		if (!point) {
+			return;
+		}
+		drag_icon->x = seat->touch_x;
+		drag_icon->y = seat->touch_y;
+	}
+}
+
+static void
+handle_drag_icon_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_drag_icon *drag_icon = wl_container_of(listener, drag_icon, destroy);
+
+	wl_list_remove(&drag_icon->link);
+	wl_list_remove(&drag_icon->destroy.link);
+	free(drag_icon);
+}
+
+static void
+handle_new_drag_icon(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, new_drag_icon);
+	struct wlr_drag_icon *wlr_drag_icon = data;
+
+	struct cg_drag_icon *drag_icon = calloc(1, sizeof(struct cg_drag_icon));
+	if (!drag_icon) {
+		return;
+	}
+	drag_icon->seat = seat;
+	drag_icon->wlr_drag_icon = wlr_drag_icon;
+
+	drag_icon->destroy.notify = handle_drag_icon_destroy;
+	wl_signal_add(&wlr_drag_icon->events.destroy, &drag_icon->destroy);
+
+	wl_list_insert(&seat->drag_icons, &drag_icon->link);
+
+	drag_icon_update_position(drag_icon);
 }
 
 static void
@@ -619,6 +678,10 @@ cg_seat_create(struct cg_server *server)
 
 	seat->new_input.notify = handle_new_input;
 	wl_signal_add(&server->backend->events.new_input, &seat->new_input);
+
+	wl_list_init(&seat->drag_icons);
+	seat->new_drag_icon.notify = handle_new_drag_icon;
+	wl_signal_add(&seat->seat->events.new_drag_icon, &seat->new_drag_icon);
 
 	return seat;
 }

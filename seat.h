@@ -3,6 +3,7 @@
 
 #include <wayland-server.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -37,6 +38,9 @@ struct cg_seat {
 	struct wl_listener touch_up;
 	struct wl_listener touch_motion;
 
+	struct wl_list drag_icons;
+	struct wl_listener new_drag_icon;
+
 	struct wl_listener request_set_cursor;
 };
 
@@ -63,6 +67,17 @@ struct cg_touch {
 	struct cg_seat *seat;
 	struct wlr_input_device *device;
 
+	struct wl_listener destroy;
+};
+
+struct cg_drag_icon {
+	struct wl_list link; // seat::drag_icons
+	struct cg_seat *seat;
+	struct wlr_drag_icon *wlr_drag_icon;
+	double x;
+	double y;
+
+	struct wl_listener surface_commit;
 	struct wl_listener destroy;
 };
 
