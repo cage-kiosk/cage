@@ -133,7 +133,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		view_for_each_surface(view, render_surface, &rdata);
 		/* If we have dialogs open and this view is not the
 		   top of the stack, draw an overlay. */
-		if (have_dialogs_open(output->server) &&
+		if (view_has_children(output->server, view) &&
 		    view->link.prev != &output->server->views) {
 			render_overlay(renderer, output->wlr_output, width, height);
 		}

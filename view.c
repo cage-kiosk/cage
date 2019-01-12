@@ -112,17 +112,17 @@ void
 view_destroy(struct cg_view *view)
 {
 	struct cg_server *server = view->server;
-	bool terminate = view_is_primary(view);
 
 	if (view->wlr_surface != NULL) {
 		view_unmap(view);
 	}
 	free(view);
 
-	/* If this was our primary view, exit. Otherwise, focus the
+	/* If this was our last primary view, exit. Otherwise, focus the
 	   previous (i.e., next highest in the stack) view. Since
 	   we're still here, we know there is at least one view in the
 	   list. */
+	bool terminate = wl_list_empty(&server->views);
 	if (terminate) {
 		wl_display_terminate(server->wl_display);
 	} else {
