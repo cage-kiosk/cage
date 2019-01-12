@@ -68,6 +68,18 @@ view_is_primary(struct cg_view *view)
 	return view->is_primary(view);
 }
 
+bool
+view_has_children(struct cg_server *server, struct cg_view *parent)
+{
+	struct cg_view *child;
+	wl_list_for_each(child, &server->views, link) {
+		if (parent != child && parent->is_parent(parent, child)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void
 view_position(struct cg_view *view)
 {
