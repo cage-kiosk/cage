@@ -30,15 +30,6 @@
 
 static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 
-bool
-have_dialogs_open(struct cg_server *server)
-{
-	/* We only need to test if there is more than a single
-	   element. We don't need to know the entire length of the
-	   list. */
-	return server->views.next != server->views.prev;
-}
-
 /* XDG toplevels may have nested surfaces, such as popup windows for context
  * menus or tooltips. This function tests if any of those are underneath the
  * coordinates lx and ly (in output Layout Coordinates). If so, it sets the
@@ -90,14 +81,14 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device,
 {
 	struct cg_server *server = seat->server;
 
-	if (state == WLR_BUTTON_PRESSED && !have_dialogs_open(server)) {
-		/* Focus that client if the button was pressed and
-		   there are no open dialogs. */
+	if (state == WLR_BUTTON_PRESSED) {
 		double sx, sy;
 		struct wlr_surface *surface;
 		struct cg_view *view = desktop_view_at(server, lx, ly,
 						       &surface, &sx, &sy);
-		if (view) {
+		/* Focus that client if the button was pressed and
+		   it has no open dialogs. */
+		if (view && !view_has_children(server, view)) {
 			seat_set_focus(seat, view);
 		}
 	}
@@ -726,7 +717,7 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 		view_activate(prev_view, false);
 	}
 
-	/* Move the view to the front, but only if it isn't the
+	/* Move the view to the front, but only if it isn't a
 	   fullscreen view. */
 	if (!view_is_primary(view)) {
 		wl_list_remove(&view->link);
