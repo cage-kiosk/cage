@@ -58,6 +58,12 @@ is_primary(struct cg_view *view)
 	return parent == NULL; /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL */
 }
 
+static bool
+is_parent(struct cg_view *parent, struct cg_view *child)
+{
+	return child->xdg_surface->toplevel->parent == parent->xdg_surface;
+}
+
 static void
 handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 {
@@ -106,4 +112,5 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	view->for_each_surface = for_each_surface;
 	view->wlr_surface_at = wlr_surface_at;
 	view->is_primary = is_primary;
+	view->is_parent = is_parent;
 }
