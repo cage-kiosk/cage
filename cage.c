@@ -183,6 +183,11 @@ main(int argc, char *argv[])
 
 #if CAGE_HAS_XWAYLAND
 	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
+	if (!xwayland) {
+		wlr_log(WLR_ERROR, "Cannot create XWayland server");
+		ret = 1;
+		goto end;
+	}
 	server.new_xwayland_surface.notify = handle_xwayland_surface_new;
 	wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
 
@@ -227,9 +232,7 @@ main(int argc, char *argv[])
 	}
 
 #if CAGE_HAS_XWAYLAND
-	if (xwayland) {
-		wlr_xwayland_set_seat(xwayland, server.seat->seat);
-	}
+	wlr_xwayland_set_seat(xwayland, server.seat->seat);
 #endif
 
 	pid_t pid;
