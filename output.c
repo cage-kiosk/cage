@@ -140,6 +140,9 @@ handle_output_frame(struct wl_listener *listener, void *data)
 	}
 
 	drag_icons_for_each_surface(output->server, render_surface, &rdata);
+	/* Draw software cursor in case hardware cursors aren't
+	   available. This is a no-op when they are. */
+	wlr_output_render_software_cursors(output->wlr_output, NULL);
 
 	wlr_renderer_end(renderer);
 	wlr_output_swap_buffers(output->wlr_output, NULL, NULL);
