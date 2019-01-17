@@ -158,6 +158,11 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 
 	view_init(&xwayland_view->view, server, CAGE_XWAYLAND_VIEW, &xwayland_view_impl);
 	xwayland_view->xwayland_surface = xwayland_surface;
+	if (xwayland_surface->override_redirect) {
+		struct cg_view *view = &xwayland_view->view;
+		view->x = xwayland_surface->x;
+		view->y = xwayland_surface->y;
+	}
 
 	xwayland_view->map.notify = handle_xwayland_surface_map;
 	wl_signal_add(&xwayland_surface->events.map, &xwayland_view->map);
