@@ -222,6 +222,8 @@ main(int argc, char *argv[])
 	if (rc < 0) {
 		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY.",
 			      "Clients may not be able to connect");
+	} else {
+		wlr_log(WLR_DEBUG, "Cage is running on Wayland display %s", socket);
 	}
 
 #if CAGE_HAS_XWAYLAND
