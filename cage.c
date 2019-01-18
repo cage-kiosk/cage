@@ -242,16 +242,17 @@ main(int argc, char *argv[])
 	}
 
 	wl_display_run(server.wl_display);
+
+#if CAGE_HAS_XWAYLAND
+	wlr_xwayland_destroy(xwayland);
+	wlr_xcursor_manager_destroy(xcursor_manager);
+#endif
 	wl_display_destroy_clients(server.wl_display);
 
 	waitpid(pid, NULL, 0);
 
 end:
 	cg_seat_destroy(server.seat);
-#if CAGE_HAS_XWAYLAND
-	wlr_xwayland_destroy(xwayland);
-	wlr_xcursor_manager_destroy(xcursor_manager);
-#endif
 	wlr_xdg_shell_destroy(xdg_shell);
 	wlr_idle_inhibit_v1_destroy(server.idle_inhibit_v1);
 	if (server.idle) {
