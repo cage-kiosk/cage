@@ -112,22 +112,40 @@ void
 view_destroy(struct cg_view *view)
 {
 	struct cg_server *server = view->server;
+	bool mapped = true;
+
+#if CAGE_HAS_XWAYLAND
+	/* Some applications that aren't yet Wayland-native or
+	   otherwise "special" (e.g. Firefox Nightly and Google
+	   Chrome/Chromium) spawn an XWayland surface upon startup
+	   that is almost immediately closed again. This makes Cage
+	   think there are no views left, which results in it
+	   exiting. However, after this initial (unmapped) surface,
+	   the "real" application surface is opened. This leads to
+	   these applications' startup sequences being interrupted by
+	   Cage exiting. Hence, to work around this issue, Cage checks
+	   whether an XWayland surface has been mapped and exits only
+	   if 1) the XWayland surface has been mapped and 2) this was
+	   the last surface Cage manages. */
+	if (view->type == CAGE_XWAYLAND_VIEW) {
+		mapped = view->xwayland_surface->mapped;
+	}
+#endif
 
 	if (view->wlr_surface != NULL) {
 		view_unmap(view);
 	}
 	free(view);
 
-	/* If this was our last primary view, exit. Otherwise, focus the
-	   previous (i.e., next highest in the stack) view. Since
-	   we're still here, we know there is at least one view in the
-	   list. */
-	bool terminate = wl_list_empty(&server->views);
-	if (terminate) {
-		wl_display_terminate(server->wl_display);
-	} else {
+	/* If there is a previous view in the list, focus that. */
+	bool empty = wl_list_empty(&server->views);
+	if (!empty) {
 		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
 		seat_set_focus(server->seat, prev);
+	} else if (mapped) {
+		/* The list is empty and the last view has been
+		   mapped, so we can safely exit. */
+		wl_display_terminate(server->wl_display);
 	}
 }
 
