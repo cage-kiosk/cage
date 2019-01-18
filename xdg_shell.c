@@ -61,6 +61,9 @@ is_primary(struct cg_view *view)
 static bool
 is_parent(struct cg_view *parent, struct cg_view *child)
 {
+	if (child->type != CAGE_XDG_SHELL_VIEW) {
+		return false;
+	}
 	return child->xdg_surface->toplevel->parent == parent->xdg_surface;
 }
 

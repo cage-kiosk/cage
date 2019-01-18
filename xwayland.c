@@ -57,6 +57,9 @@ is_primary(struct cg_view *view)
 static bool
 is_parent(struct cg_view *parent, struct cg_view *child)
 {
+	if (child->type != CAGE_XWAYLAND_VIEW) {
+		return false;
+	}
 	return child->xwayland_surface->parent == parent->xwayland_surface;
 }
 
