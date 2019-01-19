@@ -51,8 +51,20 @@ server_protos = declare_dependency(
   sources: server_protos_headers,
 )
 
+if get_option('xwayland')
+  cc = meson.get_compiler('c')
+  wlroots_has_xwayland = cc.get_define('WLR_HAS_XWAYLAND', prefix: '#include <wlr/config.h>', dependencies: wlroots) == '1'
+  if not wlroots_has_xwayland
+    error('Cannot build Cage with XWayland support: wlroots has been built without it')
+  else
+    have_xwayland = true
+  endif
+else
+  have_xwayland = false
+endif
+
 conf_data = configuration_data()
-conf_data.set10('CAGE_HAS_XWAYLAND', get_option('xwayland'))
+conf_data.set10('CAGE_HAS_XWAYLAND', have_xwayland)
 
 cage_sources = [
   'cage.c',
