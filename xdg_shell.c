@@ -91,6 +91,11 @@ static void
 handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_view *view = wl_container_of(listener, view, destroy);
+
+	wl_list_remove(&view->map.link);
+	wl_list_remove(&view->unmap.link);
+	wl_list_remove(&view->destroy.link);
+
 	view_destroy(view);
 }
 
