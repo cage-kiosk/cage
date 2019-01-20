@@ -113,7 +113,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	int width, height;
-	wlr_output_effective_resolution(output->wlr_output, &width, &height);
+	wlr_output_transformed_resolution(output->wlr_output, &width, &height);
 
 	wlr_renderer_begin(renderer, width, height);
 
@@ -152,6 +152,17 @@ handle_output_frame(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_output_transform(struct wl_listener *listener, void *data)
+{
+	struct cg_output *output = wl_container_of(listener, output, transform);
+
+	struct cg_view *view;
+	wl_list_for_each(view, &output->server->views, link) {
+		view_position(view);
+	}
+}
+
+static void
 handle_output_mode(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, mode);
@@ -165,12 +176,13 @@ handle_output_mode(struct wl_listener *listener, void *data)
 static void
 handle_output_destroy(struct wl_listener *listener, void *data)
 {
-        struct cg_output *output = wl_container_of(listener, output, destroy);
+	struct cg_output *output = wl_container_of(listener, output, destroy);
 	struct cg_server *server = output->server;
 
-        wl_list_remove(&output->destroy.link);
-        wl_list_remove(&output->frame.link);
-        free(output);
+	wl_list_remove(&output->destroy.link);
+	wl_list_remove(&output->transform.link);
+	wl_list_remove(&output->frame.link);
+	free(output);
 	server->output = NULL;
 
 	/* Since there is no use in continuing without our (single)
@@ -201,6 +213,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wl_signal_add(&wlr_output->events.frame, &server->output->frame);
 	server->output->mode.notify = handle_output_mode;
 	wl_signal_add(&wlr_output->events.mode, &server->output->mode);
+	server->output->transform.notify = handle_output_transform;
+	wl_signal_add(&wlr_output->events.transform, &server->output->transform);
 	server->output->destroy.notify = handle_output_destroy;
 	wl_signal_add(&wlr_output->events.destroy, &server->output->destroy);
 

@@ -40,7 +40,7 @@ view_maximize(struct cg_view *view)
 	struct cg_output *output = view->server->output;
 	int output_width, output_height;
 
-	wlr_output_effective_resolution(output->wlr_output, &output_width, &output_height);
+	wlr_output_transformed_resolution(output->wlr_output, &output_width, &output_height);
 	view->maximize(view, output_width, output_height);
 }
 
@@ -50,7 +50,7 @@ view_center(struct cg_view *view)
 	struct wlr_output *output = view->server->output->wlr_output;
 
 	int output_width, output_height;
-	wlr_output_effective_resolution(output, &output_width, &output_height);
+	wlr_output_transformed_resolution(output, &output_width, &output_height);
 
 	int width, height;
 	view->get_geometry(view, &width, &height);
