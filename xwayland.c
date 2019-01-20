@@ -108,10 +108,20 @@ wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double
 }
 
 static void
+handle_xwayland_surface_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, commit);
+	struct cg_view *view = &xwayland_view->view;
+	view_damage_surface(view);
+}
+
+static void
 handle_xwayland_surface_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, unmap);
 	struct cg_view *view = &xwayland_view->view;
+
+	wl_list_remove(&xwayland_view->commit.link);
 
 	view_unmap(view);
 }
@@ -126,6 +136,9 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 		view->x = xwayland_view->xwayland_surface->x;
 		view->y = xwayland_view->xwayland_surface->y;
 	}
+
+	xwayland_view->commit.notify = handle_xwayland_surface_commit;
+	wl_signal_add(&xwayland_view->xwayland_surface->surface->events.commit, &xwayland_view->commit);
 
 	xwayland_view->ever_been_mapped = true;
 	view_map(view, xwayland_view->xwayland_surface->surface);

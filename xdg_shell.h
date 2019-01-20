@@ -13,6 +13,7 @@ struct cg_xdg_shell_view {
 	struct wl_listener destroy;
 	struct wl_listener unmap;
 	struct wl_listener map;
+	struct wl_listener commit;
 	// TODO: allow applications to go to fullscreen from maximized?
 	// struct wl_listener request_fullscreen;
 };

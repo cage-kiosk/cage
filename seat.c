@@ -529,10 +529,18 @@ handle_cursor_motion(struct wl_listener *listener, void *data)
 }
 
 static void
+drag_icon_damage(struct cg_drag_icon *drag_icon)
+{
+	output_damage_drag_icon(drag_icon->seat->server->output, drag_icon);
+}
+
+static void
 drag_icon_update_position(struct cg_drag_icon *drag_icon)
 {
 	struct wlr_drag_icon *wlr_icon = drag_icon->wlr_drag_icon;
 	struct cg_seat *seat = drag_icon->seat;
+
+	drag_icon_damage(drag_icon);
 
 	if (wlr_icon->is_pointer) {
 		drag_icon->x = seat->cursor->x;
@@ -546,6 +554,8 @@ drag_icon_update_position(struct cg_drag_icon *drag_icon)
 		drag_icon->x = seat->touch_x;
 		drag_icon->y = seat->touch_y;
 	}
+
+	drag_icon_damage(drag_icon);
 }
 
 static void

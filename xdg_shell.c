@@ -106,10 +106,20 @@ wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double
 }
 
 static void
+handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
+	struct cg_view *view = &xdg_shell_view->view;
+	view_damage_surface(view);
+}
+
+static void
 handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
+
+	wl_list_remove(&xdg_shell_view->commit.link);
 
 	view_unmap(view);
 }
@@ -119,6 +129,9 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
 	struct cg_view *view = &xdg_shell_view->view;
+
+	xdg_shell_view->commit.notify = handle_xdg_shell_surface_commit;
+	wl_signal_add(&xdg_shell_view->xdg_surface->surface->events.commit, &xdg_shell_view->commit);
 
 	view_map(view, xdg_shell_view->xdg_surface->surface);
 }

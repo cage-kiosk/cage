@@ -23,10 +23,14 @@ if get_option('buildtype').startswith('debug')
   add_project_arguments('-DDEBUG', language : 'c')
 endif
 
+cc = meson.get_compiler('c')
+
 wlroots        = dependency('wlroots')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
+pixman         = dependency('pixman-1')
 xkbcommon      = dependency('xkbcommon')
+math           = cc.find_library('m')
 
 wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
 wayland_scanner = find_program('wayland-scanner')
@@ -52,7 +56,6 @@ server_protos = declare_dependency(
 )
 
 if get_option('xwayland')
-  cc = meson.get_compiler('c')
   wlroots_has_xwayland = cc.get_define('WLR_HAS_XWAYLAND', prefix: '#include <wlr/config.h>', dependencies: wlroots) == '1'
   if not wlroots_has_xwayland
     error('Cannot build Cage with XWayland support: wlroots has been built without it')
@@ -100,6 +103,8 @@ executable(
     wayland_server,
     wlroots,
     xkbcommon,
+    pixman,
+    math,
   ],
   install: true,
 )
