@@ -180,6 +180,7 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	struct cg_server *server = output->server;
 
 	wl_list_remove(&output->destroy.link);
+	wl_list_remove(&output->mode.link);
 	wl_list_remove(&output->transform.link);
 	wl_list_remove(&output->frame.link);
 	free(output);
