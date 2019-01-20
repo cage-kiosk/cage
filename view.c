@@ -46,6 +46,12 @@ view_is_transient_for(struct cg_view *child, struct cg_view *parent) {
 }
 
 void
+view_damage_surface(struct cg_view *view)
+{
+	output_damage_view_surface(view->server->output, view);
+}
+
+void
 view_activate(struct cg_view *view, bool activate)
 {
 	view->impl->activate(view, activate);
