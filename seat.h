@@ -77,7 +77,6 @@ struct cg_drag_icon {
 	double x;
 	double y;
 
-	struct wl_listener surface_commit;
 	struct wl_listener destroy;
 };
 
