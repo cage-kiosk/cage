@@ -14,6 +14,7 @@
 
 #include "output.h"
 #include "seat.h"
+#include "view.h"
 
 struct cg_server {
 	struct wl_display *wl_display;
@@ -36,5 +37,7 @@ struct cg_server {
 	struct wl_listener new_xwayland_surface;
 #endif
 };
+
+void set_window_title(struct cg_server *server, struct cg_view *view);
 
 #endif

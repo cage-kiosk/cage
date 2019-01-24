@@ -724,7 +724,8 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 		wl_list_insert(&server->views, &view->link);
 	}
 
-        view_activate(view, true);
+	view_activate(view, true);
+	set_window_title(server, view);
 
 	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(wlr_seat);
 	if (keyboard) {

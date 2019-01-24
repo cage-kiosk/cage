@@ -6,8 +6,11 @@
  * See the LICENSE file accompanying this file.
  */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wayland-server.h>
 #include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_output.h>
@@ -17,6 +20,13 @@
 #include "seat.h"
 #include "server.h"
 #include "view.h"
+
+char *
+view_get_title(struct cg_view *view)
+{
+	const char *title = view->get_title(view);
+	return strndup(title, strlen(title));
+}
 
 void
 view_activate(struct cg_view *view, bool activate)
