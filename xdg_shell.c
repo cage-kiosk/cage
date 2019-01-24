@@ -14,6 +14,12 @@
 #include "server.h"
 #include "view.h"
 
+static char *
+get_title(struct cg_view *view)
+{
+	return view->xdg_surface->toplevel->title;
+}
+
 static void
 activate(struct cg_view *view, bool activate)
 {
@@ -109,6 +115,7 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	view->destroy.notify = handle_xdg_shell_surface_destroy;
 	wl_signal_add(&xdg_surface->events.destroy, &view->destroy);
 
+	view->get_title = get_title;
 	view->activate = activate;
 	view->maximize = maximize;
 	view->get_geometry = get_geometry;

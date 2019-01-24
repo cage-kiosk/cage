@@ -41,6 +41,7 @@ struct cg_view {
 	// TODO: allow applications to go to fullscreen from maximized?
 	// struct wl_listener request_fullscreen;
 
+	char *(*get_title)(struct cg_view *view);
 	void (*activate)(struct cg_view *view, bool activate);
 	void (*maximize)(struct cg_view *view, int output_width, int output_height);
 	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
@@ -52,6 +53,7 @@ struct cg_view {
 	bool (*is_parent)(struct cg_view *parent, struct cg_view *child);
 };
 
+char *view_get_title(struct cg_view *view);
 void view_activate(struct cg_view *view, bool activate);
 void view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data);
 struct wlr_surface *view_wlr_surface_at(struct cg_view *view, double sx, double sy,
