@@ -13,6 +13,7 @@
 
 #include "server.h"
 #include "view.h"
+#include "xdg_shell.h"
 
 static char *
 get_title(struct cg_view *view)
