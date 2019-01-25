@@ -36,6 +36,10 @@ struct cg_server {
 #if CAGE_HAS_XWAYLAND
 	struct wl_listener new_xwayland_surface;
 #endif
+
+#ifdef DEBUG
+	bool debug_damage_tracking;
+#endif
 };
 
 void set_window_title(struct cg_server *server, struct cg_view *view);
