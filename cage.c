@@ -55,12 +55,13 @@ set_window_title(struct cg_server *server, struct cg_view *view)
 		return;
 	}
 
-	const char *title = view_get_title(view);
+	char *title = view_get_title(view);
 	if (is_wl) {
 		wlr_wl_output_set_title(output, title);
 	} else if (is_x11) {
 		wlr_x11_output_set_title(output, title);
 	}
+	free(title);
 }
 
 static bool
