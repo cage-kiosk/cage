@@ -131,10 +131,13 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		rdata.x = view->x;
 		rdata.y = view->y;
 		view_for_each_surface(view, render_surface, &rdata);
-		/* If we have dialogs open and this view is not the
-		   top of the stack, draw an overlay. */
-		if (view_has_children(output->server, view) &&
-		    view->link.prev != &output->server->views) {
+		/* If this view is on top of the stack and has
+		   children, draw an overlay over it. */
+		// TODO: replace this hacky mess with a transient_for
+		// pointer in cg_view or something and then draw an
+		// overlay over this cg_view only.
+		if (&view->link == output->server->views.prev &&
+		    view_has_children(output->server, view)) {
 			render_overlay(renderer, output->wlr_output, width, height);
 		}
 	}
