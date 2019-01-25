@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include <getopt.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,6 +98,42 @@ handle_signal(int signal, void *data)
 	}
 }
 
+static void
+usage(FILE *file, const char *cage)
+{
+	fprintf(file, "Usage: %s APPLICATION\n"
+		"\n"
+		" -D\t Turn on damage tracking debugging\n"
+		" -h\t Display this help message\n",
+		cage);
+}
+
+static bool
+parse_args(struct cg_server *server, int argc, char *argv[])
+{
+	int c;
+	while ((c = getopt(argc, argv, "hD")) != -1) {
+		switch (c) {
+		case 'D':
+			server->debug_damage_tracking = true;
+			break;
+		case 'h':
+			usage(stdout, argv[0]);
+			return false;
+		default:
+			usage(stderr, argv[0]);
+			return false;
+		}
+	}
+
+	if (optind == 0) {
+		usage(stderr, argv[0]);
+		return false;
+	}
+
+	return true;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -112,8 +149,7 @@ main(int argc, char *argv[])
 #endif
 	int ret = 0;
 
-	if (argc < 2) {
-		printf("Usage: %s APPLICATION\n", argv[0]);
+	if (!parse_args(&server, argc, argv)) {
 		return 1;
 	}
 
@@ -259,7 +295,7 @@ main(int argc, char *argv[])
 #endif
 
 	pid_t pid;
-	if (!spawn_primary_client(argv + 1, &pid)) {
+	if (!spawn_primary_client(argv + optind, &pid)) {
 		ret = 1;
 		goto end;
 	}

@@ -219,8 +219,9 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	}
 
 #ifdef DEBUG
-	// TODO: guard this behind a flag.
-	wlr_renderer_clear(renderer, (float[]){1, 0, 0, 1});
+	if (output->server->debug_damage_tracking) {
+		wlr_renderer_clear(renderer, (float[]){1, 0, 0, 1});
+	}
 #endif
 
 	float color[4] = {0.3, 0.3, 0.3, 1.0};
@@ -255,7 +256,9 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	wlr_renderer_end(renderer);
 
 #ifdef DEBUG
-	pixman_region32_union_rect(&damage, &damage, 0, 0, output_width, output_height);
+	if (output->server->debug_damage_tracking) {
+		pixman_region32_union_rect(&damage, &damage, 0, 0, output_width, output_height);
+	}
 #endif
 
 	enum wl_output_transform transform = wlr_output_transform_invert(output->wlr_output->transform);
