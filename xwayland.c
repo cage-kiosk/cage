@@ -47,14 +47,22 @@ is_primary(struct cg_view *view)
 }
 
 static bool
-is_parent(struct cg_view *parent, struct cg_view *child)
+is_transient_for(struct cg_view *child, struct cg_view *parent)
 {
-	if (child->type != CAGE_XWAYLAND_VIEW) {
+	if (parent->type != CAGE_XDG_SHELL_VIEW) {
 		return false;
 	}
-	struct cg_xwayland_view *_parent = xwayland_view_from_view(parent);
 	struct cg_xwayland_view *_child = xwayland_view_from_view(child);
-	return _child->xwayland_surface->parent == _parent->xwayland_surface;
+	struct wlr_xwayland_surface *xwayland_surface = _child->xwayland_surface;
+	struct cg_xwayland_view *_parent = xwayland_view_from_view(parent);
+	struct wlr_xwayland_surface *parent_xwayland_surface = _parent->xwayland_surface;
+	while (xwayland_surface) {
+		if (xwayland_surface->parent == parent_xwayland_surface) {
+			return true;
+		}
+		xwayland_surface = xwayland_surface->parent;
+	}
+	return false;
 }
 
 static void
@@ -128,7 +136,7 @@ static const struct cg_view_impl xwayland_view_impl = {
 	.get_title = get_title,
 	.get_geometry = get_geometry,
 	.is_primary = is_primary,
-	.is_parent = is_parent,
+	.is_transient_for = is_transient_for,
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,

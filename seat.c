@@ -89,9 +89,14 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device,
 		struct wlr_surface *surface;
 		struct cg_view *view = desktop_view_at(server, lx, ly,
 						       &surface, &sx, &sy);
+		struct cg_view *current = seat_get_focus(seat);
+		if (view == current) {
+			return;
+		}
+
 		/* Focus that client if the button was pressed and
 		   it has no open dialogs. */
-		if (view && !view_has_children(server, view)) {
+		if (view && !view_is_transient_for(current, view)) {
 			seat_set_focus(seat, view);
 		}
 	}

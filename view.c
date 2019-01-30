@@ -38,15 +38,8 @@ view_is_primary(struct cg_view *view)
 }
 
 bool
-view_has_children(struct cg_server *server, struct cg_view *parent)
-{
-	struct cg_view *child;
-	wl_list_for_each(child, &server->views, link) {
-		if (parent != child && parent->impl->is_parent(parent, child)) {
-			return true;
-		}
-	}
-	return false;
+view_is_transient_for(struct cg_view *child, struct cg_view *parent) {
+	return child->impl->is_transient_for(child, parent);
 }
 
 void
