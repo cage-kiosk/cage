@@ -31,6 +31,37 @@ get_title(struct cg_view *view)
 }
 
 static void
+get_geometry(struct cg_view *view, int *width_out, int *height_out)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	struct wlr_box geom;
+
+	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_surface, &geom);
+	*width_out = geom.width;
+	*height_out = geom.height;
+}
+
+static bool
+is_primary(struct cg_view *view)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	struct wlr_xdg_surface *parent = xdg_shell_view->xdg_surface->toplevel->parent;
+	/* FIXME: role is 0? */
+	return parent == NULL; /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL */
+}
+
+static bool
+is_parent(struct cg_view *parent, struct cg_view *child)
+{
+	if (child->type != CAGE_XDG_SHELL_VIEW) {
+		return false;
+	}
+	struct cg_xdg_shell_view *_parent = xdg_shell_view_from_view(parent);
+	struct cg_xdg_shell_view *_child = xdg_shell_view_from_view(child);
+	return _child->xdg_surface->toplevel->parent == _parent->xdg_surface;
+}
+
+static void
 activate(struct cg_view *view, bool activate)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
@@ -53,17 +84,6 @@ destroy(struct cg_view *view)
 }
 
 static void
-get_geometry(struct cg_view *view, int *width_out, int *height_out)
-{
-	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_box geom;
-
-	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_surface, &geom);
-	*width_out = geom.width;
-	*height_out = geom.height;
-}
-
-static void
 for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
@@ -75,26 +95,6 @@ wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
 	return wlr_xdg_surface_surface_at(xdg_shell_view->xdg_surface, sx, sy, sub_x, sub_y);
-}
-
-static bool
-is_primary(struct cg_view *view)
-{
-	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_xdg_surface *parent = xdg_shell_view->xdg_surface->toplevel->parent;
-	/* FIXME: role is 0? */
-	return parent == NULL; /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL */
-}
-
-static bool
-is_parent(struct cg_view *parent, struct cg_view *child)
-{
-	if (child->type != CAGE_XDG_SHELL_VIEW) {
-		return false;
-	}
-	struct cg_xdg_shell_view *_parent = xdg_shell_view_from_view(parent);
-	struct cg_xdg_shell_view *_child = xdg_shell_view_from_view(child);
-	return _child->xdg_surface->toplevel->parent == _parent->xdg_surface;
 }
 
 static void

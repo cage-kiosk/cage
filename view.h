@@ -33,26 +33,24 @@ struct cg_view {
 
 struct cg_view_impl {
 	char *(*get_title)(struct cg_view *view);
+	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
+	bool (*is_primary)(struct cg_view *view);
+	bool (*is_parent)(struct cg_view *parent, struct cg_view *child);
 	void (*activate)(struct cg_view *view, bool activate);
 	void (*maximize)(struct cg_view *view, int output_width, int output_height);
-	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
 	void (*destroy)(struct cg_view *view);
 	void (*for_each_surface)(struct cg_view *view, wlr_surface_iterator_func_t iterator,
 				 void *data);
 	struct wlr_surface *(*wlr_surface_at)(struct cg_view *view, double sx, double sy,
 					      double *sub_x, double *sub_y);
-	bool (*is_primary)(struct cg_view *view);
-	bool (*is_parent)(struct cg_view *parent, struct cg_view *child);
 };
 
 char *view_get_title(struct cg_view *view);
-void view_activate(struct cg_view *view, bool activate);
-void view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data);
-struct wlr_surface *view_wlr_surface_at(struct cg_view *view, double sx, double sy,
-					double *sub_x, double *sub_y);
 bool view_is_primary(struct cg_view *view);
 bool view_has_children(struct cg_server *server, struct cg_view *view);
+void view_activate(struct cg_view *view, bool activate);
 void view_position(struct cg_view *view);
+void view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data);
 void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);
@@ -60,5 +58,7 @@ void view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type
 	       const struct cg_view_impl *impl);
 
 struct cg_view *view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface);
+struct wlr_surface *view_wlr_surface_at(struct cg_view *view, double sx, double sy,
+					double *sub_x, double *sub_y);
 
 #endif

@@ -31,6 +31,33 @@ get_title(struct cg_view *view)
 }
 
 static void
+get_geometry(struct cg_view *view, int *width_out, int *height_out)
+{
+	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+	*width_out = xwayland_view->xwayland_surface->surface->current.width;
+	*height_out = xwayland_view->xwayland_surface->surface->current.height;
+}
+
+static bool
+is_primary(struct cg_view *view)
+{
+	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+	struct wlr_xwayland_surface *parent = xwayland_view->xwayland_surface->parent;
+	return parent == NULL;
+}
+
+static bool
+is_parent(struct cg_view *parent, struct cg_view *child)
+{
+	if (child->type != CAGE_XWAYLAND_VIEW) {
+		return false;
+	}
+	struct cg_xwayland_view *_parent = xwayland_view_from_view(parent);
+	struct cg_xwayland_view *_child = xwayland_view_from_view(child);
+	return _child->xwayland_surface->parent == _parent->xwayland_surface;
+}
+
+static void
 activate(struct cg_view *view, bool activate)
 {
 	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
@@ -53,14 +80,6 @@ destroy(struct cg_view *view)
 }
 
 static void
-get_geometry(struct cg_view *view, int *width_out, int *height_out)
-{
-	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	*width_out = xwayland_view->xwayland_surface->surface->current.width;
-	*height_out = xwayland_view->xwayland_surface->surface->current.height;
-}
-
-static void
 for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
 {
 	wlr_surface_for_each_surface(view->wlr_surface, iterator, data);
@@ -70,25 +89,6 @@ static struct wlr_surface *
 wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
 {
 	return wlr_surface_surface_at(view->wlr_surface, sx, sy, sub_x, sub_y);
-}
-
-static bool
-is_primary(struct cg_view *view)
-{
-	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	struct wlr_xwayland_surface *parent = xwayland_view->xwayland_surface->parent;
-	return parent == NULL;
-}
-
-static bool
-is_parent(struct cg_view *parent, struct cg_view *child)
-{
-	if (child->type != CAGE_XWAYLAND_VIEW) {
-		return false;
-	}
-	struct cg_xwayland_view *_parent = xwayland_view_from_view(parent);
-	struct cg_xwayland_view *_child = xwayland_view_from_view(child);
-	return _child->xwayland_surface->parent == _parent->xwayland_surface;
 }
 
 static void

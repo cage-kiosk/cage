@@ -28,6 +28,24 @@ view_get_title(struct cg_view *view)
 	return strndup(title, strlen(title));
 }
 
+bool
+view_is_primary(struct cg_view *view)
+{
+	return view->impl->is_primary(view);
+}
+
+bool
+view_has_children(struct cg_server *server, struct cg_view *parent)
+{
+	struct cg_view *child;
+	wl_list_for_each(child, &server->views, link) {
+		if (parent != child && parent->impl->is_parent(parent, child)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void
 view_activate(struct cg_view *view, bool activate)
 {
@@ -60,36 +78,6 @@ view_center(struct cg_view *view)
 }
 
 void
-view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
-{
-	view->impl->for_each_surface(view, iterator, data);
-}
-
-struct wlr_surface *
-view_wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
-{
-	return view->impl->wlr_surface_at(view, sx, sy, sub_x, sub_y);
-}
-
-bool
-view_is_primary(struct cg_view *view)
-{
-	return view->impl->is_primary(view);
-}
-
-bool
-view_has_children(struct cg_server *server, struct cg_view *parent)
-{
-	struct cg_view *child;
-	wl_list_for_each(child, &server->views, link) {
-		if (parent != child && parent->impl->is_parent(parent, child)) {
-			return true;
-		}
-	}
-	return false;
-}
-
-void
 view_position(struct cg_view *view)
 {
 	if (view_is_primary(view)) {
@@ -97,6 +85,12 @@ view_position(struct cg_view *view)
 	} else {
 		view_center(view);
 	}
+}
+
+void
+view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
+{
+	view->impl->for_each_surface(view, iterator, data);
 }
 
 void
@@ -159,4 +153,10 @@ view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface)
 		}
 	}
 	return NULL;
+}
+
+struct wlr_surface *
+view_wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
+{
+	return view->impl->wlr_surface_at(view, sx, sy, sub_x, sub_y);
 }
