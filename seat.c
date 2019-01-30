@@ -692,7 +692,7 @@ struct cg_view *
 seat_get_focus(struct cg_seat *seat)
 {
 	struct wlr_surface *prev_surface = seat->seat->keyboard_state.focused_surface;
-	return cg_view_from_wlr_surface(seat->server, prev_surface);
+	return view_from_wlr_surface(seat->server, prev_surface);
 }
 
 void

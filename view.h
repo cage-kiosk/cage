@@ -64,7 +64,8 @@ void view_position(struct cg_view *view);
 void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);
-struct cg_view *cg_view_create(struct cg_server *server);
-struct cg_view *cg_view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface);
+struct cg_view *view_create(struct cg_server *server);
+
+struct cg_view *view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface);
 
 #endif

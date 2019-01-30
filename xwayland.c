@@ -102,7 +102,7 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 	struct cg_server *server = wl_container_of(listener, server, new_xwayland_surface);
 	struct wlr_xwayland_surface *xwayland_surface = data;
 
-	struct cg_view *view = cg_view_create(server);
+	struct cg_view *view = view_create(server);
 	view->type = CAGE_XWAYLAND_VIEW;
 	view->xwayland_surface = xwayland_surface;
 

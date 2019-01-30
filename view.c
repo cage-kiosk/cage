@@ -160,7 +160,7 @@ view_destroy(struct cg_view *view)
 }
 
 struct cg_view *
-cg_view_create(struct cg_server *server)
+view_create(struct cg_server *server)
 {
 	struct cg_view *view = calloc(1, sizeof(struct cg_view));
 
@@ -169,7 +169,7 @@ cg_view_create(struct cg_server *server)
 }
 
 struct cg_view *
-cg_view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface)
+view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface)
 {
 	struct cg_view *view;
 	wl_list_for_each(view, &server->views, link) {
