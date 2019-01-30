@@ -110,7 +110,7 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	struct cg_view *view = cg_view_create(server);
+	struct cg_view *view = view_create(server);
 	view->type = CAGE_XDG_SHELL_VIEW;
 	view->xdg_surface = xdg_surface;
 
