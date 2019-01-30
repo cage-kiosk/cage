@@ -10,6 +10,20 @@ struct cg_xwayland_view {
 	struct cg_view view;
 	struct wlr_xwayland_surface *xwayland_surface;
 
+	/* Some applications that aren't yet Wayland-native or
+	   otherwise "special" (e.g. Firefox Nightly and Google
+	   Chrome/Chromium) spawn an XWayland surface upon startup
+	   that is almost immediately closed again. This makes Cage
+	   think there are no views left, which results in it
+	   exiting. However, after this initial (unmapped) surface,
+	   the "real" application surface is opened. This leads to
+	   these applications' startup sequences being interrupted by
+	   Cage exiting. Hence, to work around this issue, Cage checks
+	   whether an XWayland surface has ever been mapped and exits
+	   only if 1) the XWayland surface has ever been mapped and 2)
+	   this was the last surface Cage manages. */
+	bool ever_been_mapped;
+
 	struct wl_listener destroy;
 	struct wl_listener unmap;
 	struct wl_listener map;
