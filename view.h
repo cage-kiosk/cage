@@ -35,7 +35,7 @@ struct cg_view_impl {
 	char *(*get_title)(struct cg_view *view);
 	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
 	bool (*is_primary)(struct cg_view *view);
-	bool (*is_parent)(struct cg_view *parent, struct cg_view *child);
+	bool (*is_transient_for)(struct cg_view *child, struct cg_view *parent);
 	void (*activate)(struct cg_view *view, bool activate);
 	void (*maximize)(struct cg_view *view, int output_width, int output_height);
 	void (*destroy)(struct cg_view *view);
@@ -47,7 +47,7 @@ struct cg_view_impl {
 
 char *view_get_title(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
-bool view_has_children(struct cg_server *server, struct cg_view *view);
+bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
 void view_activate(struct cg_view *view, bool activate);
 void view_position(struct cg_view *view);
 void view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data);
