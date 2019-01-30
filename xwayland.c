@@ -106,6 +106,7 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, map);
 	struct cg_view *view = &xwayland_view->view;
 
+	xwayland_view->ever_been_mapped = true;
 	view_map(view, xwayland_view->xwayland_surface->surface);
 }
 
