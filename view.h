@@ -28,23 +28,15 @@ struct cg_view {
 	int x, y;
 
 	enum cg_view_type type;
-	union {
-		struct wlr_xdg_surface *xdg_surface;
-#if CAGE_HAS_XWAYLAND
-		struct wlr_xwayland_surface *xwayland_surface;
-#endif
-	};
+	const struct cg_view_impl *impl;
+};
 
-	struct wl_listener destroy;
-	struct wl_listener unmap;
-	struct wl_listener map;
-	// TODO: allow applications to go to fullscreen from maximized?
-	// struct wl_listener request_fullscreen;
-
+struct cg_view_impl {
 	char *(*get_title)(struct cg_view *view);
 	void (*activate)(struct cg_view *view, bool activate);
 	void (*maximize)(struct cg_view *view, int output_width, int output_height);
 	void (*get_geometry)(struct cg_view *view, int *width_out, int *height_out);
+	void (*destroy)(struct cg_view *view);
 	void (*for_each_surface)(struct cg_view *view, wlr_surface_iterator_func_t iterator,
 				 void *data);
 	struct wlr_surface *(*wlr_surface_at)(struct cg_view *view, double sx, double sy,
@@ -64,7 +56,8 @@ void view_position(struct cg_view *view);
 void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);
-struct cg_view *view_create(struct cg_server *server);
+void view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type,
+	       const struct cg_view_impl *impl);
 
 struct cg_view *view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface);
 

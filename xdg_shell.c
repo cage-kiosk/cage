@@ -7,60 +7,81 @@
  */
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <wayland-server.h>
 #include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/util/log.h>
 
 #include "server.h"
 #include "view.h"
 #include "xdg_shell.h"
 
+static struct cg_xdg_shell_view *
+xdg_shell_view_from_view(struct cg_view *view)
+{
+	return (struct cg_xdg_shell_view *) view;
+}
+
 static char *
 get_title(struct cg_view *view)
 {
-	return view->xdg_surface->toplevel->title;
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	return xdg_shell_view->xdg_surface->toplevel->title;
 }
 
 static void
 activate(struct cg_view *view, bool activate)
 {
-	wlr_xdg_toplevel_set_activated(view->xdg_surface, activate);
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	wlr_xdg_toplevel_set_activated(xdg_shell_view->xdg_surface, activate);
 }
 
 static void
 maximize(struct cg_view *view, int output_width, int output_height)
 {
-	wlr_xdg_toplevel_set_size(view->xdg_surface, output_width, output_height);
-	wlr_xdg_toplevel_set_maximized(view->xdg_surface, true);
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_surface, output_width, output_height);
+	wlr_xdg_toplevel_set_maximized(xdg_shell_view->xdg_surface, true);
+}
+
+static void
+destroy(struct cg_view *view)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	free(xdg_shell_view);
 }
 
 static void
 get_geometry(struct cg_view *view, int *width_out, int *height_out)
 {
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
 	struct wlr_box geom;
 
-	wlr_xdg_surface_get_geometry(view->xdg_surface, &geom);
+	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_surface, &geom);
 	*width_out = geom.width;
 	*height_out = geom.height;
 }
 
 static void
-for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator,
-		 void *data)
+for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
 {
-	wlr_xdg_surface_for_each_surface(view->xdg_surface, iterator, data);
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	wlr_xdg_surface_for_each_surface(xdg_shell_view->xdg_surface, iterator, data);
 }
 
 static struct wlr_surface *
 wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
 {
-	return wlr_xdg_surface_surface_at(view->xdg_surface, sx, sy, sub_x, sub_y);
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	return wlr_xdg_surface_surface_at(xdg_shell_view->xdg_surface, sx, sy, sub_x, sub_y);
 }
 
 static bool
 is_primary(struct cg_view *view)
 {
-	struct wlr_xdg_surface *parent = view->xdg_surface->toplevel->parent;
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	struct wlr_xdg_surface *parent = xdg_shell_view->xdg_surface->toplevel->parent;
 	/* FIXME: role is 0? */
 	return parent == NULL; /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL */
 }
@@ -71,34 +92,54 @@ is_parent(struct cg_view *parent, struct cg_view *child)
 	if (child->type != CAGE_XDG_SHELL_VIEW) {
 		return false;
 	}
-	return child->xdg_surface->toplevel->parent == parent->xdg_surface;
+	struct cg_xdg_shell_view *_parent = xdg_shell_view_from_view(parent);
+	struct cg_xdg_shell_view *_child = xdg_shell_view_from_view(child);
+	return _child->xdg_surface->toplevel->parent == _parent->xdg_surface;
 }
 
 static void
 handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 {
-	struct cg_view *view = wl_container_of(listener, view, unmap);
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
+	struct cg_view *view = &xdg_shell_view->view;
+
 	view_unmap(view);
 }
 
 static void
 handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 {
-	struct cg_view *view = wl_container_of(listener, view, map);
-	view_map(view, view->xdg_surface->surface);
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
+	struct cg_view *view = &xdg_shell_view->view;
+
+	view_map(view, xdg_shell_view->xdg_surface->surface);
 }
 
 static void
 handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
 {
-	struct cg_view *view = wl_container_of(listener, view, destroy);
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, destroy);
+	struct cg_view *view = &xdg_shell_view->view;
 
-	wl_list_remove(&view->map.link);
-	wl_list_remove(&view->unmap.link);
-	wl_list_remove(&view->destroy.link);
+	wl_list_remove(&xdg_shell_view->map.link);
+	wl_list_remove(&xdg_shell_view->unmap.link);
+	wl_list_remove(&xdg_shell_view->destroy.link);
+	xdg_shell_view->xdg_surface = NULL;
 
 	view_destroy(view);
 }
+
+static const struct cg_view_impl xdg_shell_view_impl = {
+	.get_title = get_title,
+	.get_geometry = get_geometry,
+	.is_primary = is_primary,
+	.is_parent = is_parent,
+	.activate = activate,
+	.maximize = maximize,
+	.destroy = destroy,
+	.for_each_surface = for_each_surface,
+	.wlr_surface_at = wlr_surface_at,
+};
 
 void
 handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
@@ -110,23 +151,19 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	struct cg_view *view = view_create(server);
-	view->type = CAGE_XDG_SHELL_VIEW;
-	view->xdg_surface = xdg_surface;
+	struct cg_xdg_shell_view *xdg_shell_view = calloc(1, sizeof(struct cg_xdg_shell_view));
+	if (!xdg_shell_view) {
+		wlr_log(WLR_ERROR, "Failed to allocate XDG Shell view");
+		return;
+	}
 
-	view->map.notify = handle_xdg_shell_surface_map;
-	wl_signal_add(&xdg_surface->events.map, &view->map);
-	view->unmap.notify = handle_xdg_shell_surface_unmap;
-	wl_signal_add(&xdg_surface->events.unmap, &view->unmap);
-	view->destroy.notify = handle_xdg_shell_surface_destroy;
-	wl_signal_add(&xdg_surface->events.destroy, &view->destroy);
+	view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
+	xdg_shell_view->xdg_surface = xdg_surface;
 
-	view->get_title = get_title;
-	view->activate = activate;
-	view->maximize = maximize;
-	view->get_geometry = get_geometry;
-	view->for_each_surface = for_each_surface;
-	view->wlr_surface_at = wlr_surface_at;
-	view->is_primary = is_primary;
-	view->is_parent = is_parent;
+	xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
+	wl_signal_add(&xdg_surface->events.map, &xdg_shell_view->map);
+	xdg_shell_view->unmap.notify = handle_xdg_shell_surface_unmap;
+	wl_signal_add(&xdg_surface->events.unmap, &xdg_shell_view->unmap);
+	xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
+	wl_signal_add(&xdg_surface->events.destroy, &xdg_shell_view->destroy);
 }

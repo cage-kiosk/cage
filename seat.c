@@ -27,6 +27,9 @@
 #include "seat.h"
 #include "server.h"
 #include "view.h"
+#if CAGE_HAS_XWAYLAND
+#include "xwayland.h"
+#endif
 
 static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 
@@ -707,9 +710,11 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 
 #if CAGE_HAS_XWAYLAND
-	if (view->type == CAGE_XWAYLAND_VIEW &&
-	    !wlr_xwayland_or_surface_wants_focus(view->xwayland_surface)) {
-		return;
+	if (view->type == CAGE_XWAYLAND_VIEW) {
+		struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+		if (!wlr_xwayland_or_surface_wants_focus(xwayland_view->xwayland_surface)) {
+			return;
+		}
 	}
 #endif
 
