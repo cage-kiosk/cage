@@ -27,15 +27,6 @@
 #include "server.h"
 #include "view.h"
 
-static void
-render_overlay(struct wlr_renderer *renderer, struct wlr_output *output, int width, int height)
-{
-	struct wlr_box box = { .width = width, .height = height };
-	float color[4] = { 0.0, 0.0, 0.0, 0.3 };
-
-	wlr_render_rect(renderer, &box, color, output->transform_matrix);
-}
-
 /* Used to move all of the data necessary to render a surface from the
  * top-level frame handler to the per-surface render function. */
 struct render_data {
@@ -131,15 +122,6 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		rdata.x = view->x;
 		rdata.y = view->y;
 		view_for_each_surface(view, render_surface, &rdata);
-		/* If this view is on top of the stack and has
-		   children, draw an overlay over it. */
-		// TODO: replace this hacky mess with a transient_for
-		// pointer in cg_view or something and then draw an
-		// overlay over this cg_view only.
-		if (&view->link == output->server->views.prev &&
-		    view_has_children(output->server, view)) {
-			render_overlay(renderer, output->wlr_output, width, height);
-		}
 	}
 
 	drag_icons_for_each_surface(output->server, render_surface, &rdata);
