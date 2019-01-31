@@ -23,6 +23,14 @@ xwayland_view_from_view(struct cg_view *view)
 	return (struct cg_xwayland_view *) view;
 }
 
+bool
+xwayland_view_should_manage(struct cg_view *view)
+{
+	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+	struct wlr_xwayland_surface *xwayland_surface = xwayland_view->xwayland_surface;
+	return !xwayland_surface->override_redirect;
+}
+
 static char *
 get_title(struct cg_view *view)
 {

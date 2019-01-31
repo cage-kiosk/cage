@@ -32,6 +32,7 @@ struct cg_xwayland_view {
 };
 
 struct cg_xwayland_view *xwayland_view_from_view(struct cg_view *view);
+bool xwayland_view_should_manage(struct cg_view *view);
 void handle_xwayland_surface_new(struct wl_listener *listener, void *data);
 
 #endif
