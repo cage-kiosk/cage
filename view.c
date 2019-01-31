@@ -28,6 +28,9 @@ char *
 view_get_title(struct cg_view *view)
 {
 	const char *title = view->impl->get_title(view);
+	if (!title) {
+		return NULL;
+	}
 	return strndup(title, strlen(title));
 }
 
