@@ -32,8 +32,7 @@ a TTY, it'll run with the KMS+DRM backend. In debug mode (default
 build type with Meson), press Alt+Esc to quit. To build a release
 build, use `meson build --buildtype=release`.
 
-Cage is based on the annotated source of
-[TinyWL](https://gist.github.com/ddevault/ae4d1cdcca97ffeb2c35f0878d75dc17) and rootston.
+Cage is based on the annotated source of tinywl and rootston.
 
 ## Bugs
 
