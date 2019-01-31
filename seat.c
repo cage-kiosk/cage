@@ -614,7 +614,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 }
 
 struct cg_seat *
-cg_seat_create(struct cg_server *server)
+seat_create(struct cg_server *server)
 {
 	struct cg_seat *seat = calloc(1, sizeof(struct cg_seat));
 	if (!seat) {

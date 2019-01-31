@@ -170,7 +170,7 @@ main(int argc, char *argv[])
 	server.new_output.notify = handle_new_output;
 	wl_signal_add(&server.backend->events.new_output, &server.new_output);
 
-	server.seat = cg_seat_create(&server);
+	server.seat = seat_create(&server);
 	if (!server.seat) {
 		wlr_log(WLR_ERROR, "Unable to create the seat");
 		ret = 1;
