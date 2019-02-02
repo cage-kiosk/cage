@@ -686,7 +686,7 @@ seat_create(struct cg_server *server)
 }
 
 void
-cg_seat_destroy(struct cg_seat *seat)
+seat_destroy(struct cg_seat *seat)
 {
 	if (!seat) {
 		return;

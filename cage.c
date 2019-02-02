@@ -275,7 +275,7 @@ main(int argc, char *argv[])
 	waitpid(pid, NULL, 0);
 
 end:
-	cg_seat_destroy(server.seat);
+	seat_destroy(server.seat);
 	wlr_xdg_shell_destroy(xdg_shell);
 	wlr_idle_inhibit_v1_destroy(server.idle_inhibit_v1);
 	if (server.idle) {
