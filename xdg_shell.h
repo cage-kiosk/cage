@@ -16,6 +16,16 @@ struct cg_xdg_shell_view {
 	struct wl_listener commit;
 	// TODO: allow applications to go to fullscreen from maximized?
 	// struct wl_listener request_fullscreen;
+
+	struct wl_listener new_popup;
+};
+
+struct cg_xdg_popup {
+	struct cg_view_child view_child;
+	struct wlr_xdg_popup *wlr_popup;
+
+	struct wl_listener destroy;
+	struct wl_listener new_popup;
 };
 
 void handle_xdg_shell_surface_new(struct wl_listener *listener, void *data);
