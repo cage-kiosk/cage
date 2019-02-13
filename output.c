@@ -85,7 +85,9 @@ damage_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 		.height = surface->current.height * wlr_output->scale,
 	};
 
-	if (pixman_region32_not_empty(&surface->buffer_damage)) {
+	if (ddata->whole) {
+		wlr_output_damage_add_box(output->damage, &box);
+	} else if (pixman_region32_not_empty(&surface->buffer_damage)) {
 		pixman_region32_t damage;
 		pixman_region32_init(&damage);
 		wlr_surface_get_effective_damage(surface, &damage);
@@ -101,10 +103,6 @@ damage_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 		pixman_region32_translate(&damage, box.x, box.y);
 		wlr_output_damage_add(output->damage, &damage);
 		pixman_region32_fini(&damage);
-	}
-
-	if (ddata->whole) {
-		wlr_output_damage_add_box(output->damage, &box);
 	}
 }
 
