@@ -24,11 +24,14 @@ enum cg_view_type {
 struct cg_view {
 	struct cg_server *server;
 	struct wl_list link; // server::views
+	struct wl_list children; // cg_view_child::link
 	struct wlr_surface *wlr_surface;
 	int x, y;
 
 	enum cg_view_type type;
 	const struct cg_view_impl *impl;
+
+	struct wl_listener new_subsurface;
 };
 
 struct cg_view_impl {
@@ -43,6 +46,24 @@ struct cg_view_impl {
 				 void *data);
 	struct wlr_surface *(*wlr_surface_at)(struct cg_view *view, double sx, double sy,
 					      double *sub_x, double *sub_y);
+};
+
+struct cg_view_child {
+	struct cg_view *view;
+	struct wlr_surface *wlr_surface;
+	struct wl_list link;
+
+	struct wl_listener commit;
+	struct wl_listener new_subsurface;
+
+	void (*destroy)(struct cg_view_child *child);
+};
+
+struct cg_subsurface {
+	struct cg_view_child view_child;
+	struct wlr_subsurface *wlr_subsurface;
+
+	struct wl_listener destroy;
 };
 
 char *view_get_title(struct cg_view *view);
@@ -61,5 +82,8 @@ void view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type
 struct cg_view *view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface);
 struct wlr_surface *view_wlr_surface_at(struct cg_view *view, double sx, double sy,
 					double *sub_x, double *sub_y);
+
+void view_child_finish(struct cg_view_child *child);
+void view_child_init(struct cg_view_child *child, struct cg_view *view, struct wlr_surface *wlr_surface);
 
 #endif
