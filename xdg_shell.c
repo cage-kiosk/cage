@@ -17,6 +17,84 @@
 #include "view.h"
 #include "xdg_shell.h"
 
+static void
+xdg_popup_destroy(struct cg_view_child *child)
+{
+	if (!child) {
+		return;
+	}
+
+	struct cg_xdg_popup *popup = (struct cg_xdg_popup *) child;
+	wl_list_remove(&popup->destroy.link);
+	wl_list_remove(&popup->new_popup.link);
+	view_child_finish(&popup->view_child);
+	free(popup);
+}
+
+static void
+handle_xdg_popup_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_popup *popup = wl_container_of(listener, popup, destroy);
+	struct cg_view_child *view_child = (struct cg_view_child *) popup
+	xdg_popup_destroy(view_child);
+}
+
+static void xdg_popup_create(struct cg_view *view, struct wlr_xdg_popup *wlr_popup);
+
+static void
+popup_handle_new_xdg_popup(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_popup *popup = wl_container_of(listener, popup, new_popup);
+	struct wlr_xdg_popup *wlr_popup = data;
+	xdg_popup_create(popup->view_child.view, wlr_popup);
+}
+
+static void
+popup_unconstrain(struct cg_xdg_popup *popup)
+{
+	struct cg_view *view = popup->view_child.view;
+	struct wlr_output *output = view->server->output->wlr_output;
+
+	int width, height;
+	wlr_output_effective_resolution(output, &width, &height);
+
+	struct wlr_box output_toplevel_box = {
+		.x = output->lx - view->x,
+		.y = output->ly - view->y,
+		.width = width,
+		.height = height
+	};
+
+	wlr_xdg_popup_unconstrain_from_box(popup->wlr_popup, &output_toplevel_box);
+}
+
+static void
+xdg_popup_create(struct cg_view *view, struct wlr_xdg_popup *wlr_popup)
+{
+	struct cg_xdg_popup *popup = calloc(1, sizeof(struct cg_xdg_popup));
+	if (!popup) {
+		return;
+	}
+
+	popup->wlr_popup = wlr_popup;
+	view_child_init(&popup->view_child, view, wlr_popup->base->surface);
+	popup->view_child.destroy = xdg_popup_destroy;
+	popup->destroy.notify = handle_xdg_popup_destroy;
+	wl_signal_add(&wlr_popup->base->events.destroy, &popup->destroy);
+	popup->new_popup.notify = popup_handle_new_xdg_popup;
+	wl_signal_add(&wlr_popup->base->events.new_popup, &popup->new_popup);
+
+	popup_unconstrain(popup);
+}
+
+static void
+handle_new_xdg_popup(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, new_popup);
+	struct wlr_xdg_popup *wlr_popup = data;
+	xdg_popup_create(&xdg_shell_view->view, wlr_popup);
+}
+
 static struct cg_xdg_shell_view *
 xdg_shell_view_from_view(struct cg_view *view)
 {
@@ -145,6 +223,7 @@ handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&xdg_shell_view->map.link);
 	wl_list_remove(&xdg_shell_view->unmap.link);
 	wl_list_remove(&xdg_shell_view->destroy.link);
+	wl_list_remove(&xdg_shell_view->new_popup.link);
 	xdg_shell_view->xdg_surface = NULL;
 
 	view_destroy(view);
@@ -187,4 +266,6 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	wl_signal_add(&xdg_surface->events.unmap, &xdg_shell_view->unmap);
 	xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
 	wl_signal_add(&xdg_surface->events.destroy, &xdg_shell_view->destroy);
+	xdg_shell_view->new_popup.notify = handle_new_xdg_popup;
+	wl_signal_add(&xdg_surface->events.new_popup, &xdg_shell_view->new_popup);
 }
