@@ -121,6 +121,8 @@ handle_xwayland_surface_unmap(struct wl_listener *listener, void *data)
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, unmap);
 	struct cg_view *view = &xwayland_view->view;
 
+	view_damage_whole(view);
+
 	wl_list_remove(&xwayland_view->commit.link);
 
 	view_unmap(view);
@@ -142,6 +144,8 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 
 	xwayland_view->ever_been_mapped = true;
 	view_map(view, xwayland_view->xwayland_surface->surface);
+
+	view_damage_whole(view);
 }
 
 static void

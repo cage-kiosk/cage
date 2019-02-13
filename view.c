@@ -48,6 +48,8 @@ view_child_finish(struct cg_view_child *child)
 		return;
 	}
 
+	view_damage_whole(child->view);
+
 	wl_list_remove(&child->link);
 	wl_list_remove(&child->commit.link);
 	wl_list_remove(&child->new_subsurface.link);
