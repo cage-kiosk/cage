@@ -24,6 +24,94 @@
 #include "xwayland.h"
 #endif
 
+static void
+view_child_handle_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_view_child *child = wl_container_of(listener, child, commit);
+	view_damage_surface(child->view);
+}
+
+static void subsurface_create(struct cg_view *view, struct wlr_subsurface *wlr_subsurface);
+
+static void
+view_child_handle_new_subsurface(struct wl_listener *listener, void *data)
+{
+	struct cg_view_child *child = wl_container_of(listener, child, new_subsurface);
+	struct wlr_subsurface *wlr_subsurface = data;
+	subsurface_create(child->view, wlr_subsurface);
+}
+
+void
+view_child_finish(struct cg_view_child *child)
+{
+	if (!child) {
+		return;
+	}
+
+	wl_list_remove(&child->link);
+	wl_list_remove(&child->commit.link);
+	wl_list_remove(&child->new_subsurface.link);
+}
+
+void
+view_child_init(struct cg_view_child *child, struct cg_view *view, struct wlr_surface *wlr_surface)
+{
+	child->view = view;
+	child->wlr_surface = wlr_surface;
+
+	child->commit.notify = view_child_handle_commit;
+	wl_signal_add(&wlr_surface->events.commit, &child->commit);
+	child->new_subsurface.notify = view_child_handle_new_subsurface;
+	wl_signal_add(&wlr_surface->events.new_subsurface, &child->new_subsurface);
+
+	wl_list_insert(&view->children, &child->link);
+}
+
+static void
+subsurface_destroy(struct cg_view_child *child)
+{
+	if (!child) {
+		return;
+	}
+
+	struct cg_subsurface *subsurface = (struct cg_subsurface *) child;
+	wl_list_remove(&subsurface->destroy.link);
+	view_child_finish(&subsurface->view_child);
+	free(subsurface);
+}
+
+static void
+subsurface_handle_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_subsurface *subsurface = wl_container_of(listener, subsurface, destroy);
+	struct cg_view_child *view_child = (struct cg_view_child *) subsurface;
+	subsurface_destroy(view_child);
+}
+
+static void
+subsurface_create(struct cg_view *view, struct wlr_subsurface *wlr_subsurface)
+{
+	struct cg_subsurface *subsurface = calloc(1, sizeof(struct cg_subsurface));
+	if (!subsurface) {
+		return;
+	}
+
+	view_child_init(&subsurface->view_child, view, wlr_subsurface->surface);
+	subsurface->view_child.destroy = subsurface_destroy;
+	subsurface->wlr_subsurface = wlr_subsurface;
+
+	subsurface->destroy.notify = subsurface_handle_destroy;
+	wl_signal_add(&wlr_subsurface->events.destroy, &subsurface->destroy);
+}
+
+static void
+handle_new_subsurface(struct wl_listener *listener, void *data)
+{
+	struct cg_view *view = wl_container_of(listener, view, new_subsurface);
+	struct wlr_subsurface *wlr_subsurface = data;
+	subsurface_create(view, wlr_subsurface);
+}
+
 char *
 view_get_title(struct cg_view *view)
 {
@@ -102,6 +190,14 @@ void
 view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
+
+	wl_list_remove(&view->new_subsurface.link);
+
+	struct cg_view_child *child, *tmp;
+	wl_list_for_each_safe(child, tmp, &view->children, link) {
+		child->destroy(child);
+	}
+
 	view->wlr_surface = NULL;
 }
 
@@ -109,6 +205,14 @@ void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
 	view->wlr_surface = surface;
+
+	struct wlr_subsurface *subsurface;
+	wl_list_for_each(subsurface, &view->wlr_surface->subsurfaces, parent_link) {
+		subsurface_create(view, subsurface);
+	}
+
+	view->new_subsurface.notify = handle_new_subsurface;
+	wl_signal_add(&view->wlr_surface->events.new_subsurface, &view->new_subsurface);
 
 #if CAGE_HAS_XWAYLAND
 	/* We shouldn't position override-redirect windows. They set
@@ -161,6 +265,8 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 	view->server = server;
 	view->type = type;
 	view->impl = impl;
+
+	wl_list_init(&view->children);
 }
 
 struct cg_view *
