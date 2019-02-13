@@ -392,6 +392,18 @@ output_damage_view_surface(struct cg_output *cg_output, struct cg_view *view)
 }
 
 void
+output_damage_view_whole(struct cg_output *cg_output, struct cg_view *view)
+{
+	struct damage_data data = {
+		.output = cg_output,
+		.x = view->x,
+		.y = view->y,
+		.whole = true,
+	};
+	view_for_each_surface(view, damage_surface, &data);
+}
+
+void
 output_damage_drag_icon(struct cg_output *cg_output, struct cg_drag_icon *drag_icon)
 {
 	struct damage_data data = {

@@ -140,6 +140,12 @@ view_damage_surface(struct cg_view *view)
 }
 
 void
+view_damage_whole(struct cg_view *view)
+{
+	output_damage_view_whole(view->server->output, view);
+}
+
+void
 view_activate(struct cg_view *view, bool activate)
 {
 	view->impl->activate(view, activate);
