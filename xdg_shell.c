@@ -26,16 +26,32 @@ xdg_popup_destroy(struct cg_view_child *child)
 
 	struct cg_xdg_popup *popup = (struct cg_xdg_popup *) child;
 	wl_list_remove(&popup->destroy.link);
+	wl_list_remove(&popup->map.link);
+	wl_list_remove(&popup->unmap.link);
 	wl_list_remove(&popup->new_popup.link);
 	view_child_finish(&popup->view_child);
 	free(popup);
 }
 
 static void
+handle_xdg_popup_map(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_popup *popup = wl_container_of(listener, popup, map);
+	view_damage_whole(popup->view_child.view);
+}
+
+static void
+handle_xdg_popup_unmap(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_popup *popup = wl_container_of(listener, popup, unmap);
+	view_damage_whole(popup->view_child.view);
+}
+
+static void
 handle_xdg_popup_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_popup *popup = wl_container_of(listener, popup, destroy);
-	struct cg_view_child *view_child = (struct cg_view_child *) popup
+	struct cg_view_child *view_child = (struct cg_view_child *) popup;
 	xdg_popup_destroy(view_child);
 }
 
@@ -81,6 +97,10 @@ xdg_popup_create(struct cg_view *view, struct wlr_xdg_popup *wlr_popup)
 	popup->view_child.destroy = xdg_popup_destroy;
 	popup->destroy.notify = handle_xdg_popup_destroy;
 	wl_signal_add(&wlr_popup->base->events.destroy, &popup->destroy);
+	popup->map.notify = handle_xdg_popup_map;
+	wl_signal_add(&wlr_popup->base->events.map, &popup->map);
+	popup->unmap.notify = handle_xdg_popup_unmap;
+	wl_signal_add(&wlr_popup->base->events.unmap, &popup->unmap);
 	popup->new_popup.notify = popup_handle_new_xdg_popup;
 	wl_signal_add(&wlr_popup->base->events.new_popup, &popup->new_popup);
 
@@ -197,6 +217,8 @@ handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
 
+	view_damage_whole(view);
+
 	wl_list_remove(&xdg_shell_view->commit.link);
 
 	view_unmap(view);
@@ -212,6 +234,8 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 	wl_signal_add(&xdg_shell_view->xdg_surface->surface->events.commit, &xdg_shell_view->commit);
 
 	view_map(view, xdg_shell_view->xdg_surface->surface);
+
+	view_damage_whole(view);
 }
 
 static void
