@@ -108,6 +108,14 @@ wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double
 }
 
 static void
+handle_xwayland_surface_request_fullscreen(struct wl_listener *listener, void *data)
+{
+	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, request_fullscreen);
+	struct wlr_xwayland_surface *xwayland_surface = xwayland_view->xwayland_surface;
+	wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, xwayland_surface->fullscreen);
+}
+
+static void
 handle_xwayland_surface_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, commit);
@@ -157,6 +165,7 @@ handle_xwayland_surface_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&xwayland_view->map.link);
 	wl_list_remove(&xwayland_view->unmap.link);
 	wl_list_remove(&xwayland_view->destroy.link);
+	wl_list_remove(&xwayland_view->request_fullscreen.link);
 	xwayland_view->xwayland_surface = NULL;
 
 	view_destroy(view);
@@ -195,4 +204,6 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 	wl_signal_add(&xwayland_surface->events.unmap, &xwayland_view->unmap);
 	xwayland_view->destroy.notify = handle_xwayland_surface_destroy;
 	wl_signal_add(&xwayland_surface->events.destroy, &xwayland_view->destroy);
+	xwayland_view->request_fullscreen.notify = handle_xwayland_surface_request_fullscreen;
+	wl_signal_add(&xwayland_surface->events.request_fullscreen, &xwayland_view->request_fullscreen);
 }
