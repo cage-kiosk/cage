@@ -204,6 +204,14 @@ wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double
 }
 
 static void
+handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
+	struct wlr_xdg_toplevel_set_fullscreen_event *event = data;
+	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_surface, event->fullscreen);
+}
+
+static void
 handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
@@ -247,6 +255,7 @@ handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&xdg_shell_view->map.link);
 	wl_list_remove(&xdg_shell_view->unmap.link);
 	wl_list_remove(&xdg_shell_view->destroy.link);
+	wl_list_remove(&xdg_shell_view->request_fullscreen.link);
 	wl_list_remove(&xdg_shell_view->new_popup.link);
 	xdg_shell_view->xdg_surface = NULL;
 
@@ -290,6 +299,8 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	wl_signal_add(&xdg_surface->events.unmap, &xdg_shell_view->unmap);
 	xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
 	wl_signal_add(&xdg_surface->events.destroy, &xdg_shell_view->destroy);
+	xdg_shell_view->request_fullscreen.notify = handle_xdg_shell_surface_request_fullscreen;
+	wl_signal_add(&xdg_surface->toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
 	xdg_shell_view->new_popup.notify = handle_new_xdg_popup;
 	wl_signal_add(&xdg_surface->events.new_popup, &xdg_shell_view->new_popup);
 }
