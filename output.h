@@ -25,5 +25,6 @@ void handle_new_output(struct wl_listener *listener, void *data);
 void output_damage_view_surface(struct cg_output *output, struct cg_view *view);
 void output_damage_view_whole(struct cg_output *cg_output, struct cg_view *view);
 void output_damage_drag_icon(struct cg_output *output, struct cg_drag_icon *icon);
+void output_set_window_title(struct cg_output *output, const char *title);
 
 #endif

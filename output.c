@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
+#include <wlr/backend/wayland.h>
+#include <wlr/backend/x11.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_matrix.h>
@@ -413,4 +415,16 @@ output_damage_drag_icon(struct cg_output *cg_output, struct cg_drag_icon *drag_i
 	wlr_surface_for_each_surface(drag_icon->wlr_drag_icon->surface,
 				     damage_surface,
 				     &data);
+}
+
+void
+output_set_window_title(struct cg_output *output, const char *title)
+{
+	struct wlr_output *wlr_output = output->wlr_output;
+
+	if (wlr_output_is_wl(wlr_output)) {
+		wlr_wl_output_set_title(wlr_output, title);
+	} else if (wlr_output_is_x11(wlr_output)) {
+		wlr_x11_output_set_title(wlr_output, title);
+	}
 }

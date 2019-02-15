@@ -42,6 +42,4 @@ struct cg_server {
 #endif
 };
 
-void set_window_title(struct cg_server *server, struct cg_view *view);
-
 #endif

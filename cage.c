@@ -18,8 +18,6 @@
 #include <unistd.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
-#include <wlr/backend/wayland.h>
-#include <wlr/backend/x11.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
@@ -44,26 +42,6 @@
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
-
-void
-set_window_title(struct cg_server *server, struct cg_view *view)
-{
-	struct wlr_output *output = server->output->wlr_output;
-	bool is_wl = wlr_output_is_wl(output);
-	bool is_x11 = wlr_output_is_x11(output);
-
-	if (!is_wl && !is_x11) {
-		return;
-	}
-
-	char *title = view_get_title(view);
-	if (is_wl) {
-		wlr_wl_output_set_title(output, title);
-	} else if (is_x11) {
-		wlr_x11_output_set_title(output, title);
-	}
-	free(title);
-}
 
 static bool
 spawn_primary_client(char *argv[], pid_t *pid_out)
