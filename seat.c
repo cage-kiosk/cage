@@ -15,6 +15,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle.h>
+#include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -341,6 +342,24 @@ handle_new_input(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_request_set_primary_selection(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, request_set_primary_selection);
+	struct wlr_seat_request_set_primary_selection_event *event = data;
+
+	wlr_seat_set_primary_selection(seat->seat, event->source, event->serial);
+}
+
+static void
+handle_request_set_selection(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, request_set_selection);
+	struct wlr_seat_request_set_selection_event *event = data;
+
+	wlr_seat_set_selection(seat->seat, event->source, event->serial);
+}
+
+static void
 handle_request_set_cursor(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, request_set_cursor);
@@ -631,6 +650,8 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&seat->touch_up.link);
 	wl_list_remove(&seat->touch_motion.link);
 	wl_list_remove(&seat->request_set_cursor.link);
+	wl_list_remove(&seat->request_set_selection.link);
+	wl_list_remove(&seat->request_set_primary_selection.link);
 }
 
 struct cg_seat *
@@ -692,6 +713,10 @@ seat_create(struct cg_server *server)
 
 	seat->request_set_cursor.notify = handle_request_set_cursor;
 	wl_signal_add(&seat->seat->events.request_set_cursor, &seat->request_set_cursor);
+	seat->request_set_selection.notify = handle_request_set_selection;
+	wl_signal_add(&seat->seat->events.request_set_selection, &seat->request_set_selection);
+	seat->request_set_primary_selection.notify = handle_request_set_primary_selection;
+	wl_signal_add(&seat->seat->events.request_set_primary_selection, &seat->request_set_primary_selection);
 
 	wl_list_init(&seat->keyboards);
 	wl_list_init(&seat->pointers);
