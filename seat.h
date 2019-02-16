@@ -30,6 +30,7 @@ struct cg_seat {
 	struct wl_listener cursor_motion_absolute;
 	struct wl_listener cursor_button;
 	struct wl_listener cursor_axis;
+	struct wl_listener cursor_frame;
 
 	int32_t touch_id;
 	double touch_x;
