@@ -18,6 +18,30 @@
 #include "xdg_shell.h"
 
 static void
+xdg_decoration_handle_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_decoration *xdg_decoration = wl_container_of(listener, xdg_decoration, destroy);
+
+	wl_list_remove(&xdg_decoration->destroy.link);
+	wl_list_remove(&xdg_decoration->request_mode.link);
+	free(xdg_decoration);
+}
+
+static void
+xdg_decoration_handle_request_mode(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_decoration *xdg_decoration = wl_container_of(listener, xdg_decoration, request_mode);
+	enum wlr_xdg_toplevel_decoration_v1_mode mode;
+
+	if (xdg_decoration->server->xdg_decoration) {
+		mode = WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
+	} else {
+		mode = WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE;
+	}
+	wlr_xdg_toplevel_decoration_v1_set_mode(xdg_decoration->wlr_decoration, mode);
+}
+
+static void
 xdg_popup_destroy(struct cg_view_child *child)
 {
 	if (!child) {
@@ -303,4 +327,26 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 	wl_signal_add(&xdg_surface->toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
 	xdg_shell_view->new_popup.notify = handle_new_xdg_popup;
 	wl_signal_add(&xdg_surface->events.new_popup, &xdg_shell_view->new_popup);
+}
+
+void
+handle_xdg_toplevel_decoration(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, xdg_toplevel_decoration);
+	struct wlr_xdg_toplevel_decoration_v1 *wlr_decoration = data;
+
+	struct cg_xdg_decoration *xdg_decoration = calloc(1, sizeof(struct cg_xdg_decoration));
+	if (!xdg_decoration) {
+		return;
+	}
+
+	xdg_decoration->wlr_decoration = wlr_decoration;
+	xdg_decoration->server = server;
+
+	xdg_decoration->destroy.notify = xdg_decoration_handle_destroy;
+	wl_signal_add(&wlr_decoration->events.destroy, &xdg_decoration->destroy);
+	xdg_decoration->request_mode.notify = xdg_decoration_handle_request_mode;
+	wl_signal_add(&wlr_decoration->events.request_mode, &xdg_decoration->request_mode);
+
+	xdg_decoration_handle_request_mode(&xdg_decoration->request_mode, wlr_decoration);
 }
