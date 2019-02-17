@@ -1,6 +1,6 @@
 /*
  * Cage: A Wayland kiosk.
- * 
+ *
  * Copyright (C) 2018-2019 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
@@ -27,6 +27,7 @@
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
+#include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
@@ -84,6 +85,7 @@ usage(FILE *file, const char *cage)
 {
 	fprintf(file, "Usage: %s APPLICATION\n"
 		"\n"
+		" -d\t Don't draw client side decorations, when possible\n"
 		" -D\t Turn on damage tracking debugging\n"
 		" -h\t Display this help message\n",
 		cage);
@@ -93,8 +95,11 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
-	while ((c = getopt(argc, argv, "hD")) != -1) {
+	while ((c = getopt(argc, argv, "dDh")) != -1) {
 		switch (c) {
+		case 'd':
+			server->xdg_decoration = true;
+			break;
 		case 'D':
 			server->debug_damage_tracking = true;
 			break;
@@ -123,6 +128,7 @@ main(int argc, char *argv[])
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_mgr = NULL;
+	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xwayland *xwayland = NULL;
@@ -159,6 +165,8 @@ main(int argc, char *argv[])
 
 	renderer = wlr_backend_get_renderer(server.backend);
 	wlr_renderer_init_wl_display(renderer, server.wl_display);
+
+	wl_list_init(&server.views);
 
 	server.output_layout = wlr_output_layout_create();
 	if (!server.output_layout) {
@@ -210,16 +218,19 @@ main(int argc, char *argv[])
 	server.new_idle_inhibitor_v1.notify = handle_idle_inhibitor_v1_new;
 	wl_signal_add(&server.idle_inhibit_v1->events.new_inhibitor, &server.new_idle_inhibitor_v1);
 	wl_list_init(&server.inhibitors);
-		
+
 	xdg_shell = wlr_xdg_shell_create(server.wl_display);
 	if (!xdg_shell) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
 		ret = 1;
 		goto end;
 	}
-	wl_list_init(&server.views);
 	server.new_xdg_shell_surface.notify = handle_xdg_shell_surface_new;
 	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
+
+	xdg_decoration_manager = wlr_xdg_decoration_manager_v1_create(server.wl_display);
+	wl_signal_add(&xdg_decoration_manager->events.new_toplevel_decoration, &server.xdg_toplevel_decoration);
+	server.xdg_toplevel_decoration.notify = handle_xdg_toplevel_decoration;
 
 #if CAGE_HAS_XWAYLAND
 	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
@@ -293,6 +304,7 @@ main(int argc, char *argv[])
 
 end:
 	seat_destroy(server.seat);
+	wlr_xdg_decoration_manager_v1_destroy(xdg_decoration_manager);
 	wlr_xdg_shell_destroy(xdg_shell);
 	wlr_idle_inhibit_v1_destroy(server.idle_inhibit_v1);
 	if (server.idle) {
