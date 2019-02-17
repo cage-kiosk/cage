@@ -48,6 +48,9 @@ spawn_primary_client(char *argv[], pid_t *pid_out)
 {
 	pid_t pid = fork();
 	if (pid == 0) {
+		sigset_t set;
+		sigemptyset(&set);
+		sigprocmask(SIG_SETMASK, &set, NULL);
 		execvp(argv[0], argv);
 		_exit(1);
 	} else if (pid == -1) {
