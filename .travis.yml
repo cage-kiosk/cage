@@ -1,0 +1,28 @@
+language: c
+os: linux
+
+services:
+  - docker
+
+before_install:
+  # Add the automatically checked out repository to the Docker image.
+  - echo "ADD . /root/cage" >> Dockerfile
+  # Build the Docker image.
+  - docker build -t hjdskes/cage .
+
+script:
+  # Build Cage with AddressSanitizer (incl. LeakSanitizer) and
+  # UndefinedBehaviorSanitizer, which will be instrumented during execution.
+  # TODO: find a nicer way to kill termite in order to get Cage to exit.
+  - docker run hjdskes/cage /bin/bash -c "export CC=gcc && meson build -Db_sanitize=address,undefined && ninja -C build && (sleep 5 && pkill -9 termite) & xvfb-run ./build/cage termite"
+
+  # Build Cage with MemorySanitizer, which will also instrument Cage during
+  # execution. Since we can't use all sanitizers together, we have to duplicate
+  # this process here. TODO: This does not work with GCC.
+  # - docker run hjdskes/cage /bin/bash -c "export CC=gcc && meson build -Db_sanitize=memory && ninja -C build && (sleep 5 && pkill -9 termite) & xvfb-run ./build/cage termite"
+
+after_script:
+  # If Cage ran successfully and without any memory errors or undefined behavior
+  # (in those parts exercised by launching a client and exiting almost
+  # immediately), we run Clang's Static Analyzer on Cage.
+  - docker run hjdskes/cage /bin/bash -c "export CC=clang && meson build && ninja -C build scan-build"
