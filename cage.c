@@ -125,6 +125,8 @@ main(int argc, char *argv[])
 {
 	struct cg_server server = {0};
 	struct wl_event_loop *event_loop = NULL;
+	struct wl_event_source *sigint_source = NULL;
+	struct wl_event_source *sigterm_source = NULL;
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_mgr = NULL;
@@ -153,8 +155,8 @@ main(int argc, char *argv[])
 	}
 
 	event_loop = wl_display_get_event_loop(server.wl_display);
-	wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
-	wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
+	sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
+	sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
 	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
 	if (!server.backend) {
@@ -303,6 +305,8 @@ main(int argc, char *argv[])
 	waitpid(pid, NULL, 0);
 
 end:
+	wl_event_source_remove(sigint_source);
+	wl_event_source_remove(sigterm_source);
 	seat_destroy(server.seat);
 	wlr_xdg_decoration_manager_v1_destroy(xdg_decoration_manager);
 	wlr_xdg_shell_destroy(xdg_shell);
