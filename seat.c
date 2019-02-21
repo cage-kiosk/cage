@@ -652,6 +652,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&seat->request_set_cursor.link);
 	wl_list_remove(&seat->request_set_selection.link);
 	wl_list_remove(&seat->request_set_primary_selection.link);
+	free(seat);
 }
 
 struct cg_seat *
@@ -739,7 +740,8 @@ seat_destroy(struct cg_seat *seat)
 		return;
 	}
 
-	handle_destroy(&seat->destroy, NULL);
+	// Destroying the wlr seat will trigger the destroy handler on our seat,
+	// which will in turn free it.
 	wlr_seat_destroy(seat->seat);
 }
 
