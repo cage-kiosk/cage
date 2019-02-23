@@ -233,6 +233,11 @@ main(int argc, char *argv[])
 	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
 
 	xdg_decoration_manager = wlr_xdg_decoration_manager_v1_create(server.wl_display);
+	if (!xdg_decoration_manager) {
+		wlr_log(WLR_ERROR, "Unable to create the XDG decoration manager");
+		ret = 1;
+		goto end;
+	}
 	wl_signal_add(&xdg_decoration_manager->events.new_toplevel_decoration, &server.xdg_toplevel_decoration);
 	server.xdg_toplevel_decoration.notify = handle_xdg_toplevel_decoration;
 
