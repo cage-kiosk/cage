@@ -24,6 +24,7 @@
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_server_decoration.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
@@ -130,6 +131,7 @@ main(int argc, char *argv[])
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_mgr = NULL;
+	struct wlr_server_decoration_manager *server_decoration_manager = NULL;
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
 #if CAGE_HAS_XWAYLAND
@@ -234,6 +236,17 @@ main(int argc, char *argv[])
 	wl_signal_add(&xdg_decoration_manager->events.new_toplevel_decoration, &server.xdg_toplevel_decoration);
 	server.xdg_toplevel_decoration.notify = handle_xdg_toplevel_decoration;
 
+	server_decoration_manager = wlr_server_decoration_manager_create(server.wl_display);
+	if (!server_decoration_manager) {
+		wlr_log(WLR_ERROR, "Unable to create the server decoration manager");
+		ret = 1;
+		goto end;
+	}
+	wlr_server_decoration_manager_set_default_mode(server_decoration_manager,
+						       server.xdg_decoration ?
+						       WLR_SERVER_DECORATION_MANAGER_MODE_SERVER :
+						       WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
+
 #if CAGE_HAS_XWAYLAND
 	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
 	if (!xwayland) {
@@ -308,6 +321,7 @@ end:
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
 	seat_destroy(server.seat);
+	wlr_server_decoration_manager_destroy(server_decoration_manager);
 	wlr_xdg_decoration_manager_v1_destroy(xdg_decoration_manager);
 	wlr_xdg_shell_destroy(xdg_shell);
 	wlr_idle_inhibit_v1_destroy(server.idle_inhibit_v1);
