@@ -9,13 +9,16 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include "config.h"
+#include <wlr/config.h>
 
 #include <stdlib.h>
 #include <unistd.h>
 #include <wayland-server.h>
 #include <wlr/backend.h>
 #include <wlr/backend/wayland.h>
+#if WLR_HAS_X11_BACKEND
 #include <wlr/backend/x11.h>
+#endif
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_matrix.h>
@@ -424,7 +427,9 @@ output_set_window_title(struct cg_output *output, const char *title)
 
 	if (wlr_output_is_wl(wlr_output)) {
 		wlr_wl_output_set_title(wlr_output, title);
+#if WLR_HAS_X11_BACKEND
 	} else if (wlr_output_is_x11(wlr_output)) {
 		wlr_x11_output_set_title(wlr_output, title);
+#endif
 	}
 }
