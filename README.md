@@ -1,4 +1,4 @@
-# Cage: a Wayland kiosk
+# Cage: a Wayland kiosk [![Build Status](https://travis-ci.com/Hjdskes/cage.svg?branch=master)](https://travis-ci.com/Hjdskes/cage)
 
 This is Cage, a Wayland kiosk. A kiosk runs a single, maximized
 application.
