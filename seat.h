@@ -40,7 +40,8 @@ struct cg_seat {
 	struct wl_listener touch_motion;
 
 	struct wl_list drag_icons;
-	struct wl_listener new_drag_icon;
+	struct wl_listener request_start_drag;
+	struct wl_listener start_drag;
 
 	struct wl_listener request_set_cursor;
 	struct wl_listener request_set_selection;

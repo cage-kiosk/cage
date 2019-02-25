@@ -567,20 +567,25 @@ drag_icon_update_position(struct cg_drag_icon *drag_icon)
 {
 	struct wlr_drag_icon *wlr_icon = drag_icon->wlr_drag_icon;
 	struct cg_seat *seat = drag_icon->seat;
+	struct wlr_touch_point *point;
 
 	drag_icon_damage(drag_icon);
 
-	if (wlr_icon->is_pointer) {
+	switch (wlr_icon->drag->grab_type) {
+	case WLR_DRAG_GRAB_KEYBOARD:
+		return;
+	case WLR_DRAG_GRAB_KEYBOARD_POINTER:
 		drag_icon->x = seat->cursor->x;
 		drag_icon->y = seat->cursor->y;
-	} else {
-		struct wlr_touch_point *point =
-			wlr_seat_touch_get_point(seat->seat, wlr_icon->touch_id);
+		break;
+	case WLR_DRAG_GRAB_KEYBOARD_TOUCH:
+		point = wlr_seat_touch_get_point(seat->seat, wlr_icon->drag->touch_id);
 		if (!point) {
 			return;
 		}
 		drag_icon->x = seat->touch_x;
 		drag_icon->y = seat->touch_y;
+		break;
 	}
 
 	drag_icon_damage(drag_icon);
@@ -597,10 +602,40 @@ handle_drag_icon_destroy(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_new_drag_icon(struct wl_listener *listener, void *data)
+handle_request_start_drag(struct wl_listener *listener, void *data)
 {
-	struct cg_seat *seat = wl_container_of(listener, seat, new_drag_icon);
-	struct wlr_drag_icon *wlr_drag_icon = data;
+	struct cg_seat *seat = wl_container_of(listener, seat, request_start_drag);
+	struct wlr_seat_request_start_drag_event *event = data;
+
+	if (wlr_seat_validate_pointer_grab_serial(seat->seat,
+				event->origin, event->serial)) {
+		wlr_seat_start_pointer_drag(seat->seat, event->drag, event->serial);
+		return;
+	}
+
+	struct wlr_touch_point *point;
+	if (wlr_seat_validate_touch_grab_serial(seat->seat,
+				event->origin, event->serial, &point)) {
+		wlr_seat_start_touch_drag(seat->seat,
+				event->drag, event->serial, point);
+		return;
+	}
+
+	// TODO: tablet grabs
+	wlr_log(WLR_DEBUG, "Ignoring start_drag request: "
+			"could not validate pointer/touch serial %" PRIu32, event->serial);
+	wlr_data_source_destroy(event->drag->source);
+}
+
+static void
+handle_start_drag(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, start_drag);
+	struct wlr_drag *wlr_drag = data;
+	struct wlr_drag_icon *wlr_drag_icon = wlr_drag->icon;
+	if (wlr_drag_icon == NULL) {
+		return;
+	}
 
 	struct cg_drag_icon *drag_icon = calloc(1, sizeof(struct cg_drag_icon));
 	if (!drag_icon) {
@@ -727,8 +762,11 @@ seat_create(struct cg_server *server)
 	wl_signal_add(&server->backend->events.new_input, &seat->new_input);
 
 	wl_list_init(&seat->drag_icons);
-	seat->new_drag_icon.notify = handle_new_drag_icon;
-	wl_signal_add(&seat->seat->events.new_drag_icon, &seat->new_drag_icon);
+	seat->request_start_drag.notify = handle_request_start_drag;
+	wl_signal_add(&seat->seat->events.request_start_drag,
+			&seat->request_start_drag);
+	seat->start_drag.notify = handle_start_drag;
+	wl_signal_add(&seat->seat->events.start_drag, &seat->start_drag);
 
 	return seat;
 }
@@ -739,6 +777,9 @@ seat_destroy(struct cg_seat *seat)
 	if (!seat) {
 		return;
 	}
+
+	wl_list_remove(&seat->request_start_drag.link);
+	wl_list_remove(&seat->start_drag.link);
 
 	// Destroying the wlr seat will trigger the destroy handler on our seat,
 	// which will in turn free it.
