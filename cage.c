@@ -84,11 +84,13 @@ handle_signal(int signal, void *data)
 static void
 usage(FILE *file, const char *cage)
 {
-	fprintf(file, "Usage: %s APPLICATION\n"
+	fprintf(file, "Usage: %s [OPTIONS] [--] APPLICATION\n"
 		"\n"
 		" -d\t Don't draw client side decorations, when possible\n"
 		" -D\t Turn on damage tracking debugging\n"
-		" -h\t Display this help message\n",
+		" -h\t Display this help message\n"
+		"\n"
+		" Use -- when you want to pass arguments to APPLICATION\n",
 		cage);
 }
 
@@ -113,7 +115,7 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 		}
 	}
 
-	if (optind == 0) {
+	if (optind >= argc) {
 		usage(stderr, argv[0]);
 		return false;
 	}
