@@ -10,9 +10,12 @@ page](https://hjdskes.nl/projects/cage).
 
 ## Building and running Cage
 
-You can build Cage with the [meson](https://mesonbuild.com/) build
-system. It requires wayland, wlroots and xkbcommon to be
-installed. Simply execute the following steps to build Cage:
+You can build Cage with the [meson](https://mesonbuild.com/) build system. It
+requires wayland, wlroots and xkbcommon to be installed. Note that Cage is
+developed against the latest tag of wlroots, in order to not constantly chase
+breaking changes as soon as they occur.
+
+Simply execute the following steps to build Cage:
 
 ```
 $ meson build
