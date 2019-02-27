@@ -97,6 +97,8 @@ handle_signal(int signal, void *data)
 	case SIGINT:
 		/* Fallthrough */
 	case SIGTERM:
+		/* Fallthrough */
+	case SIGCHLD:
 		wl_display_terminate(display);
 		return 0;
 	default:
@@ -172,6 +174,7 @@ main(int argc, char *argv[])
 	struct wl_event_loop *event_loop = NULL;
 	struct wl_event_source *sigint_source = NULL;
 	struct wl_event_source *sigterm_source = NULL;
+	struct wl_event_source *sigchld_source = NULL;
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_manager = NULL;
@@ -213,6 +216,7 @@ main(int argc, char *argv[])
 	event_loop = wl_display_get_event_loop(server.wl_display);
 	sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
 	sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
+	sigchld_source = wl_event_loop_add_signal(event_loop, SIGCHLD, handle_signal, &server.wl_display);
 
 	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
 	if (!server.backend) {
@@ -424,6 +428,7 @@ main(int argc, char *argv[])
 end:
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
+	wl_event_source_remove(sigchld_source);
 	seat_destroy(server.seat);
 	wlr_output_layout_destroy(server.output_layout);
 	/* This function is not null-safe, but we only ever get here
