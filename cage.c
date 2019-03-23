@@ -87,7 +87,9 @@ usage(FILE *file, const char *cage)
 	fprintf(file, "Usage: %s [OPTIONS] [--] APPLICATION\n"
 		"\n"
 		" -d\t Don't draw client side decorations, when possible\n"
+#ifdef DEBUG
 		" -D\t Turn on damage tracking debugging\n"
+#endif
 		" -h\t Display this help message\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
@@ -98,14 +100,20 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
+#ifdef DEBUG
 	while ((c = getopt(argc, argv, "dDh")) != -1) {
+#else
+	while ((c = getopt(argc, argv, "dh")) != -1) {
+#endif
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
 			break;
+#ifdef DEBUG
 		case 'D':
 			server->debug_damage_tracking = true;
 			break;
+#endif
 		case 'h':
 			usage(stdout, argv[0]);
 			return false;
