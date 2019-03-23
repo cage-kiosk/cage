@@ -270,6 +270,15 @@ main(int argc, char *argv[])
 	        ret = 1;
 		goto end;
 	}
+
+	int rc = setenv("DISPLAY", xwayland->display_name, true);
+	if (rc < 0) {
+		wlr_log_errno(WLR_ERROR, "Unable to set DISPLAY for XWayland.",
+			      "Clients may not be able to connect");
+	} else {
+		wlr_log(WLR_DEBUG, "XWayland is running on display %s", socket);
+	}
+
 	if (wlr_xcursor_manager_load(xcursor_manager, 1)) {
 		wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
 	}
@@ -296,7 +305,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	int rc = setenv("WAYLAND_DISPLAY", socket, true);
+	rc = setenv("WAYLAND_DISPLAY", socket, true);
 	if (rc < 0) {
 		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY.",
 			      "Clients may not be able to connect");

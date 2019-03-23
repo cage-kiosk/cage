@@ -24,7 +24,7 @@ endif
 
 cc = meson.get_compiler('c')
 
-wlroots        = dependency('wlroots', version: '>= 0.4.1')
+wlroots        = dependency('wlroots', version: '>= 0.5.0')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 pixman         = dependency('pixman-1')
