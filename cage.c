@@ -271,8 +271,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	int rc = setenv("DISPLAY", xwayland->display_name, true);
-	if (rc < 0) {
+	if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "Unable to set DISPLAY for XWayland.",
 			      "Clients may not be able to connect");
 	} else {
@@ -305,8 +304,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	rc = setenv("WAYLAND_DISPLAY", socket, true);
-	if (rc < 0) {
+	if (setenv("WAYLAND_DISPLAY", socket, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY.",
 			      "Clients may not be able to connect");
 	} else {
