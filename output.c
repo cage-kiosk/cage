@@ -211,10 +211,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 		goto damage_finish;
 	}
 
-	int output_width, output_height;
-	wlr_output_transformed_resolution(output->wlr_output, &output_width, &output_height);
-
-	wlr_renderer_begin(renderer, output_width, output_height);
+	wlr_renderer_begin(renderer, output->wlr_output->width, output->wlr_output->height);
 
 	if (!pixman_region32_not_empty(&damage)) {
 		wlr_log(WLR_DEBUG, "Output isn't damaged but needs a buffer swap");
@@ -257,6 +254,9 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	wlr_output_render_software_cursors(output->wlr_output, &damage);
 	wlr_renderer_scissor(renderer, NULL);
 	wlr_renderer_end(renderer);
+
+	int output_width, output_height;
+	wlr_output_transformed_resolution(output->wlr_output, &output_width, &output_height);
 
 #ifdef DEBUG
 	if (output->server->debug_damage_tracking) {
@@ -365,6 +365,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wl_signal_add(&server->output->damage->events.frame, &server->output->damage_frame);
 	server->output->damage_destroy.notify = handle_output_damage_destroy;
 	wl_signal_add(&server->output->damage->events.destroy, &server->output->damage_destroy);
+
+	wlr_output_set_transform(wlr_output, server->output_transform);
 
 	wlr_output_layout_add_auto(server->output_layout, wlr_output);
 
