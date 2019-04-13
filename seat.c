@@ -157,6 +157,8 @@ handle_new_touch(struct cg_seat *seat, struct wlr_input_device *device)
 	wl_list_insert(&seat->touch, &touch->link);
 	touch->destroy.notify = handle_touch_destroy;
 	wl_signal_add(&touch->device->events.destroy, &touch->destroy);
+
+	wlr_cursor_map_input_to_output(seat->cursor, device, seat->server->output->wlr_output);
 }
 
 static void
@@ -189,6 +191,8 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 	wl_list_insert(&seat->pointers, &pointer->link);
 	pointer->destroy.notify = handle_pointer_destroy;
 	wl_signal_add(&device->events.destroy, &pointer->destroy);
+
+	wlr_cursor_map_input_to_output(seat->cursor, device, seat->server->output->wlr_output);
 }
 
 static void

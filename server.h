@@ -39,6 +39,7 @@ struct cg_server {
 #endif
 
 	bool xdg_decoration;
+	enum wl_output_transform output_transform;
 #ifdef DEBUG
 	bool debug_damage_tracking;
 #endif
