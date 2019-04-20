@@ -1,4 +1,4 @@
-# Cage: a Wayland kiosk
+# Cage: a Wayland kiosk [![builds.sr.ht status](https://builds.sr.ht/~hjdskes.svg)](https://builds.sr.ht/~hjdskes?)
 
 This is Cage, a Wayland kiosk. A kiosk runs a single, maximized
 application.
