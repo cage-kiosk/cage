@@ -290,7 +290,7 @@ main(int argc, char *argv[])
 		wlr_log_errno(WLR_ERROR, "Unable to set DISPLAY for XWayland.",
 			      "Clients may not be able to connect");
 	} else {
-		wlr_log(WLR_DEBUG, "XWayland is running on display %s", socket);
+		wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
 	}
 
 	if (wlr_xcursor_manager_load(xcursor_manager, 1)) {
