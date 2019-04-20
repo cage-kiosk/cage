@@ -24,6 +24,17 @@ endif
 
 cc = meson.get_compiler('c')
 
+is_freebsd = host_machine.system().startswith('freebsd')
+if is_freebsd
+  add_project_arguments(
+    [
+      '-Wno-format-extra-args',
+      '-Wno-gnu-zero-variadic-macro-arguments',
+    ],
+    language: 'c'
+  )
+endif
+
 wlroots        = dependency('wlroots', version: '>= 0.5.0')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')

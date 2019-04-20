@@ -55,7 +55,7 @@ scissor_output(struct wlr_output *output, pixman_box32_t *rect)
 }
 
 static void
-send_frame_done(struct wlr_surface *surface, int _unused, int __unused, void *data)
+send_frame_done(struct wlr_surface *surface, int _unused, int _not_used, void *data)
 {
 	struct timespec *now = data;
 	wlr_surface_send_frame_done(surface, now);
