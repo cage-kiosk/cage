@@ -1,5 +1,7 @@
 # Cage: a Wayland kiosk [![builds.sr.ht status](https://builds.sr.ht/~hjdskes.svg)](https://builds.sr.ht/~hjdskes?)
 
+<img src="https://www.hjdskes.nl/img/projects/cage/cage.svg" alt="Cage's logo" width="15%" align="right">
+
 This is Cage, a Wayland kiosk. A kiosk runs a single, maximized
 application.
 
@@ -7,6 +9,12 @@ This README is only relevant for development resources and
 instructions. For a description of Cage and installation instructions
 for end-users, please see [its project
 page](https://hjdskes.nl/projects/cage).
+
+## Release signatures
+
+Releases are signed with
+[6EBC43B1](http://keys.gnupg.net/pks/lookup?op=vindex&fingerprint=on&search=0x37C445296EBC43B1)
+and published on [GitHub](https://github.com/Hjdskes/cage/releases).
 
 ## Building and running Cage
 
