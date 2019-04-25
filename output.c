@@ -198,23 +198,23 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
-	bool needs_swap;
+	bool needs_frame;
 	pixman_region32_t damage;
 	pixman_region32_init(&damage);
-	if (!wlr_output_damage_make_current(output->damage, &needs_swap, &damage)) {
+	if (!wlr_output_damage_attach_render(output->damage, &needs_frame, &damage)) {
 		wlr_log(WLR_ERROR, "Cannot make damage output current");
 		goto damage_finish;
 	}
 
-	if (!needs_swap) {
-		wlr_log(WLR_DEBUG, "Output doesn't need swap and isn't damaged");
+	if (!needs_frame) {
+		wlr_log(WLR_DEBUG, "Output doesn't need frame and isn't damaged");
 		goto damage_finish;
 	}
 
 	wlr_renderer_begin(renderer, output->wlr_output->width, output->wlr_output->height);
 
 	if (!pixman_region32_not_empty(&damage)) {
-		wlr_log(WLR_DEBUG, "Output isn't damaged but needs a buffer swap");
+		wlr_log(WLR_DEBUG, "Output isn't damaged but needs a buffer frame");
 		goto renderer_end;
 	}
 
@@ -267,8 +267,9 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	enum wl_output_transform transform = wlr_output_transform_invert(output->wlr_output->transform);
 	wlr_region_transform(&damage, &damage, transform, output_width, output_height);
 
-	if (!wlr_output_damage_swap_buffers(output->damage, &now, &damage)) {
-	        wlr_log(WLR_ERROR, "Could not swap buffers");
+	wlr_output_set_damage(output->wlr_output, &damage);
+	if (!wlr_output_commit(output->wlr_output)) {
+	        wlr_log(WLR_ERROR, "Could not commit output");
 	}
 
  damage_finish:
