@@ -65,6 +65,22 @@ spawn_primary_client(char *argv[], pid_t *pid_out)
 	return true;
 }
 
+static bool drop_permissions(void)
+{
+	if (getuid() != geteuid() || getgid() != getegid()) {
+		if (setuid(getuid()) != 0 || setgid(getgid()) != 0) {
+			wlr_log(WLR_ERROR, "Unable to drop root, refusing to start");
+			return false;
+		}
+	}
+	if (setuid(0) != -1) {
+		wlr_log(WLR_ERROR, "Unable to drop root (we shouldn't be able to "
+			"restore it after setuid), refusing to start");
+		return false;
+	}
+	return true;
+}
+
 static int
 handle_signal(int signal, void *data)
 {
@@ -180,6 +196,11 @@ main(int argc, char *argv[])
 	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
 	if (!server.backend) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots backend");
+		ret = 1;
+		goto end;
+	}
+
+	if (!drop_permissions()) {
 		ret = 1;
 		goto end;
 	}
