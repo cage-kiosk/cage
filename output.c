@@ -347,14 +347,11 @@ handle_new_output(struct wl_listener *listener, void *data)
 {
 	struct cg_server *server = wl_container_of(listener, server, new_output);
 	struct wlr_output *wlr_output = data;
+	struct wlr_output_mode *preferred_mode;
 
-	/* On outputs that have modes, we need to set one before we
-	 * can use it. Each monitor supports only a specific set of
-	 * modes. We just pick the last, in the future we could pick
-	 * the mode the display advertises as preferred. */
-	if (!wl_list_empty(&wlr_output->modes)) {
-		struct wlr_output_mode *mode = wl_container_of(wlr_output->modes.prev, mode, link);
-		wlr_output_set_mode(wlr_output, mode);
+	preferred_mode = wlr_output_preferred_mode(wlr_output);
+	if (preferred_mode) {
+		wlr_output_set_mode(wlr_output, preferred_mode);
 	}
 
 	server->output = calloc(1, sizeof(struct cg_output));
