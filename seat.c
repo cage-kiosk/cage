@@ -289,6 +289,11 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 	}
 
 	struct xkb_rule_names rules = { 0 };
+	rules.rules = getenv("XKB_DEFAULT_RULES");
+	rules.model = getenv("XKB_DEFAULT_MODEL");
+	rules.layout = getenv("XKB_DEFAULT_LAYOUT");
+	rules.variant = getenv("XKB_DEFAULT_VARIANT");
+	rules.options = getenv("XKB_DEFAULT_OPTIONS");
 	struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules,
 							   XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!keymap) {
