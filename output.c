@@ -258,20 +258,20 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	int output_width, output_height;
 	wlr_output_transformed_resolution(output->wlr_output, &output_width, &output_height);
 
-	pixman_region32_t output_damage;
-	pixman_region32_init(&output_damage);
+	pixman_region32_t frame_damage;
+	pixman_region32_init(&frame_damage);
+
+	enum wl_output_transform transform = wlr_output_transform_invert(output->wlr_output->transform);
+	wlr_region_transform(&frame_damage, &output->damage->current, transform, output_width, output_height);
 
 #ifdef DEBUG
 	if (output->server->debug_damage_tracking) {
-		pixman_region32_union_rect(&output_damage, &output_damage, 0, 0, output_width, output_height);
+		pixman_region32_union_rect(&frame_damage, &frame_damage, 0, 0, output_width, output_height);
 	}
 #endif
 
-	enum wl_output_transform transform = wlr_output_transform_invert(output->wlr_output->transform);
-	wlr_region_transform(&output_damage, &output->damage->current, transform, output_width, output_height);
-
-	wlr_output_set_damage(output->wlr_output, &output_damage);
-	pixman_region32_fini(&output_damage);
+	wlr_output_set_damage(output->wlr_output, &frame_damage);
+	pixman_region32_fini(&frame_damage);
 
 	if (!wlr_output_commit(output->wlr_output)) {
 	        wlr_log(WLR_ERROR, "Could not commit output");
