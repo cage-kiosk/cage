@@ -152,7 +152,7 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 	pixman_region32_union_rect(&damage, &damage, box.x, box.y, box.width, box.height);
 	pixman_region32_intersect(&damage, &damage, rdata->damage);
 	if (!pixman_region32_not_empty(&damage)) {
-		goto damage_finish;
+		goto buffer_damage_finish;
 	}
 
 	float matrix[9];
@@ -166,7 +166,7 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 		wlr_render_texture_with_matrix(surface->renderer, texture, matrix, 1);
 	}
 
- damage_finish:
+ buffer_damage_finish:
 	pixman_region32_fini(&damage);
 }
 
@@ -199,21 +199,21 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	bool needs_frame;
-	pixman_region32_t damage;
-	pixman_region32_init(&damage);
-	if (!wlr_output_damage_attach_render(output->damage, &needs_frame, &damage)) {
+	pixman_region32_t buffer_damage;
+	pixman_region32_init(&buffer_damage);
+	if (!wlr_output_damage_attach_render(output->damage, &needs_frame, &buffer_damage)) {
 		wlr_log(WLR_ERROR, "Cannot make damage output current");
-		goto damage_finish;
+		goto buffer_damage_finish;
 	}
 
 	if (!needs_frame) {
 		wlr_log(WLR_DEBUG, "Output doesn't need frame and isn't damaged");
-		goto damage_finish;
+		goto buffer_damage_finish;
 	}
 
 	wlr_renderer_begin(renderer, output->wlr_output->width, output->wlr_output->height);
 
-	if (!pixman_region32_not_empty(&damage)) {
+	if (!pixman_region32_not_empty(&buffer_damage)) {
 		wlr_log(WLR_DEBUG, "Output isn't damaged but needs a buffer frame");
 		goto renderer_end;
 	}
@@ -226,7 +226,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 
 	float color[4] = {0.3, 0.3, 0.3, 1.0};
 	int nrects;
-	pixman_box32_t *rects = pixman_region32_rectangles(&damage, &nrects);
+	pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
 	for (int i = 0; i < nrects; i++) {
 		scissor_output(output->wlr_output, &rects[i]);
 		wlr_renderer_clear(renderer, color);
@@ -236,7 +236,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 		.output_layout = output->server->output_layout,
 		.output = output->wlr_output,
 		.when = &now,
-		.damage = &damage,
+		.damage = &buffer_damage,
 	};
 
 	struct cg_view *view;
@@ -251,29 +251,35 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
  renderer_end:
 	/* Draw software cursor in case hardware cursors aren't
 	   available. This is a no-op when they are. */
-	wlr_output_render_software_cursors(output->wlr_output, &damage);
+	wlr_output_render_software_cursors(output->wlr_output, &buffer_damage);
 	wlr_renderer_scissor(renderer, NULL);
 	wlr_renderer_end(renderer);
 
 	int output_width, output_height;
 	wlr_output_transformed_resolution(output->wlr_output, &output_width, &output_height);
 
+	pixman_region32_t output_damage;
+	pixman_region32_init(&output_damage);
+
 #ifdef DEBUG
 	if (output->server->debug_damage_tracking) {
-		pixman_region32_union_rect(&damage, &damage, 0, 0, output_width, output_height);
+		pixman_region32_union_rect(&output_damage, &output_damage, 0, 0, output_width, output_height);
 	}
 #endif
 
 	enum wl_output_transform transform = wlr_output_transform_invert(output->wlr_output->transform);
-	wlr_region_transform(&damage, &damage, transform, output_width, output_height);
+	wlr_region_transform(&output_damage, &output->damage->current, transform, output_width, output_height);
 
-	wlr_output_set_damage(output->wlr_output, &damage);
+	wlr_output_set_damage(output->wlr_output, &output_damage);
+	pixman_region32_fini(&output_damage);
+
 	if (!wlr_output_commit(output->wlr_output)) {
 	        wlr_log(WLR_ERROR, "Could not commit output");
+		goto buffer_damage_finish;
 	}
 
- damage_finish:
-	pixman_region32_fini(&damage);
+ buffer_damage_finish:
+	pixman_region32_fini(&buffer_damage);
 
 	wl_list_for_each_reverse(view, &output->server->views, link) {
 		view_for_each_surface(view, send_frame_done, &now);
