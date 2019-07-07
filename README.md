@@ -8,7 +8,7 @@ application.
 This README is only relevant for development resources and
 instructions. For a description of Cage and installation instructions
 for end-users, please see [its project
-page](https://hjdskes.nl/projects/cage).
+page](https://www.hjdskes.nl/projects/cage).
 
 ## Release signatures
 
