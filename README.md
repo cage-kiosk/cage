@@ -57,4 +57,4 @@ Please see
 [LICENSE](https://github.com/Hjdskes/cage/blob/master/LICENSE) on
 [GitHub](https://github.com/Hjdskes/cage).
 
-Copyright © 2018-2019 Jente Hidskes <hjdskes@gmail.com>
+Copyright © 2018-2019 Jente Hidskes <dev@hjdskes.nl>
