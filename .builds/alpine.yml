@@ -17,8 +17,9 @@ tasks:
   # version, instead of master, to avoid any breaking changes in wlroots.
   - wlroots: |
       cd wlroots
-      # This corresponds to the tag of 0.6.0
-      git checkout c0305f4f864543f8c3fea6f302e91c9b1d3396f3
+      # We'd like to build against the latest release (0.6.0), but that doesn't compile
+      # against libinput 1.14. This commit introduces support for that version.
+      git checkout 94f65e354d09ded037e6ba724dc3eeed6d63778f
       meson --prefix=/usr build -Drootston=false -Dexamples=false
       ninja -C build
       sudo ninja -C build install
