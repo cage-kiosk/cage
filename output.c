@@ -224,7 +224,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	}
 #endif
 
-	float color[4] = {0.3, 0.3, 0.3, 1.0};
+	float color[4] = {0, 0, 0, 1.0};
 	int nrects;
 	pixman_box32_t *rects = pixman_region32_rectangles(&buffer_damage, &nrects);
 	for (int i = 0; i < nrects; i++) {
