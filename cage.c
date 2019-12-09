@@ -392,17 +392,6 @@ end:
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
 	seat_destroy(server.seat);
-	wlr_xdg_output_manager_v1_destroy(output_manager);
-	wlr_screencopy_manager_v1_destroy(screencopy_manager);
-	wlr_server_decoration_manager_destroy(server_decoration_manager);
-	wlr_xdg_decoration_manager_v1_destroy(xdg_decoration_manager);
-	wlr_xdg_shell_destroy(xdg_shell);
-	wlr_idle_inhibit_v1_destroy(server.idle_inhibit_v1);
-	if (server.idle) {
-		wlr_idle_destroy(server.idle);
-	}
-	wlr_data_device_manager_destroy(data_device_mgr);
-	wlr_compositor_destroy(compositor);
 	wlr_output_layout_destroy(server.output_layout);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
