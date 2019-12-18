@@ -18,9 +18,9 @@ tasks:
   # version, instead of master, to avoid any breaking changes in wlroots.
   - wlroots: |
       cd wlroots
-      # This corresponds to the tag of 0.6.0
-      git checkout c0305f4f864543f8c3fea6f302e91c9b1d3396f3
-      meson --prefix=/usr/local build -Drootston=false -Dexamples=false
+      # Need this to compile 0.8.1
+      git checkout d113e48a2a32542fe6e12f1759f07888364609bf
+      meson --prefix=/usr build -Dexamples=false
       ninja -C build
       sudo ninja -C build install
   - build: |

@@ -15,10 +15,9 @@ tasks:
   # version, instead of master, to avoid any breaking changes in wlroots.
   - wlroots: |
       cd wlroots
-      # We'd like to build against the latest release (0.6.0), but that doesn't compile
-      # against libinput 1.14. This commit introduces support for that version.
-      git checkout 94f65e354d09ded037e6ba724dc3eeed6d63778f
-      meson --prefix=/usr build -Drootston=false -Dexamples=false
+      # Need this to compile 0.8.1.
+      git checkout d113e48a2a32542fe6e12f1759f07888364609bf
+      meson --prefix=/usr build -Dexamples=false
       ninja -C build
       sudo ninja -C build install
   - build: |
