@@ -1,7 +1,7 @@
 #ifndef CG_OUTPUT_H
 #define CG_OUTPUT_H
 
-#include <wayland-server.h>
+#include <wayland-server-core.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_damage.h>
 

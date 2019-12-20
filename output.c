@@ -13,7 +13,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <wayland-server.h>
+#include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/wayland.h>
 #if WLR_HAS_X11_BACKEND

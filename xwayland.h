@@ -1,7 +1,7 @@
 #ifndef CG_XWAYLAND_H
 #define CG_XWAYLAND_H
 
-#include <wayland-server.h>
+#include <wayland-server-core.h>
 #include <wlr/xwayland.h>
 
 #include "view.h"

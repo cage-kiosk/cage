@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 #include <linux/input-event-codes.h>
-#include <wayland-server.h>
+#include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
