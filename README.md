@@ -43,6 +43,8 @@ a TTY, it'll run with the KMS+DRM backend. In debug mode (default
 build type with Meson), press Alt+Esc to quit. To build a release
 build, use `meson build --buildtype=release`.
 
+For more information, see the `docs/` folder.
+
 Cage is based on the annotated source of tinywl and rootston.
 
 ## Bugs
