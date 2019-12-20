@@ -21,6 +21,7 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -173,6 +174,7 @@ main(int argc, char *argv[])
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
 	struct wlr_screencopy_manager_v1 *screencopy_manager = NULL;
 	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
+	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xwayland *xwayland = NULL;
@@ -307,6 +309,13 @@ main(int argc, char *argv[])
 	output_manager = wlr_xdg_output_manager_v1_create(server.wl_display, server.output_layout);
 	if (!output_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the output manager");
+		ret = 1;
+		goto end;
+	}
+
+	gamma_control_manager = wlr_gamma_control_manager_v1_create(server.wl_display);
+	if (!gamma_control_manager) {
+		wlr_log(WLR_ERROR, "Unable to create the gamma control manager");
 		ret = 1;
 		goto end;
 	}
