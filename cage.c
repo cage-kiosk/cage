@@ -169,7 +169,7 @@ main(int argc, char *argv[])
 	struct wl_event_source *sigterm_source = NULL;
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
-	struct wlr_data_device_manager *data_device_mgr = NULL;
+	struct wlr_data_device_manager *data_device_manager = NULL;
 	struct wlr_server_decoration_manager *server_decoration_manager = NULL;
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
 	struct wlr_screencopy_manager_v1 *screencopy_manager = NULL;
@@ -233,8 +233,8 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	data_device_mgr = wlr_data_device_manager_create(server.wl_display);
-	if (!data_device_mgr) {
+	data_device_manager = wlr_data_device_manager_create(server.wl_display);
+	if (!data_device_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the data device manager");
 		ret = 1;
 		goto end;
