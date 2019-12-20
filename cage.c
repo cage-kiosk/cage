@@ -21,17 +21,18 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
@@ -172,6 +173,7 @@ main(int argc, char *argv[])
 	struct wlr_data_device_manager *data_device_manager = NULL;
 	struct wlr_server_decoration_manager *server_decoration_manager = NULL;
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
+	struct wlr_export_dmabuf_manager_v1 *export_dmabuf_manager = NULL;
 	struct wlr_screencopy_manager_v1 *screencopy_manager = NULL;
 	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
 	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
@@ -298,6 +300,13 @@ main(int argc, char *argv[])
 						       server.xdg_decoration ?
 						       WLR_SERVER_DECORATION_MANAGER_MODE_SERVER :
 						       WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
+
+	export_dmabuf_manager = wlr_export_dmabuf_manager_v1_create(server.wl_display);
+	if (!export_dmabuf_manager) {
+		wlr_log(WLR_ERROR, "Unable to create the export DMABUF manager");
+		ret = 1;
+		goto end;
+	}
 
 	screencopy_manager = wlr_screencopy_manager_v1_create(server.wl_display);
 	if (!screencopy_manager) {
