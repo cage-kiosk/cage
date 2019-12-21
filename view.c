@@ -138,13 +138,19 @@ view_is_transient_for(struct cg_view *child, struct cg_view *parent) {
 void
 view_damage_surface(struct cg_view *view)
 {
-	output_damage_view_surface(view->server->output, view);
+	struct cg_output *output;
+	wl_list_for_each(output, &view->server->outputs, link) {
+		output_damage_view_surface(output, view);
+	}
 }
 
 void
 view_damage_whole(struct cg_view *view)
 {
-	output_damage_view_whole(view->server->output, view);
+	struct cg_output *output;
+	wl_list_for_each(output, &view->server->outputs, link) {
+		output_damage_view_whole(output, view);
+	}
 }
 
 void
@@ -154,22 +160,34 @@ view_activate(struct cg_view *view, bool activate)
 }
 
 static void
+get_view_output_dimensions(struct cg_view *view, int *output_width, int *output_height)
+{
+	*output_width = 0;
+	*output_height = 0;
+	struct cg_output *output;
+	wl_list_for_each(output, &view->server->outputs, link) {
+		int h, w;
+		wlr_output_transformed_resolution(output->wlr_output, &w, &h);
+		*output_width += w;
+		if (h > *output_height) {
+			*output_height = h;
+		}
+	}
+}
+
+static void
 view_maximize(struct cg_view *view)
 {
-	struct cg_output *output = view->server->output;
 	int output_width, output_height;
-
-	wlr_output_transformed_resolution(output->wlr_output, &output_width, &output_height);
+	get_view_output_dimensions(view, &output_width, &output_height);
 	view->impl->maximize(view, output_width, output_height);
 }
 
 static void
 view_center(struct cg_view *view)
 {
-	struct wlr_output *output = view->server->output->wlr_output;
-
 	int output_width, output_height;
-	wlr_output_transformed_resolution(output, &output_width, &output_height);
+	get_view_output_dimensions(view, &output_width, &output_height);
 
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);

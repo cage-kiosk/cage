@@ -158,7 +158,15 @@ handle_new_touch(struct cg_seat *seat, struct wlr_input_device *device)
 	touch->destroy.notify = handle_touch_destroy;
 	wl_signal_add(&touch->device->events.destroy, &touch->destroy);
 
-	wlr_cursor_map_input_to_output(seat->cursor, device, seat->server->output->wlr_output);
+	if (device->output_name != NULL) {
+		struct cg_output *output;
+		wl_list_for_each(output, &seat->server->outputs, link) {
+			if (strcmp(device->output_name, output->wlr_output->name) == 0) {
+				wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
+				break;
+			}
+		}
+	}
 }
 
 static void
@@ -192,7 +200,15 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 	pointer->destroy.notify = handle_pointer_destroy;
 	wl_signal_add(&device->events.destroy, &pointer->destroy);
 
-	wlr_cursor_map_input_to_output(seat->cursor, device, seat->server->output->wlr_output);
+	if (device->output_name != NULL) {
+		struct cg_output *output;
+		wl_list_for_each(output, &seat->server->outputs, link) {
+			if (strcmp(device->output_name, output->wlr_output->name) == 0) {
+				wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
+				break;
+			}
+		}
+	}
 }
 
 static void
@@ -568,7 +584,10 @@ handle_cursor_motion(struct wl_listener *listener, void *data)
 static void
 drag_icon_damage(struct cg_drag_icon *drag_icon)
 {
-	output_damage_drag_icon(drag_icon->seat->server->output, drag_icon);
+	struct cg_output *output;
+	wl_list_for_each(output, &drag_icon->seat->server->outputs, link) {
+		output_damage_drag_icon(output, drag_icon);
+	}
 }
 
 static void
@@ -835,7 +854,10 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 
 	view_activate(view, true);
 	char *title = view_get_title(view);
-	output_set_window_title(server->output, title);
+	struct cg_output *output;
+	wl_list_for_each(output, &server->outputs, link) {
+		output_set_window_title(output, title);
+	}
 	free(title);
 
 	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(wlr_seat);

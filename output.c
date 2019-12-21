@@ -319,12 +319,20 @@ output_destroy(struct cg_output *output)
 	wl_list_remove(&output->transform.link);
 	wl_list_remove(&output->damage_frame.link);
 	wl_list_remove(&output->damage_destroy.link);
-	free(output);
-	server->output = NULL;
+	wl_list_remove(&output->link);
 
-	/* Since there is no use in continuing without our (single)
-	 * output, terminate. */
-	wl_display_terminate(server->wl_display);
+	wlr_output_layout_remove(server->output_layout, output->wlr_output);
+
+	struct cg_view *view;
+	wl_list_for_each(view, &output->server->views, link) {
+		view_position(view);
+	}
+
+	free(output);
+
+	if (wl_list_empty(&server->outputs)) {
+		wl_display_terminate(server->wl_display);
+	}
 }
 
 static void
@@ -354,28 +362,31 @@ handle_new_output(struct wl_listener *listener, void *data)
 		wlr_output_set_mode(wlr_output, preferred_mode);
 	}
 
-	server->output = calloc(1, sizeof(struct cg_output));
-	server->output->wlr_output = wlr_output;
-	server->output->server = server;
-	server->output->damage = wlr_output_damage_create(wlr_output);
+	struct cg_output *output = calloc(1, sizeof(struct cg_output));
+	output->wlr_output = wlr_output;
+	output->server = server;
+	output->damage = wlr_output_damage_create(wlr_output);
+	wl_list_insert(&server->outputs, &output->link);
 
-	server->output->mode.notify = handle_output_mode;
-	wl_signal_add(&wlr_output->events.mode, &server->output->mode);
-	server->output->transform.notify = handle_output_transform;
-	wl_signal_add(&wlr_output->events.transform, &server->output->transform);
-	server->output->destroy.notify = handle_output_destroy;
-	wl_signal_add(&wlr_output->events.destroy, &server->output->destroy);
-	server->output->damage_frame.notify = handle_output_damage_frame;
-	wl_signal_add(&server->output->damage->events.frame, &server->output->damage_frame);
-	server->output->damage_destroy.notify = handle_output_damage_destroy;
-	wl_signal_add(&server->output->damage->events.destroy, &server->output->damage_destroy);
+	output->mode.notify = handle_output_mode;
+	wl_signal_add(&wlr_output->events.mode, &output->mode);
+	output->transform.notify = handle_output_transform;
+	wl_signal_add(&wlr_output->events.transform, &output->transform);
+	output->destroy.notify = handle_output_destroy;
+	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
+	output->damage_frame.notify = handle_output_damage_frame;
+	wl_signal_add(&output->damage->events.frame, &output->damage_frame);
+	output->damage_destroy.notify = handle_output_damage_destroy;
+	wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
+
+	struct cg_view *view;
+	wl_list_for_each(view, &output->server->views, link) {
+		view_position(view);
+	}
 
 	wlr_output_set_transform(wlr_output, server->output_transform);
 
 	wlr_output_layout_add_auto(server->output_layout, wlr_output);
-
-	/* Disconnect the signal now, because we only use one static output. */
-	wl_list_remove(&server->new_output.link);
 
 	if (wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f",
@@ -385,7 +396,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	/* Place the cursor in the center of the screen. */
 	wlr_cursor_warp(server->seat->cursor, NULL, wlr_output->width / 2, wlr_output->height / 2);
-	wlr_output_damage_add_whole(server->output->damage);
+	wlr_output_damage_add_whole(output->damage);
 }
 
 void
