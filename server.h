@@ -29,7 +29,7 @@ struct cg_server {
 	struct wl_list inhibitors;
 
 	struct wlr_output_layout *output_layout;
-	struct cg_output *output;
+	struct wl_list outputs;
 	struct wl_listener new_output;
 
 	struct wl_listener xdg_toplevel_decoration;

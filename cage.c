@@ -220,6 +220,7 @@ main(int argc, char *argv[])
 	wlr_renderer_init_wl_display(renderer, server.wl_display);
 
 	wl_list_init(&server.views);
+	wl_list_init(&server.outputs);
 
 	server.output_layout = wlr_output_layout_create();
 	if (!server.output_layout) {
