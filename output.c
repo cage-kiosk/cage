@@ -363,6 +363,10 @@ handle_new_output(struct wl_listener *listener, void *data)
 	}
 
 	struct cg_output *output = calloc(1, sizeof(struct cg_output));
+	if (!output) {
+		return;
+	}
+
 	output->wlr_output = wlr_output;
 	output->server = server;
 	output->damage = wlr_output_damage_create(wlr_output);
