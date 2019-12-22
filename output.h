@@ -20,7 +20,7 @@ struct cg_output {
 	struct wl_listener damage_frame;
 	struct wl_listener damage_destroy;
 
-	struct wl_list link;
+	struct wl_list link; // cg_server::outputs
 };
 
 void handle_new_output(struct wl_listener *listener, void *data);
