@@ -71,7 +71,7 @@ struct cg_subsurface {
 char *view_get_title(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
 bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
-void view_damage_surface(struct cg_view *view);
+void view_damage_part(struct cg_view *view);
 void view_damage_whole(struct cg_view *view);
 void view_activate(struct cg_view *view, bool activate);
 void view_position(struct cg_view *view);

@@ -242,7 +242,7 @@ handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
 	struct cg_view *view = &xdg_shell_view->view;
-	view_damage_surface(view);
+	view_damage_part(view);
 }
 
 static void

@@ -28,7 +28,7 @@ static void
 view_child_handle_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_view_child *child = wl_container_of(listener, child, commit);
-	view_damage_surface(child->view);
+	view_damage_part(child->view);
 }
 
 static void subsurface_create(struct cg_view *view, struct wlr_subsurface *wlr_subsurface);
@@ -136,7 +136,7 @@ view_is_transient_for(struct cg_view *child, struct cg_view *parent) {
 }
 
 void
-view_damage_surface(struct cg_view *view)
+view_damage_part(struct cg_view *view)
 {
 	struct cg_output *output;
 	wl_list_for_each(output, &view->server->outputs, link) {

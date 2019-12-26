@@ -120,7 +120,7 @@ handle_xwayland_surface_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, commit);
 	struct cg_view *view = &xwayland_view->view;
-	view_damage_surface(view);
+	view_damage_part(view);
 }
 
 static void
