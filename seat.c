@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2019 Jente Hidskes
+ * Copyright (C) 2018-2020 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
@@ -586,7 +586,8 @@ drag_icon_damage(struct cg_drag_icon *drag_icon)
 {
 	struct cg_output *output;
 	wl_list_for_each(output, &drag_icon->seat->server->outputs, link) {
-		output_damage_drag_icon(output, drag_icon);
+		output_damage_surface(output, drag_icon->wlr_drag_icon->surface,
+			drag_icon->lx, drag_icon->ly, true);
 	}
 }
 
