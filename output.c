@@ -207,7 +207,6 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	}
 
 	if (!needs_frame) {
-		wlr_log(WLR_DEBUG, "Output doesn't need frame and isn't damaged");
 		goto buffer_damage_finish;
 	}
 
