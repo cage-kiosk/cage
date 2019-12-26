@@ -83,7 +83,9 @@ cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
   'output.c',
+  'render.c',
   'seat.c',
+  'util.c',
   'view.c',
   'xdg_shell.c',
 ]
@@ -94,8 +96,10 @@ cage_headers = [
 		 configuration: conf_data),
   'idle_inhibit_v1.h',
   'output.h',
+  'render.h',
   'seat.h',
   'server.h',
+  'util.h',
   'view.h',
   'xdg_shell.h',
 ]
