@@ -853,19 +853,10 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 
 	view_activate(view, true);
-
-	struct wlr_box surface_box;
-	wlr_surface_get_extends(view->wlr_surface, &surface_box);
-
 	char *title = view_get_title(view);
 	struct cg_output *output;
 	wl_list_for_each(output, &server->outputs, link) {
-		struct wlr_box *output_box =
-				wlr_output_layout_get_box(view->server->output_layout, output->wlr_output);
-		struct wlr_box intersection;
-		if (wlr_box_intersection(&intersection, &surface_box, output_box)) {
-			output_set_window_title(output, title);
-		}
+		output_set_window_title(output, title);
 	}
 	free(title);
 
