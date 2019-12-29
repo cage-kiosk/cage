@@ -160,40 +160,25 @@ view_activate(struct cg_view *view, bool activate)
 }
 
 static void
-get_view_output_dimensions(struct cg_view *view, int *output_width, int *output_height)
-{
-	*output_width = 0;
-	*output_height = 0;
-	struct cg_output *output;
-	wl_list_for_each(output, &view->server->outputs, link) {
-		int h, w;
-		wlr_output_transformed_resolution(output->wlr_output, &w, &h);
-		*output_width += w;
-		if (h > *output_height) {
-			*output_height = h;
-		}
-	}
-}
-
-static void
 view_maximize(struct cg_view *view)
 {
-	int output_width, output_height;
-	get_view_output_dimensions(view, &output_width, &output_height);
-	view->impl->maximize(view, output_width, output_height);
+	struct wlr_box *layout_box = wlr_output_layout_get_box(view->server->output_layout, NULL);
+
+	view->x = layout_box->x;
+	view->y = layout_box->y;
+	view->impl->maximize(view, layout_box->width, layout_box->height);
 }
 
 static void
 view_center(struct cg_view *view)
 {
-	int output_width, output_height;
-	get_view_output_dimensions(view, &output_width, &output_height);
+	struct wlr_box *layout_box = wlr_output_layout_get_box(view->server->output_layout, NULL);
 
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
-	view->x = (output_width - width) / 2;
-	view->y = (output_height - height) / 2;
+	view->x = (layout_box->width - width) / 2;
+	view->y = (layout_box->height - height) / 2;
 }
 
 void
