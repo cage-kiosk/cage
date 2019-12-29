@@ -64,8 +64,9 @@ send_frame_done(struct wlr_surface *surface, int _unused, int _not_used, void *d
 /* Used to move all of the data necessary to damage a surface. */
 struct damage_data {
 	struct cg_output *output;
-	double x;
-	double y;
+
+	/* Output-local coordinates. */
+	double ox, oy;
 	bool whole;
 };
 
@@ -80,12 +81,9 @@ damage_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 		return;
 	}
 
-	double x = ddata->x + sx, y = ddata->y + sy;
-	wlr_output_layout_output_coords(output->server->output_layout, wlr_output, &x, &y);
-
 	struct wlr_box box = {
-		.x = x * wlr_output->scale,
-		.y = y * wlr_output->scale,
+		.x = (ddata->ox + sx) * wlr_output->scale,
+		.y = (ddata->oy + sy) * wlr_output->scale,
 		.width = surface->current.width * wlr_output->scale,
 		.height = surface->current.height * wlr_output->scale,
 	};
@@ -118,7 +116,9 @@ struct render_data {
 	struct wlr_output *output;
 	struct timespec *when;
 	pixman_region32_t *damage;
-	double x, y;
+
+	/* Output-local coordinates. */
+	double ox, oy;
 };
 
 static void
@@ -137,12 +137,9 @@ render_surface(struct wlr_surface *surface, int sx, int sy, void *data)
 		return;
 	}
 
-	double x = rdata->x + sx, y = rdata->y + sy;
-	wlr_output_layout_output_coords(rdata->output_layout, output, &x, &y);
-
 	struct wlr_box box = {
-		.x = x * output->scale,
-		.y = y * output->scale,
+		.x = (rdata->ox + sx) * output->scale,
+		.y = (rdata->oy + sy) * output->scale,
 		.width = surface->current.width * output->scale,
 		.height = surface->current.height * output->scale,
 	};
@@ -175,14 +172,16 @@ drag_icons_for_each_surface(struct cg_server *server, wlr_surface_iterator_func_
 			    void *data)
 {
 	struct render_data *rdata = data;
+	struct wlr_output *wlr_output = rdata->output;
 
 	struct cg_drag_icon *drag_icon;
 	wl_list_for_each(drag_icon, &server->seat->drag_icons, link) {
 		if (!drag_icon->wlr_drag_icon->mapped) {
 			continue;
 		}
-		rdata->x = drag_icon->x;
-		rdata->y = drag_icon->y;
+		rdata->ox = drag_icon->x;
+		rdata->oy = drag_icon->y;
+		wlr_output_layout_output_coords(server->output_layout, wlr_output, &rdata->ox, &rdata->oy);
 		wlr_surface_for_each_surface(drag_icon->wlr_drag_icon->surface,
 					     iterator,
 					     data);
@@ -240,8 +239,9 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 
 	struct cg_view *view;
 	wl_list_for_each_reverse(view, &output->server->views, link) {
-		rdata.x = view->x;
-		rdata.y = view->y;
+		rdata.ox = view->lx;
+		rdata.oy = view->ly;
+		wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &rdata.ox, &rdata.oy);
 		view_for_each_surface(view, render_surface, &rdata);
 	}
 
@@ -404,38 +404,41 @@ handle_new_output(struct wl_listener *listener, void *data)
 }
 
 void
-output_damage_view_surface(struct cg_output *cg_output, struct cg_view *view)
+output_damage_view_surface(struct cg_output *output, struct cg_view *view)
 {
 	struct damage_data data = {
-		.output = cg_output,
-		.x = view->x,
-		.y = view->y,
+		.output = output,
+		.ox = view->lx,
+		.oy = view->ly,
 		.whole = false,
 	};
+	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
 	view_for_each_surface(view, damage_surface, &data);
 }
 
 void
-output_damage_view_whole(struct cg_output *cg_output, struct cg_view *view)
+output_damage_view_whole(struct cg_output *output, struct cg_view *view)
 {
 	struct damage_data data = {
-		.output = cg_output,
-		.x = view->x,
-		.y = view->y,
+		.output = output,
+		.ox = view->lx,
+		.oy = view->ly,
 		.whole = true,
 	};
+	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
 	view_for_each_surface(view, damage_surface, &data);
 }
 
 void
-output_damage_drag_icon(struct cg_output *cg_output, struct cg_drag_icon *drag_icon)
+output_damage_drag_icon(struct cg_output *output, struct cg_drag_icon *drag_icon)
 {
 	struct damage_data data = {
-		.output = cg_output,
-		.x = drag_icon->x,
-		.y = drag_icon->y,
+		.output = output,
+		.ox = drag_icon->x,
+		.oy = drag_icon->y,
 		.whole = true,
 	};
+	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
 	wlr_surface_for_each_surface(drag_icon->wlr_drag_icon->surface,
 				     damage_surface,
 				     &data);

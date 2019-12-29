@@ -97,12 +97,12 @@ popup_unconstrain(struct cg_xdg_popup *popup)
 	struct wlr_box *popup_box = &popup->wlr_popup->geometry;
 
 	struct wlr_output_layout *output_layout = server->output_layout;
-	struct wlr_output *wlr_output = wlr_output_layout_output_at(output_layout, view->x + popup_box->x, view->y + popup_box->y);
+	struct wlr_output *wlr_output = wlr_output_layout_output_at(output_layout, view->lx + popup_box->x, view->ly + popup_box->y);
 	struct wlr_box *output_box = wlr_output_layout_get_box(output_layout, wlr_output);
 
 	struct wlr_box output_toplevel_box = {
-		.x = output_box->x - view->x,
-		.y = output_box->y - view->y,
+		.x = output_box->x - view->lx,
+		.y = output_box->y - view->ly,
 		.width = output_box->width,
 		.height = output_box->height
 	};

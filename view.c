@@ -164,8 +164,8 @@ view_maximize(struct cg_view *view)
 {
 	struct wlr_box *layout_box = wlr_output_layout_get_box(view->server->output_layout, NULL);
 
-	view->x = layout_box->x;
-	view->y = layout_box->y;
+	view->lx = layout_box->x;
+	view->ly = layout_box->y;
 	view->impl->maximize(view, layout_box->width, layout_box->height);
 }
 
@@ -177,8 +177,8 @@ view_center(struct cg_view *view)
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
-	view->x = (layout_box->width - width) / 2;
-	view->y = (layout_box->height - height) / 2;
+	view->lx = (layout_box->width - width) / 2;
+	view->ly = (layout_box->height - height) / 2;
 }
 
 void

@@ -43,8 +43,8 @@ static bool
 view_at(struct cg_view *view, double lx, double ly,
 	struct wlr_surface **surface, double *sx, double *sy)
 {
-	double view_sx = lx - view->x;
-	double view_sy = ly - view->y;
+	double view_sx = lx - view->lx;
+	double view_sy = ly - view->ly;
 
 	double _sx, _sy;
 	struct wlr_surface *_surface = view_wlr_surface_at(view, view_sx, view_sy, &_sx, &_sy);

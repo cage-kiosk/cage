@@ -26,7 +26,9 @@ struct cg_view {
 	struct wl_list link; // server::views
 	struct wl_list children; // cg_view_child::link
 	struct wlr_surface *wlr_surface;
-	int x, y;
+
+	/* The view has a position in layout coordinates. */
+	int lx, ly;
 
 	enum cg_view_type type;
 	const struct cg_view_impl *impl;
