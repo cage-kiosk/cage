@@ -143,8 +143,8 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 	struct cg_view *view = &xwayland_view->view;
 
 	if (!xwayland_view_should_manage(view)) {
-		view->x = xwayland_view->xwayland_surface->x;
-		view->y = xwayland_view->xwayland_surface->y;
+		view->lx = xwayland_view->xwayland_surface->x;
+		view->ly = xwayland_view->xwayland_surface->y;
 	}
 
 	xwayland_view->commit.notify = handle_xwayland_surface_commit;
