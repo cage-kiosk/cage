@@ -273,7 +273,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	pixman_region32_fini(&frame_damage);
 
 	if (!wlr_output_commit(output->wlr_output)) {
-	        wlr_log(WLR_ERROR, "Could not commit output");
+		wlr_log(WLR_ERROR, "Could not commit output");
 		goto buffer_damage_finish;
 	}
 

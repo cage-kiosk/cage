@@ -343,7 +343,7 @@ main(int argc, char *argv[])
 	xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
 	if (!xcursor_manager) {
 		wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
-	        ret = 1;
+		ret = 1;
 		goto end;
 	}
 
@@ -371,7 +371,7 @@ main(int argc, char *argv[])
 	if (!socket) {
 		wlr_log_errno(WLR_ERROR, "Unable to open Wayland socket");
 		ret = 1;
-	        goto end;
+		goto end;
 	}
 
 	if (!wlr_backend_start(server.backend)) {
