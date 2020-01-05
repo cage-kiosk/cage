@@ -428,8 +428,8 @@ handle_touch_down(struct wl_listener *listener, void *data)
 
 	if (serial && wlr_seat_touch_num_points(seat->seat) == 1) {
 		seat->touch_id = event->touch_id;
-		seat->touch_x = lx;
-		seat->touch_y = ly;
+		seat->touch_lx = lx;
+		seat->touch_ly = ly;
 		press_cursor_button(seat, event->device, event->time_msec,
 				    BTN_LEFT, WLR_BUTTON_PRESSED, lx, ly);
 	}
@@ -450,7 +450,7 @@ handle_touch_up(struct wl_listener *listener, void *data)
 	if (wlr_seat_touch_num_points(seat->seat) == 1) {
 		press_cursor_button(seat, event->device, event->time_msec,
 				    BTN_LEFT, WLR_BUTTON_RELEASED,
-				    seat->touch_x, seat->touch_y);
+				    seat->touch_lx, seat->touch_ly);
 	}
 
 	wlr_seat_touch_notify_up(seat->seat, event->time_msec, event->touch_id);
@@ -487,8 +487,8 @@ handle_touch_motion(struct wl_listener *listener, void *data)
 	}
 
 	if (event->touch_id == seat->touch_id) {
-		seat->touch_x = lx;
-		seat->touch_y = ly;
+		seat->touch_lx = lx;
+		seat->touch_ly = ly;
 	}
 
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
@@ -603,16 +603,16 @@ drag_icon_update_position(struct cg_drag_icon *drag_icon)
 	case WLR_DRAG_GRAB_KEYBOARD:
 		return;
 	case WLR_DRAG_GRAB_KEYBOARD_POINTER:
-		drag_icon->x = seat->cursor->x;
-		drag_icon->y = seat->cursor->y;
+		drag_icon->lx = seat->cursor->x;
+		drag_icon->ly = seat->cursor->y;
 		break;
 	case WLR_DRAG_GRAB_KEYBOARD_TOUCH:
 		point = wlr_seat_touch_get_point(seat->seat, wlr_icon->drag->touch_id);
 		if (!point) {
 			return;
 		}
-		drag_icon->x = seat->touch_x;
-		drag_icon->y = seat->touch_y;
+		drag_icon->lx = seat->touch_lx;
+		drag_icon->ly = seat->touch_ly;
 		break;
 	}
 

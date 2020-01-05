@@ -179,8 +179,8 @@ drag_icons_for_each_surface(struct cg_server *server, wlr_surface_iterator_func_
 		if (!drag_icon->wlr_drag_icon->mapped) {
 			continue;
 		}
-		rdata->ox = drag_icon->x;
-		rdata->oy = drag_icon->y;
+		rdata->ox = drag_icon->lx;
+		rdata->oy = drag_icon->ly;
 		wlr_output_layout_output_coords(server->output_layout, wlr_output, &rdata->ox, &rdata->oy);
 		wlr_surface_for_each_surface(drag_icon->wlr_drag_icon->surface,
 					     iterator,
@@ -434,8 +434,8 @@ output_damage_drag_icon(struct cg_output *output, struct cg_drag_icon *drag_icon
 {
 	struct damage_data data = {
 		.output = output,
-		.ox = drag_icon->x,
-		.oy = drag_icon->y,
+		.ox = drag_icon->lx,
+		.oy = drag_icon->ly,
 		.whole = true,
 	};
 	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);

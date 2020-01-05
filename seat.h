@@ -33,8 +33,8 @@ struct cg_seat {
 	struct wl_listener cursor_frame;
 
 	int32_t touch_id;
-	double touch_x;
-	double touch_y;
+	double touch_lx;
+	double touch_ly;
 	struct wl_listener touch_down;
 	struct wl_listener touch_up;
 	struct wl_listener touch_motion;
@@ -80,7 +80,7 @@ struct cg_drag_icon {
 	struct wlr_drag_icon *wlr_drag_icon;
 
 	/* The drag icon has a position in layout coordinates. */
-	double x, y;
+	double lx, ly;
 
 	struct wl_listener destroy;
 };
