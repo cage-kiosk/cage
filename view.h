@@ -46,6 +46,8 @@ struct cg_view_impl {
 	void (*destroy)(struct cg_view *view);
 	void (*for_each_surface)(struct cg_view *view, wlr_surface_iterator_func_t iterator,
 				 void *data);
+	void (*for_each_popup)(struct cg_view *view, wlr_surface_iterator_func_t iterator,
+			       void *data);
 	struct wlr_surface *(*wlr_surface_at)(struct cg_view *view, double sx, double sy,
 					      double *sub_x, double *sub_y);
 };
@@ -76,6 +78,7 @@ void view_damage_whole(struct cg_view *view);
 void view_activate(struct cg_view *view, bool activate);
 void view_position(struct cg_view *view);
 void view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data);
+void view_for_each_popup(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data);
 void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);

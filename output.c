@@ -100,7 +100,7 @@ output_for_each_surface_iterator(struct wlr_surface *surface, int sx, int sy, vo
 	data->user_iterator(data->output, surface, &box, data->user_data);
 }
 
-static void
+void
 output_surface_for_each_surface(struct cg_output *output, struct wlr_surface *surface,
 				double ox, double oy, cg_surface_iterator_func_t iterator,
 				void *user_data)
@@ -116,7 +116,7 @@ output_surface_for_each_surface(struct cg_output *output, struct wlr_surface *su
 	wlr_surface_for_each_surface(surface, output_for_each_surface_iterator, &data);
 }
 
-void
+static void
 output_view_for_each_surface(struct cg_output *output, struct cg_view *view,
 			     cg_surface_iterator_func_t iterator, void *user_data)
 {
@@ -130,6 +130,49 @@ output_view_for_each_surface(struct cg_output *output, struct cg_view *view,
 
 	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
 	view_for_each_surface(view, output_for_each_surface_iterator, &data);
+}
+
+void
+output_view_for_each_popup(struct cg_output *output, struct cg_view *view,
+			   cg_surface_iterator_func_t iterator, void *user_data)
+{
+	struct surface_iterator_data data = {
+		.user_iterator = iterator,
+		.user_data = user_data,
+		.output = output,
+		.ox = view->lx,
+		.oy = view->ly,
+	};
+
+	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
+	view_for_each_popup(view, output_for_each_surface_iterator, &data);
+}
+
+void
+output_drag_icons_for_each_surface(struct cg_output *output, struct wl_list *drag_icons,
+				   cg_surface_iterator_func_t iterator, void *user_data)
+{
+	struct cg_drag_icon *drag_icon;
+	wl_list_for_each(drag_icon, drag_icons, link) {
+		if (drag_icon->wlr_drag_icon->mapped) {
+			double ox = drag_icon->lx;
+			double oy = drag_icon->ly;
+			wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
+			output_surface_for_each_surface(output, drag_icon->wlr_drag_icon->surface,
+				ox, oy, iterator, user_data);
+		}
+	}
+}
+
+static void
+output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data)
+{
+	struct cg_view *view;
+	wl_list_for_each_reverse(view, &output->server->views, link) {
+		output_view_for_each_surface(output, view, iterator, user_data);
+	}
+
+	output_drag_icons_for_each_surface(output, &output->server->seat->drag_icons, iterator, user_data);
 }
 
 struct send_frame_done_data {
@@ -185,33 +228,6 @@ output_damage_surface(struct cg_output *output, struct wlr_surface *surface,
 	double ox = lx, oy = ly;
 	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
 	output_surface_for_each_surface(output, surface, ox, oy, damage_surface_iterator, &whole);
-}
-
-void
-output_drag_icons_for_each_surface(struct cg_output *output, struct wl_list *drag_icons,
-				   cg_surface_iterator_func_t iterator, void *user_data)
-{
-	struct cg_drag_icon *drag_icon;
-	wl_list_for_each(drag_icon, drag_icons, link) {
-		if (drag_icon->wlr_drag_icon->mapped) {
-			double ox = drag_icon->lx;
-			double oy = drag_icon->ly;
-			wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
-			output_surface_for_each_surface(output, drag_icon->wlr_drag_icon->surface,
-				ox, oy, iterator, user_data);
-		}
-	}
-}
-
-static void
-output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data)
-{
-	struct cg_view *view;
-	wl_list_for_each_reverse(view, &output->server->views, link) {
-		output_view_for_each_surface(output, view, iterator, user_data);
-	}
-
-	output_drag_icons_for_each_surface(output, &output->server->seat->drag_icons, iterator, user_data);
 }
 
 static void
