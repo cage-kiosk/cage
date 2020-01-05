@@ -198,6 +198,15 @@ view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator
 }
 
 void
+view_for_each_popup(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
+{
+	if (!view->impl->for_each_popup) {
+		return;
+	}
+	view->impl->for_each_popup(view, iterator, data);
+}
+
+void
 view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
