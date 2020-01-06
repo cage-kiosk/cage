@@ -206,6 +206,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	}
 
 	if (!needs_frame) {
+		wlr_output_rollback(output->wlr_output);
 		goto buffer_damage_finish;
 	}
 
