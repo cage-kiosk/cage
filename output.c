@@ -235,6 +235,10 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, damage_frame);
 
+	if (!output->wlr_output->enabled) {
+		return;
+	}
+
 	bool needs_frame;
 	pixman_region32_t damage;
 	pixman_region32_init(&damage);
@@ -263,6 +267,10 @@ handle_output_transform(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, transform);
 
+	if (!output->wlr_output->enabled) {
+		return;
+	}
+
 	struct cg_view *view;
 	wl_list_for_each(view, &output->server->views, link) {
 		view_position(view);
@@ -273,6 +281,10 @@ static void
 handle_output_mode(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, mode);
+
+	if (!output->wlr_output->enabled) {
+		return;
+	}
 
 	struct cg_view *view;
 	wl_list_for_each(view, &output->server->views, link) {
