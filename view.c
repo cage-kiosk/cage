@@ -159,21 +159,26 @@ view_activate(struct cg_view *view, bool activate)
 	view->impl->activate(view, activate);
 }
 
-static void
-view_maximize(struct cg_view *view)
+static bool
+view_extends_output_layout(struct cg_view *view, struct wlr_box *layout_box)
 {
-	struct wlr_box *layout_box = wlr_output_layout_get_box(view->server->output_layout, NULL);
+	int width, height;
+	view->impl->get_geometry(view, &width, &height);
 
+	return (layout_box->height < height || layout_box->width < width);
+}
+
+static void
+view_maximize(struct cg_view *view, struct wlr_box *layout_box)
+{
 	view->lx = layout_box->x;
 	view->ly = layout_box->y;
 	view->impl->maximize(view, layout_box->width, layout_box->height);
 }
 
 static void
-view_center(struct cg_view *view)
+view_center(struct cg_view *view, struct wlr_box *layout_box)
 {
-	struct wlr_box *layout_box = wlr_output_layout_get_box(view->server->output_layout, NULL);
-
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
@@ -184,10 +189,12 @@ view_center(struct cg_view *view)
 void
 view_position(struct cg_view *view)
 {
-	if (view_is_primary(view)) {
-		view_maximize(view);
+	struct wlr_box *layout_box = wlr_output_layout_get_box(view->server->output_layout, NULL);
+
+	if (view_is_primary(view) || view_extends_output_layout(view, layout_box)) {
+		view_maximize(view, layout_box);
 	} else {
-		view_center(view);
+		view_center(view, layout_box);
 	}
 }
 
