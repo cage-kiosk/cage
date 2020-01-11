@@ -49,55 +49,41 @@ struct surface_iterator_data {
 	double ox, oy;
 };
 
-// TODO: this doesn't just get the surface box; it also indicates if said box overlaps
-// with the current output box.
-static bool // TODO: remove surface_iterator_data argument?
-get_surface_box(struct surface_iterator_data *data,
-		struct wlr_surface *surface, int sx, int sy,
-		struct wlr_box *surface_box)
+static bool
+intersects_with_output(struct cg_output *output, struct wlr_output_layout *output_layout, struct wlr_box *surface_box)
 {
-	struct cg_output *output = data->output;
-
-	if (!wlr_surface_has_buffer(surface)) {
-		return false;
-	}
-
-	struct wlr_box box = {
-		.x = sx + surface->sx,
-		.y = sy + surface->sy,
-		.width = surface->current.width,
-		.height = surface->current.height,
-	};
-
-	struct cg_server *server = output->server;
-	struct wlr_box *output_box = wlr_output_layout_get_box(server->output_layout, output->wlr_output);
+	/* Since the surface_box's x- and y-coordinates are already output local,
+	 * the x- and y-coordinates of this box need to be 0 for this function to
+	 * work correctly. */
+	struct wlr_box output_box = {0};
+	wlr_output_effective_resolution(output->wlr_output, &output_box.width, &output_box.height);
 
 	struct wlr_box intersection;
-	bool intersects = wlr_box_intersection(&intersection, output_box, &box);
-
-	// TODO: why can't we do this before the intersection check?
-	box.x += data->ox;
-	box.y += data->oy;
-
-	if (surface_box) {
-		memcpy(surface_box, &box, sizeof(struct wlr_box));
-	}
-
-	return intersects;
+	return wlr_box_intersection(&intersection, &output_box, surface_box);
 }
 
 static void
 output_for_each_surface_iterator(struct wlr_surface *surface, int sx, int sy, void *user_data)
 {
 	struct surface_iterator_data *data = user_data;
+	struct cg_output *output = data->output;
 
-	struct wlr_box box;
-	bool intersects = get_surface_box(data, surface, sx, sy, &box);
-	if (!intersects) {
+	if (!wlr_surface_has_buffer(surface)) {
 		return;
 	}
 
-	data->user_iterator(data->output, surface, &box, data->user_data);
+	struct wlr_box surface_box = {
+		.x = data->ox + sx + surface->sx,
+		.y = data->oy + sy + surface->sy,
+		.width = surface->current.width,
+		.height = surface->current.height,
+	};
+
+	if (!intersects_with_output(output, output->server->output_layout, &surface_box)) {
+		return;
+	}
+
+	data->user_iterator(data->output, surface, &surface_box, data->user_data);
 }
 
 void
