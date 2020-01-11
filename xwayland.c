@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2019 Jente Hidskes
+ * Copyright (C) 2018-2020 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
@@ -84,7 +84,7 @@ static void
 maximize(struct cg_view *view, int output_width, int output_height)
 {
 	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, 0, 0, output_width, output_height);
+	wlr_xwayland_surface_configure(xwayland_view->xwayland_surface, view->lx, view->ly, output_width, output_height);
 	wlr_xwayland_surface_set_maximized(xwayland_view->xwayland_surface, true);
 }
 
