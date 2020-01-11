@@ -324,12 +324,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 {
 	struct cg_server *server = wl_container_of(listener, server, new_output);
 	struct wlr_output *wlr_output = data;
-	struct wlr_output_mode *preferred_mode;
-
-	preferred_mode = wlr_output_preferred_mode(wlr_output);
-	if (preferred_mode) {
-		wlr_output_set_mode(wlr_output, preferred_mode);
-	}
 
 	struct cg_output *output = calloc(1, sizeof(struct cg_output));
 	if (!output) {
@@ -353,14 +347,17 @@ handle_new_output(struct wl_listener *listener, void *data)
 	output->damage_destroy.notify = handle_output_damage_destroy;
 	wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
 
+	struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
+	if (preferred_mode) {
+		wlr_output_set_mode(wlr_output, preferred_mode);
+	}
+	wlr_output_set_transform(wlr_output, server->output_transform);
+	wlr_output_layout_add_auto(server->output_layout, wlr_output);
+
 	struct cg_view *view;
 	wl_list_for_each(view, &output->server->views, link) {
 		view_position(view);
 	}
-
-	wlr_output_set_transform(wlr_output, server->output_transform);
-
-	wlr_output_layout_add_auto(server->output_layout, wlr_output);
 
 	if (wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f",
