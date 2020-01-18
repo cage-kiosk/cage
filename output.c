@@ -365,12 +365,10 @@ handle_new_output(struct wl_listener *listener, void *data)
 			wlr_output->scale);
 	}
 
-	/* Place the cursor in the center of the screen. */
-	wlr_cursor_warp(server->seat->cursor, NULL, wlr_output->width / 2, wlr_output->height / 2);
-	wlr_output_damage_add_whole(output->damage);
-
 	wlr_output_enable(wlr_output, true);
 	wlr_output_commit(wlr_output);
+
+	wlr_output_damage_add_whole(output->damage);
 }
 
 void
