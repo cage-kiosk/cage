@@ -194,6 +194,12 @@ main(int argc, char *argv[])
 	wlr_log_init(WLR_ERROR, NULL);
 #endif
 
+	/* Wayland requires XDG_RUNTIME_DIR to be set. */
+	if (!getenv("XDG_RUNTIME_DIR")) {
+		wlr_log(WLR_ERROR, "XDG_RUNTIME_DIR is not set in the environment");
+		return 1;
+	}
+
 	server.wl_display = wl_display_create();
 	if (!server.wl_display) {
 		wlr_log(WLR_ERROR, "Cannot allocate a Wayland display");
