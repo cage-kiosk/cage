@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2019 Jente Hidskes
+ * Copyright (C) 2018-2020 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
