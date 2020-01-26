@@ -149,7 +149,12 @@ output_render(struct cg_output *output, pixman_region32_t *damage)
 	struct cg_server *server = output->server;
 	struct wlr_output *wlr_output = output->wlr_output;
 
-	struct wlr_renderer *renderer = wlr_backend_get_renderer(server->backend);
+	struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
+	if (!renderer) {
+		wlr_log(WLR_DEBUG, "Expected the output backend to have a renderer");
+		return;
+	}
+
 	wlr_renderer_begin(renderer, wlr_output->width, wlr_output->height);
 
 	if (!pixman_region32_not_empty(damage)) {
