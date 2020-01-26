@@ -69,6 +69,20 @@ spawn_primary_client(char *argv[], pid_t *pid_out)
 	return true;
 }
 
+static void
+cleanup_primary_client(pid_t pid)
+{
+	int status;
+
+	waitpid(pid, &status, 0);
+
+	if (WIFEXITED(status)) {
+		wlr_log(WLR_DEBUG, "Child exited normally with exit status %d", WEXITSTATUS(status));
+	} else if (WIFSIGNALED(status)) {
+		wlr_log(WLR_DEBUG, "Child was terminated by a signal (%d)", WTERMSIG(status));
+	}
+}
+
 static bool
 drop_permissions(void)
 {
@@ -423,7 +437,7 @@ main(int argc, char *argv[])
 #endif
 	wl_display_destroy_clients(server.wl_display);
 
-	waitpid(pid, NULL, 0);
+	cleanup_primary_client(pid);
 
 end:
 	wl_event_source_remove(sigint_source);
