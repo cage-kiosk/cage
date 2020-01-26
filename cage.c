@@ -100,7 +100,7 @@ handle_signal(int signal, void *data)
 		wl_display_terminate(display);
 		return 0;
 	default:
-		return 1;
+		return 0;
 	}
 }
 
