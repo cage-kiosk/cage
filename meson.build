@@ -76,8 +76,24 @@ else
   have_xwayland = false
 endif
 
+git = find_program('git', native: true, required: false)
+if git.found()
+  git_commit = run_command([git, 'rev-parse', '--short', 'HEAD'])
+  git_branch = run_command([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
+  if git_commit.returncode() == 0 and git_branch.returncode() == 0
+    version = '@0@-@1@ (branch \'@2@\')'.format(
+      meson.project_version(),
+      git_commit.stdout().strip(),
+      git_branch.stdout().strip(),
+    )
+  endif
+else
+  version = '@0@'.format(meson.project_version())
+endif
+
 conf_data = configuration_data()
 conf_data.set10('CAGE_HAS_XWAYLAND', have_xwayland)
+conf_data.set_quoted('CAGE_VERSION', version)
 
 cage_sources = [
   'cage.c',
@@ -125,9 +141,9 @@ executable(
 
 summary = [
 	'',
-	'Cage @0@'.format(meson.project_version()),
+	'Cage @0@'.format(version),
 	'',
-	'    xwayland: @0@'.format(conf_data.get('CAGE_HAS_XWAYLAND', false)),
+	'    xwayland: @0@'.format(have_xwayland),
 	''
 ]
 message('\n'.join(summary))

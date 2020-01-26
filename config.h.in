@@ -3,4 +3,6 @@
 
 #mesondefine CAGE_HAS_XWAYLAND
 
+#mesondefine CAGE_VERSION
+
 #endif
