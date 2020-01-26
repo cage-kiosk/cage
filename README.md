@@ -5,9 +5,9 @@
 This is Cage, a Wayland kiosk. A kiosk runs a single, maximized
 application.
 
-This README is only relevant for development resources and
-instructions. For a description of Cage and installation instructions
-for end-users, please see [its project
+This README is only relevant for development resources and instructions. For a
+description of Cage and installation instructions for end-users, please see
+[the Wiki](https://github.com/Hjdskes/cage/wiki/) and [its project
 page](https://www.hjdskes.nl/projects/cage).
 
 ## Release signatures
@@ -43,7 +43,7 @@ a TTY, it'll run with the KMS+DRM backend. In debug mode (default
 build type with Meson), press Alt+Esc to quit. To build a release
 build, use `meson build --buildtype=release`.
 
-For more information, see the `docs/` folder.
+For more information, see the [Wiki](https://github.com/Hjdskes/cage/wiki).
 
 Cage is based on the annotated source of tinywl and rootston.
 
