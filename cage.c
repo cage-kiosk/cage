@@ -115,6 +115,7 @@ usage(FILE *file, const char *cage)
 		" -D\t Turn on damage tracking debugging\n"
 #endif
 		" -h\t Display this help message\n"
+		" -v\t Show the version number and exit\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
 		cage);
@@ -125,9 +126,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
 #ifdef DEBUG
-	while ((c = getopt(argc, argv, "drDh")) != -1) {
+	while ((c = getopt(argc, argv, "drDhv")) != -1) {
 #else
-	while ((c = getopt(argc, argv, "drh")) != -1) {
+	while ((c = getopt(argc, argv, "drhv")) != -1) {
 #endif
 		switch (c) {
 		case 'd':
@@ -147,6 +148,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 		case 'h':
 			usage(stdout, argv[0]);
 			return false;
+		case 'v':
+			fprintf(stdout, "Cage version " CAGE_VERSION "\n");
+			exit(0);
 		default:
 			usage(stderr, argv[0]);
 			return false;
@@ -390,7 +394,7 @@ main(int argc, char *argv[])
 		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY.",
 			      "Clients may not be able to connect");
 	} else {
-		wlr_log(WLR_DEBUG, "Cage is running on Wayland display %s", socket);
+		wlr_log(WLR_DEBUG, "Cage " CAGE_VERSION " is running on Wayland display %s", socket);
 	}
 
 #if CAGE_HAS_XWAYLAND
