@@ -444,9 +444,9 @@ end:
 	wl_event_source_remove(sigterm_source);
 	wl_event_source_remove(sigchld_source);
 	seat_destroy(server.seat);
-	wlr_output_layout_destroy(server.output_layout);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
 	wl_display_destroy(server.wl_display);
+	wlr_output_layout_destroy(server.output_layout);
 	return ret;
 }
