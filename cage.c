@@ -49,20 +49,53 @@
 #include "xwayland.h"
 #endif
 
-static bool
-spawn_primary_client(char *argv[], pid_t *pid_out)
+static int
+sigchld_handler(int fd, uint32_t mask, void *data)
 {
+	struct wl_display *display = data;
+
+	/* Close Cage's read pipe. */
+	close(fd);
+
+	if (mask & WL_EVENT_HANGUP) {
+		wlr_log(WLR_DEBUG, "Child process closed normally");
+	} else if (mask & WL_EVENT_ERROR) {
+		wlr_log(WLR_DEBUG, "Connection closed by server");
+	}
+
+	wl_display_terminate(display);
+	return 0;
+}
+
+static bool
+spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, struct wl_event_source **sigchld_source)
+{
+	int fd[2];
+	if (pipe(fd) != 0) {
+		wlr_log(WLR_ERROR, "Unable to create pipe");
+		return false;
+	}
+
 	pid_t pid = fork();
 	if (pid == 0) {
 		sigset_t set;
 		sigemptyset(&set);
 		sigprocmask(SIG_SETMASK, &set, NULL);
+		/* Close read, we only need write in the primary client process. */
+		close(fd[0]);
 		execvp(argv[0], argv);
 		_exit(1);
 	} else if (pid == -1) {
 		wlr_log_errno(WLR_ERROR, "Unable to fork");
 		return false;
 	}
+
+	/* Close write, we only need read in Cage. */
+	close(fd[1]);
+
+	struct wl_event_loop *event_loop = wl_display_get_event_loop(display);
+	uint32_t mask = WL_EVENT_HANGUP | WL_EVENT_ERROR;
+	*sigchld_source = wl_event_loop_add_fd(event_loop, fd[0], mask, sigchld_handler, display);
 
 	*pid_out = pid;
 	wlr_log(WLR_DEBUG, "Child process created with pid %d", pid);
@@ -111,8 +144,6 @@ handle_signal(int signal, void *data)
 	case SIGINT:
 		/* Fallthrough */
 	case SIGTERM:
-		/* Fallthrough */
-	case SIGCHLD:
 		wl_display_terminate(display);
 		return 0;
 	default:
@@ -230,7 +261,6 @@ main(int argc, char *argv[])
 	event_loop = wl_display_get_event_loop(server.wl_display);
 	sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
 	sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
-	sigchld_source = wl_event_loop_add_signal(event_loop, SIGCHLD, handle_signal, &server.wl_display);
 
 	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
 	if (!server.backend) {
@@ -420,7 +450,7 @@ main(int argc, char *argv[])
 #endif
 
 	pid_t pid;
-	if (!spawn_primary_client(argv + optind, &pid)) {
+	if (!spawn_primary_client(server.wl_display, argv + optind, &pid, &sigchld_source)) {
 		ret = 1;
 		goto end;
 	}
