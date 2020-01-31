@@ -23,5 +23,5 @@ tasks:
       sudo ninja -C build install
   - build: |
       cd cage
-      meson build -Dxwayland=true
+      meson build --werror -Dxwayland=true
       ninja -C build

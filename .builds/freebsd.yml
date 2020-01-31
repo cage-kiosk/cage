@@ -24,5 +24,5 @@ tasks:
       sudo ninja -C build install
   - build: |
       cd cage
-      PKG_CONFIG_PATH=/usr/local/lib/pkgconfig meson build -Dxwayland=true
+      PKG_CONFIG_PATH=/usr/local/lib/pkgconfig meson build --werror -Dxwayland=true
       PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ninja -C build
