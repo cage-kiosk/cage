@@ -36,6 +36,7 @@
 #include "server.h"
 #include "util.h"
 #include "view.h"
+#include "xwayland.h"
 
 static void output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data);
 
@@ -179,6 +180,64 @@ send_frame_done(struct cg_output *output, struct send_frame_done_data *data)
 }
 
 static void
+count_surface_iterator(struct cg_output *output, struct wlr_surface *surface,
+		       struct wlr_box *_box, void *data)
+{
+	size_t *n = data;
+	n++;
+}
+
+static bool
+scan_out_primary_view(struct cg_output *output)
+{
+	struct cg_server *server = output->server;
+	struct wlr_output *wlr_output = output->wlr_output;
+
+	struct cg_drag_icon *drag_icon;
+	wl_list_for_each(drag_icon, &server->seat->drag_icons, link) {
+		if (drag_icon->wlr_drag_icon->mapped) {
+			return false;
+		}
+	}
+
+	struct cg_view *view = seat_get_focus(server->seat);
+	if (!view || !view->wlr_surface) {
+		return false;
+	}
+
+	size_t n_surfaces = 0;
+	output_view_for_each_surface(output, view, count_surface_iterator, &n_surfaces);
+	if (n_surfaces > 1) {
+		return false;
+	}
+
+#if CAGE_HAS_XWAYLAND
+	if (view->type == CAGE_XWAYLAND_VIEW) {
+		struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+		if (!wl_list_empty(&xwayland_view->xwayland_surface->children)) {
+			return false;
+		}
+	}
+#endif
+
+	struct wlr_surface *surface = view->wlr_surface;
+
+	if (!surface->buffer) {
+		return false;
+	}
+
+	if ((float) surface->current.scale != wlr_output->scale || surface->current.transform != wlr_output->transform) {
+		return false;
+	}
+
+	if (!wlr_output_attach_buffer(wlr_output, surface->buffer)) {
+		return false;
+	}
+
+	return wlr_output_commit(wlr_output);
+}
+
+static void
 damage_surface_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box, void *user_data)
 {
 	struct wlr_output *wlr_output = output->wlr_output;
@@ -220,9 +279,26 @@ static void
 handle_output_damage_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, damage_frame);
+	struct send_frame_done_data frame_data = {0};
 
 	if (!output->wlr_output->enabled) {
 		return;
+	}
+
+	/* Check if we can scan-out the primary view. */
+	static bool last_scanned_out = false;
+	bool scanned_out = scan_out_primary_view(output);
+
+	if (scanned_out && !last_scanned_out) {
+		wlr_log(WLR_DEBUG, "Scanning out primary view");
+	}
+	if (last_scanned_out && !scanned_out) {
+		wlr_log(WLR_DEBUG, "Stopping primary view scan out");
+	}
+	last_scanned_out = scanned_out;
+
+	if (scanned_out) {
+		goto frame_done;
 	}
 
 	bool needs_frame;
@@ -243,7 +319,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
  damage_finish:
 	pixman_region32_fini(&damage);
 
-	struct send_frame_done_data frame_data = {0};
+ frame_done:
 	clock_gettime(CLOCK_MONOTONIC, &frame_data.when);
 	send_frame_done(output, &frame_data);
 }
