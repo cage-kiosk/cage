@@ -19,6 +19,7 @@
 #include <wlr/backend/wayland.h>
 #if WLR_HAS_X11_BACKEND
 #include <wlr/backend/x11.h>
+#include "xwayland.h"
 #endif
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_data_device.h>
@@ -36,7 +37,6 @@
 #include "server.h"
 #include "util.h"
 #include "view.h"
-#include "xwayland.h"
 
 static void output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data);
 
