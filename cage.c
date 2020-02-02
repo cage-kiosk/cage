@@ -39,6 +39,7 @@
 #include <wlr/xwayland.h>
 #endif
 
+#include "fullscreen_shell.h"
 #include "idle_inhibit_v1.h"
 #include "output.h"
 #include "seat.h"
@@ -181,6 +182,7 @@ main(int argc, char *argv[])
 	struct wlr_screencopy_manager_v1 *screencopy_manager = NULL;
 	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
 	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
+	struct wlr_fullscreen_shell_v1 *fullscreen_shell = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xwayland *xwayland = NULL;
@@ -282,6 +284,15 @@ main(int argc, char *argv[])
 	server.new_idle_inhibitor_v1.notify = handle_idle_inhibitor_v1_new;
 	wl_signal_add(&server.idle_inhibit_v1->events.new_inhibitor, &server.new_idle_inhibitor_v1);
 	wl_list_init(&server.inhibitors);
+
+	fullscreen_shell = wlr_fullscreen_shell_v1_create(server.wl_display);
+	if (!fullscreen_shell) {
+		wlr_log(WLR_ERROR, "Unable to create the Fullscreen Shell interface");
+		ret = 1;
+		goto end;
+	}
+	server.fullscreen_shell_present_surface.notify = handle_fullscreen_shell_present_surface;
+	wl_signal_add(&fullscreen_shell->events.present_surface, &server.fullscreen_shell_present_surface);
 
 	xdg_shell = wlr_xdg_shell_create(server.wl_display);
 	if (!xdg_shell) {

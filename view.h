@@ -15,6 +15,7 @@
 #include "server.h"
 
 enum cg_view_type {
+	CAGE_FULLSCREEN_SHELL_VIEW,
 	CAGE_XDG_SHELL_VIEW,
 #if CAGE_HAS_XWAYLAND
 	CAGE_XWAYLAND_VIEW,

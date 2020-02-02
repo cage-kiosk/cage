@@ -32,6 +32,7 @@ struct cg_server {
 	struct wl_list outputs;
 	struct wl_listener new_output;
 
+	struct wl_listener fullscreen_shell_present_surface;
 	struct wl_listener xdg_toplevel_decoration;
 	struct wl_listener new_xdg_shell_surface;
 #if CAGE_HAS_XWAYLAND

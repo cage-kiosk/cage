@@ -117,6 +117,10 @@ handle_new_subsurface(struct wl_listener *listener, void *data)
 char *
 view_get_title(struct cg_view *view)
 {
+	if (!view->impl->get_title) {
+		return NULL;
+	}
+
 	const char *title = view->impl->get_title(view);
 	if (!title) {
 		return NULL;
@@ -156,6 +160,9 @@ view_damage_whole(struct cg_view *view)
 void
 view_activate(struct cg_view *view, bool activate)
 {
+	if (!view->impl->activate) {
+		return;
+	}
 	view->impl->activate(view, activate);
 }
 

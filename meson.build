@@ -51,6 +51,7 @@ wayland_scanner_server = generator(
 
 server_protocols = [
   [wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
+  [wl_protocol_dir, 'unstable/fullscreen-shell/fullscreen-shell-unstable-v1.xml'],
 ]
 
 server_protos_headers = []
@@ -96,6 +97,7 @@ conf_data.set_quoted('CAGE_VERSION', version)
 
 cage_sources = [
   'cage.c',
+  'fullscreen_shell.c',
   'idle_inhibit_v1.c',
   'output.c',
   'render.c',
@@ -109,6 +111,7 @@ cage_headers = [
   configure_file(input: 'config.h.in',
 		 output: 'config.h',
 		 configuration: conf_data),
+  'fullscreen_shell.h',
   'idle_inhibit_v1.h',
   'output.h',
   'render.h',
