@@ -33,6 +33,7 @@
 
 #include "output.h"
 #include "render.h"
+#include "seat.h"
 #include "server.h"
 #include "util.h"
 #include "view.h"

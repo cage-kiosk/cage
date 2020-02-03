@@ -5,7 +5,6 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_damage.h>
 
-#include "seat.h"
 #include "server.h"
 #include "view.h"
 
