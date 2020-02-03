@@ -36,7 +36,9 @@
 #include "server.h"
 #include "util.h"
 #include "view.h"
+#if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
+#endif
 
 static void output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data);
 
