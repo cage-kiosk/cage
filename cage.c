@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include <fcntl.h>
 #include <getopt.h>
 #include <signal.h>
 #include <stdio.h>
@@ -68,6 +69,25 @@ sigchld_handler(int fd, uint32_t mask, void *data)
 }
 
 static bool
+set_cloexec(int fd)
+{
+	int flags = fcntl(fd, F_GETFD);
+
+	if (flags == -1) {
+		wlr_log(WLR_ERROR, "Unable to set the CLOEXEC flag: fnctl failed");
+		return false;
+	}
+
+	flags = flags | FD_CLOEXEC;
+	if (fcntl(fd, F_SETFD, flags) == -1) {
+		wlr_log(WLR_ERROR, "Unable to set the CLOEXEC flag: fnctl failed");
+		return false;
+	}
+
+	return true;
+}
+
+static bool
 spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, struct wl_event_source **sigchld_source)
 {
 	int fd[2];
@@ -87,6 +107,10 @@ spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, s
 		_exit(1);
 	} else if (pid == -1) {
 		wlr_log_errno(WLR_ERROR, "Unable to fork");
+		return false;
+	}
+
+	if (!set_cloexec(fd[0]) || !set_cloexec(fd[1])) {
 		return false;
 	}
 
