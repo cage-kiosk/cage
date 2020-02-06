@@ -298,7 +298,7 @@ cg_keyboard_group_remove(struct cg_keyboard *keyboard)
 	                                   keyboard->device->keyboard);
 
 	if (wl_list_empty(&wlr_group->devices)) {
-		wlr_log(WLR_DEBUG, "Destroying empty keyboard group %p", wlr_group);
+		wlr_log(WLR_DEBUG, "Destroying empty keyboard group %p", (void*)wlr_group);
 		struct cg_keyboard_group *cg_group = wlr_group->data;
 		wlr_group->data = NULL;
 		wl_list_remove(&cg_group->link);
@@ -376,8 +376,8 @@ keyboard_group_add(struct cg_keyboard *keyboard) {
 		struct wlr_keyboard_group *wlr_group = group->wlr_group;
 		if (keymaps_match(wlr_keyboard->keymap, wlr_group->keyboard.keymap) &&
 		   repeat_info_match(keyboard, &wlr_group->keyboard)) {
-			wlr_log(WLR_DEBUG, "Adding keyboard %p to group %p.", keyboard,
-			        wlr_group);
+			wlr_log(WLR_DEBUG, "Adding keyboard %p to group %p.", (void*)keyboard,
+			        (void*)wlr_group);
 			wlr_keyboard_group_add_keyboard(wlr_group, wlr_keyboard);
 			return;
 		}
@@ -399,7 +399,7 @@ keyboard_group_add(struct cg_keyboard *keyboard) {
 	cg_group->wlr_group->data = cg_group;
 	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard,
 	                        keyboard->device->keyboard->keymap);
-	wlr_log(WLR_DEBUG, "Created keyboard group %p", cg_group->wlr_group);
+	wlr_log(WLR_DEBUG, "Created keyboard group %p", (void*)cg_group->wlr_group);
 
 	cg_group->keyboard =
 	    cg_keyboard_from_seat(seat, cg_group->wlr_group->input_device);
@@ -408,8 +408,8 @@ keyboard_group_add(struct cg_keyboard *keyboard) {
 		goto cleanup;
 	}
 
-	wlr_log(WLR_DEBUG, "Adding keyboard %p to group %p.", keyboard,
-	        cg_group->wlr_group);
+	wlr_log(WLR_DEBUG, "Adding keyboard %p to group %p.", (void*)keyboard,
+	        (void*)cg_group->wlr_group);
 	wlr_keyboard_group_add_keyboard(cg_group->wlr_group, wlr_keyboard);
 	wl_list_insert(&seat->keyboard_groups, &cg_group->link);
 
