@@ -110,6 +110,9 @@ spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, s
 		return false;
 	}
 
+	/* Set this early so that if we fail, the client process will be cleaned up properly. */
+	*pid_out = pid;
+
 	if (!set_cloexec(fd[0]) || !set_cloexec(fd[1])) {
 		return false;
 	}
@@ -121,7 +124,6 @@ spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, s
 	uint32_t mask = WL_EVENT_HANGUP | WL_EVENT_ERROR;
 	*sigchld_source = wl_event_loop_add_fd(event_loop, fd[0], mask, sigchld_handler, display);
 
-	*pid_out = pid;
 	wlr_log(WLR_DEBUG, "Child process created with pid %d", pid);
 	return true;
 }
@@ -258,6 +260,7 @@ main(int argc, char *argv[])
 	struct wlr_xwayland *xwayland = NULL;
 	struct wlr_xcursor_manager *xcursor_manager = NULL;
 #endif
+	pid_t pid = 0;
 	int ret = 0;
 
 	if (!parse_args(&server, argc, argv)) {
@@ -473,7 +476,6 @@ main(int argc, char *argv[])
 	wlr_xwayland_set_seat(xwayland, server.seat->seat);
 #endif
 
-	pid_t pid;
 	if (!spawn_primary_client(server.wl_display, argv + optind, &pid, &sigchld_source)) {
 		ret = 1;
 		goto end;
@@ -491,9 +493,9 @@ main(int argc, char *argv[])
 #endif
 	wl_display_destroy_clients(server.wl_display);
 
+end:
 	cleanup_primary_client(pid);
 
-end:
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
 	wl_event_source_remove(sigchld_source);
