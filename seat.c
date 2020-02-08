@@ -288,8 +288,7 @@ cg_keyboard_group_remove_keyboard(struct cg_keyboard *keyboard)
 {
 	struct wlr_keyboard_group *wlr_group = keyboard->device->keyboard->group;
 
-	wlr_keyboard_group_remove_keyboard(keyboard->device->keyboard->group,
-	                                   keyboard->device->keyboard);
+	wlr_keyboard_group_remove_keyboard(wlr_group, keyboard->device->keyboard);
 
 	if (wl_list_empty(&wlr_group->devices)) {
 		wlr_log(WLR_DEBUG, "Destroying empty keyboard group %p", (void*)wlr_group);
