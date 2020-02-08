@@ -105,7 +105,7 @@ update_capabilities(struct cg_seat *seat)
 {
 	uint32_t caps = 0;
 
-	if (!wl_list_empty(&seat->keyboards)) {
+	if (!wl_list_empty(&seat->keyboard_groups)) {
 		caps |= WL_SEAT_CAPABILITY_KEYBOARD;
 	}
 	if (!wl_list_empty(&seat->pointers)) {
@@ -209,12 +209,13 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 }
 
 static void
-handle_modifier_event(struct cg_keyboard *keyboard)
+handle_modifier_event(struct wlr_input_device *device, struct cg_seat *seat)
 {
-	wlr_seat_set_keyboard(keyboard->seat->seat, keyboard->device);
-	wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat, &keyboard->device->keyboard->modifiers);
+	wlr_seat_set_keyboard(seat->seat, device);
+	wlr_seat_keyboard_notify_modifiers(seat->seat,
+					   &device->keyboard->modifiers);
 
-	wlr_idle_notify_activity(keyboard->seat->server->idle, keyboard->seat->seat);
+	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
 
 static bool
@@ -234,19 +235,18 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 }
 
 static void
-handle_key_event(struct cg_keyboard *keyboard, void *data)
+handle_key_event(struct wlr_input_device *device, struct cg_seat* seat, void *data)
 {
-	struct cg_seat *seat = keyboard->seat;
 	struct wlr_event_keyboard_key *event = data;
 
 	/* Translate from libinput keycode to an xkbcommon keycode. */
 	xkb_keycode_t keycode = event->keycode + 8;
 
 	const xkb_keysym_t *syms;
-	int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state, keycode, &syms);
+	int nsyms = xkb_state_key_get_syms(device->keyboard->xkb_state, keycode, &syms);
 
 	bool handled = false;
-	uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->device->keyboard);
+	uint32_t modifiers = wlr_keyboard_get_modifiers(device->keyboard);
 	if ((modifiers & WLR_MODIFIER_ALT) && event->state == WLR_KEY_PRESSED) {
 		/* If Alt is held down and this button was pressed, we
 		 * attempt to process it as a compositor
@@ -258,97 +258,31 @@ handle_key_event(struct cg_keyboard *keyboard, void *data)
 
 	if (!handled) {
 		/* Otherwise, we pass it along to the client. */
-		wlr_seat_set_keyboard(seat->seat, keyboard->device);
-		wlr_seat_keyboard_notify_key(seat->seat, event->time_msec, event->keycode, event->state);
+		wlr_seat_set_keyboard(seat->seat, device);
+		wlr_seat_keyboard_notify_key(seat->seat, event->time_msec,
+					     event->keycode, event->state);
 	}
 
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
 
-static void cg_keyboard_group_remove_keyboard(struct cg_keyboard *keyboard);
-
-static void
-cg_keyboard_destroy(struct cg_keyboard *keyboard)
-{
-	struct cg_seat *seat = keyboard->seat;
-
-	if (keyboard->device->keyboard->group != NULL) {
-		cg_keyboard_group_remove_keyboard(keyboard);
-	}
-
-	if (wlr_seat_get_keyboard(seat->seat) == keyboard->device->keyboard) {
-		wlr_seat_set_keyboard(seat->seat, NULL);
-	}
-
-	free(keyboard);
-}
-
-static void
-cg_keyboard_group_remove_keyboard(struct cg_keyboard *keyboard)
-{
-	struct wlr_keyboard_group *wlr_group = keyboard->device->keyboard->group;
-
-	wlr_keyboard_group_remove_keyboard(wlr_group, keyboard->device->keyboard);
-
-	if (wl_list_empty(&wlr_group->devices)) {
-		wlr_log(WLR_DEBUG, "Destroying empty keyboard group");
-		struct cg_keyboard_group *cg_group = wlr_group->data;
-		wlr_group->data = NULL;
-		wl_list_remove(&cg_group->link);
-		wl_list_remove(&cg_group->key.link);
-		wl_list_remove(&cg_group->modifiers.link);
-		cg_keyboard_destroy(cg_group->keyboard);
-		free(cg_group);
-
-		wlr_keyboard_group_destroy(wlr_group);
-	}
-}
-
-static void
-handle_keyboard_destroy(struct wl_listener *listener, void *data)
-{
-	struct cg_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
-	struct cg_seat *seat = keyboard->seat;
-
-	wl_list_remove(&keyboard->link);
-	wl_list_remove(&keyboard->destroy.link);
-	cg_keyboard_destroy(keyboard);
-	update_capabilities(seat);
-}
-
 static void
 handle_keyboard_group_key(struct wl_listener *listener, void *data) {
 	struct cg_keyboard_group *cg_group = wl_container_of(listener, cg_group, key);
-	handle_key_event(cg_group->keyboard, data);
+	handle_key_event(cg_group->wlr_group->input_device, cg_group->seat, data);
 }
 
 static void
 handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
 {
 	struct cg_keyboard_group *group = wl_container_of(listener, group, modifiers);
-	handle_modifier_event(group->keyboard);
-}
-
-struct cg_keyboard *
-cg_keyboard_from_seat(struct cg_seat *seat, struct wlr_input_device *device)
-{
-	struct cg_keyboard *keyboard = calloc(1, sizeof(struct cg_keyboard));
-	if (keyboard == NULL) {
-		wlr_log(WLR_ERROR, "Could not allocate new cg_keyboard.");
-		return NULL;
-	}
-
-	keyboard->seat = seat;
-	keyboard->device = device;
-
-	return keyboard;
+	handle_modifier_event(group->wlr_group->input_device, group->seat);
 }
 
 static void
-cg_keyboard_group_add(struct cg_keyboard *keyboard)
+cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat* seat)
 {
-	struct cg_seat *seat = keyboard->seat;
-	struct wlr_keyboard *wlr_keyboard = keyboard->device->keyboard;
+	struct wlr_keyboard *wlr_keyboard = device->keyboard;
 
 	struct cg_keyboard_group *group;
 	wl_list_for_each(group, &seat->keyboard_groups, link) {
@@ -363,6 +297,7 @@ cg_keyboard_group_add(struct cg_keyboard *keyboard)
 	 * any group */
 	struct cg_keyboard_group *cg_group =
 	    calloc(1, sizeof(struct cg_keyboard_group));
+	cg_group->seat = seat;
 	if (cg_group == NULL) {
 		wlr_log(WLR_ERROR, "Failed to allocate keyboard group.");
 		return;
@@ -375,15 +310,14 @@ cg_keyboard_group_add(struct cg_keyboard *keyboard)
 
 	cg_group->wlr_group->data = cg_group;
 	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard,
-	                        keyboard->device->keyboard->keymap);
+	                        device->keyboard->keymap);
 
 	wlr_keyboard_set_repeat_info(&cg_group->wlr_group->keyboard,
 			wlr_keyboard->repeat_info.rate, wlr_keyboard->repeat_info.delay);
 
 	wlr_log(WLR_DEBUG, "Created keyboard group");
 
-	cg_group->keyboard =
-	    cg_keyboard_from_seat(seat, cg_group->wlr_group->input_device);
+	cg_group->keyboard = &cg_group->wlr_group->keyboard;
 	if (cg_group->keyboard == NULL) {
 		wlr_log(WLR_ERROR, "Failed to create keyboard from seat.");
 		goto cleanup;
@@ -410,16 +344,9 @@ cleanup:
 static void
 handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 {
-	struct cg_keyboard *keyboard = calloc(1, sizeof(struct cg_keyboard));
-	if (!keyboard) {
-		wlr_log(WLR_ERROR, "Cannot allocate keyboard");
-		return;
-	}
-
 	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!context) {
 		wlr_log(WLR_ERROR, "Unable to create XBK context");
-		free(keyboard);
 		return;
 	}
 
@@ -432,24 +359,19 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 	struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!keymap) {
 		wlr_log(WLR_ERROR, "Unable to configure keyboard: keymap does not exist");
-		free(keyboard);
 		xkb_context_unref(context);
 		return;
 	}
 
-	keyboard->seat = seat;
-	keyboard->device = device;
 	wlr_keyboard_set_keymap(device->keyboard, keymap);
 
 	xkb_keymap_unref(keymap);
 	xkb_context_unref(context);
 	wlr_keyboard_set_repeat_info(device->keyboard, 25, 600);
 
-	cg_keyboard_group_add(keyboard);
+	cg_keyboard_group_add(device, seat);
 
-	wl_list_insert(&seat->keyboards, &keyboard->link);
-	keyboard->destroy.notify = handle_keyboard_destroy;
-	wl_signal_add(&device->events.destroy, &keyboard->destroy);
+	wl_signal_init(&device->events.destroy);
 	wlr_seat_set_keyboard(seat->seat, device);
 }
 
@@ -781,9 +703,10 @@ handle_destroy(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, destroy);
 	wl_list_remove(&seat->destroy.link);
 
-	struct cg_keyboard *keyboard, *keyboard_tmp;
-	wl_list_for_each_safe (keyboard, keyboard_tmp, &seat->keyboards, link) {
-		handle_keyboard_destroy(&keyboard->destroy, NULL);
+	struct cg_keyboard_group *group, *group_tmp;
+	wl_list_for_each_safe(group, group_tmp, &seat->keyboard_groups, link) {
+		wlr_keyboard_group_destroy(group->wlr_group);
+		free(group);
 	}
 	struct cg_pointer *pointer, *pointer_tmp;
 	wl_list_for_each_safe (pointer, pointer_tmp, &seat->pointers, link) {

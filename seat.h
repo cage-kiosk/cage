@@ -49,16 +49,8 @@ struct cg_seat {
 	struct wl_listener request_set_primary_selection;
 };
 
-struct cg_keyboard {
-	struct wl_list link; // seat::keyboards
-	struct cg_seat *seat;
-	struct wlr_input_device *device;
-
-	struct wl_listener destroy;
-};
-
 struct cg_keyboard_group {
-	struct cg_keyboard *keyboard;
+	struct wlr_keyboard *keyboard;
 
 	struct wlr_keyboard_group *wlr_group;
 	struct cg_seat *seat;
