@@ -284,12 +284,6 @@ cg_keyboard_destroy(struct cg_keyboard *keyboard)
 }
 
 static void
-destroy_empty_wlr_keyboard_group(void *data)
-{
-	wlr_keyboard_group_destroy(data);
-}
-
-static void
 cg_keyboard_group_remove_keyboard(struct cg_keyboard *keyboard)
 {
 	struct wlr_keyboard_group *wlr_group = keyboard->device->keyboard->group;
@@ -307,7 +301,7 @@ cg_keyboard_group_remove_keyboard(struct cg_keyboard *keyboard)
 		cg_keyboard_destroy(cg_group->keyboard);
 		free(cg_group);
 
-		destroy_empty_wlr_keyboard_group(wlr_group);
+		wlr_keyboard_group_destroy(wlr_group);
 	}
 }
 
