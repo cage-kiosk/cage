@@ -445,7 +445,7 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 	xkb_context_unref(context);
 	wlr_keyboard_set_repeat_info(device->keyboard, 25, 600);
 
-	keyboard_group_add(keyboard);
+	cg_keyboard_group_add(keyboard);
 
 	wl_list_insert(&seat->keyboards, &keyboard->link);
 	keyboard->destroy.notify = handle_keyboard_destroy;
