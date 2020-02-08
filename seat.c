@@ -318,16 +318,14 @@ handle_keyboard_destroy(struct wl_listener *listener, void *data)
 
 static void
 handle_keyboard_group_key(struct wl_listener *listener, void *data) {
-	struct cg_keyboard_group *cg_group =
-	    wl_container_of(listener, cg_group, key);
+	struct cg_keyboard_group *cg_group = wl_container_of(listener, cg_group, key);
 	handle_key_event(cg_group->keyboard, data);
 }
 
 static void
 handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
 {
-	struct cg_keyboard_group *group =
-	    wl_container_of(listener, group, modifiers);
+	struct cg_keyboard_group *group = wl_container_of(listener, group, modifiers);
 	handle_modifier_event(group->keyboard);
 }
 
