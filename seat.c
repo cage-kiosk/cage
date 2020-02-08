@@ -329,24 +329,6 @@ handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
 	handle_modifier_event(group->keyboard);
 }
 
-static bool
-keymaps_match(struct xkb_keymap *km1, struct xkb_keymap *km2)
-{
-	char *km1_str = xkb_keymap_get_as_string(km1, XKB_KEYMAP_FORMAT_TEXT_V1);
-	char *km2_str = xkb_keymap_get_as_string(km2, XKB_KEYMAP_FORMAT_TEXT_V1);
-	bool result = strcmp(km1_str, km2_str) == 0;
-	free(km1_str);
-	free(km2_str);
-	return result;
-}
-
-static bool
-repeat_info_match(struct cg_keyboard *a, struct wlr_keyboard *b)
-{
-	return a->device->keyboard->repeat_info.rate == b->repeat_info.rate &&
-	       a->device->keyboard->repeat_info.delay == b->repeat_info.delay;
-}
-
 struct cg_keyboard *
 cg_keyboard_from_seat(struct cg_seat *seat, struct wlr_input_device *device)
 {
@@ -370,11 +352,8 @@ keyboard_group_add(struct cg_keyboard *keyboard)
 	struct cg_keyboard_group *group;
 	wl_list_for_each(group, &seat->keyboard_groups, link) {
 		struct wlr_keyboard_group *wlr_group = group->wlr_group;
-		if (keymaps_match(wlr_keyboard->keymap, wlr_group->keyboard.keymap) &&
-		   repeat_info_match(keyboard, &wlr_group->keyboard)) {
-			wlr_log(WLR_DEBUG, "Adding keyboard %p to group %p.", (void*)keyboard,
-			        (void*)wlr_group);
-			wlr_keyboard_group_add_keyboard(wlr_group, wlr_keyboard);
+		if (wlr_keyboard_group_add_keyboard(wlr_group, wlr_keyboard)) {
+			wlr_log(WLR_DEBUG, "Added new keyboard to existing group");
 			return;
 		}
 	}
@@ -395,7 +374,7 @@ keyboard_group_add(struct cg_keyboard *keyboard)
 	cg_group->wlr_group->data = cg_group;
 	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard,
 	                        keyboard->device->keyboard->keymap);
-	wlr_log(WLR_DEBUG, "Created keyboard group %p", (void*)cg_group->wlr_group);
+	wlr_log(WLR_DEBUG, "Created keyboard group");
 
 	cg_group->keyboard =
 	    cg_keyboard_from_seat(seat, cg_group->wlr_group->input_device);
@@ -404,8 +383,6 @@ keyboard_group_add(struct cg_keyboard *keyboard)
 		goto cleanup;
 	}
 
-	wlr_log(WLR_DEBUG, "Adding keyboard %p to group %p.", (void*)keyboard,
-	        (void*)cg_group->wlr_group);
 	wlr_keyboard_group_add_keyboard(cg_group->wlr_group, wlr_keyboard);
 	wl_list_insert(&seat->keyboard_groups, &cg_group->link);
 
