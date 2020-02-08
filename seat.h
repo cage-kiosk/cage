@@ -85,7 +85,7 @@ struct cg_drag_icon {
 	struct wl_listener destroy;
 };
 
-struct cg_seat *seat_create(struct cg_server *server);
+struct cg_seat *seat_create(struct cg_server *server, struct wlr_backend *backend);
 void seat_destroy(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);

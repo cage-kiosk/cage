@@ -246,6 +246,7 @@ main(int argc, char *argv[])
 	struct wl_event_source *sigint_source = NULL;
 	struct wl_event_source *sigterm_source = NULL;
 	struct wl_event_source *sigchld_source = NULL;
+	struct wlr_backend *backend = NULL;
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_manager = NULL;
@@ -289,8 +290,8 @@ main(int argc, char *argv[])
 	sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
 	sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
-	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
-	if (!server.backend) {
+	backend = wlr_backend_autocreate(server.wl_display, NULL);
+	if (!backend) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots backend");
 		ret = 1;
 		goto end;
@@ -301,7 +302,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	renderer = wlr_backend_get_renderer(server.backend);
+	renderer = wlr_backend_get_renderer(backend);
 	wlr_renderer_init_wl_display(renderer, server.wl_display);
 
 	wl_list_init(&server.views);
@@ -332,9 +333,9 @@ main(int argc, char *argv[])
 	 * available on the backend. We use this only to detect the
 	 * first output and ignore subsequent outputs. */
 	server.new_output.notify = handle_new_output;
-	wl_signal_add(&server.backend->events.new_output, &server.new_output);
+	wl_signal_add(&backend->events.new_output, &server.new_output);
 
-	server.seat = seat_create(&server);
+	server.seat = seat_create(&server, backend);
 	if (!server.seat) {
 		wlr_log(WLR_ERROR, "Unable to create the seat");
 		ret = 1;
@@ -459,7 +460,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	if (!wlr_backend_start(server.backend)) {
+	if (!wlr_backend_start(backend)) {
 		wlr_log(WLR_ERROR, "Unable to start the wlroots backend");
 		ret = 1;
 		goto end;

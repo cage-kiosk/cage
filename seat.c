@@ -720,7 +720,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 }
 
 struct cg_seat *
-seat_create(struct cg_server *server)
+seat_create(struct cg_server *server, struct wlr_backend *backend)
 {
 	struct cg_seat *seat = calloc(1, sizeof(struct cg_seat));
 	if (!seat) {
@@ -788,7 +788,7 @@ seat_create(struct cg_server *server)
 	wl_list_init(&seat->touch);
 
 	seat->new_input.notify = handle_new_input;
-	wl_signal_add(&server->backend->events.new_input, &seat->new_input);
+	wl_signal_add(&backend->events.new_input, &seat->new_input);
 
 	wl_list_init(&seat->drag_icons);
 	seat->request_start_drag.notify = handle_request_start_drag;
