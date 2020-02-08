@@ -345,10 +345,11 @@ cg_keyboard_from_seat(struct cg_seat *seat, struct wlr_input_device *device)
 }
 
 static void
-keyboard_group_add(struct cg_keyboard *keyboard)
+cg_keyboard_group_add(struct cg_keyboard *keyboard)
 {
 	struct cg_seat *seat = keyboard->seat;
 	struct wlr_keyboard *wlr_keyboard = keyboard->device->keyboard;
+
 	struct cg_keyboard_group *group;
 	wl_list_for_each(group, &seat->keyboard_groups, link) {
 		struct wlr_keyboard_group *wlr_group = group->wlr_group;
@@ -357,6 +358,7 @@ keyboard_group_add(struct cg_keyboard *keyboard)
 			return;
 		}
 	}
+
 	/* This is reached if and only if the keyboard could not be inserted into
 	 * any group */
 	struct cg_keyboard_group *cg_group =
@@ -374,6 +376,10 @@ keyboard_group_add(struct cg_keyboard *keyboard)
 	cg_group->wlr_group->data = cg_group;
 	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard,
 	                        keyboard->device->keyboard->keymap);
+
+	wlr_keyboard_set_repeat_info(&cg_group->wlr_group->keyboard,
+			wlr_keyboard->repeat_info.rate, wlr_keyboard->repeat_info.delay);
+
 	wlr_log(WLR_DEBUG, "Created keyboard group");
 
 	cg_group->keyboard =
