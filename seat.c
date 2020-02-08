@@ -265,8 +265,7 @@ handle_key_event(struct cg_keyboard *keyboard, void *data)
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
 
-static void
-cg_keyboard_group_remove(struct cg_keyboard *keyboard);
+static void cg_keyboard_group_remove_keyboard(struct cg_keyboard *keyboard);
 
 static void
 cg_keyboard_destroy(struct cg_keyboard *keyboard)
@@ -274,7 +273,7 @@ cg_keyboard_destroy(struct cg_keyboard *keyboard)
 	struct cg_seat *seat = keyboard->seat;
 
 	if (keyboard->device->keyboard->group != NULL) {
-		cg_keyboard_group_remove(keyboard);
+		cg_keyboard_group_remove_keyboard(keyboard);
 	}
 
 	if (wlr_seat_get_keyboard(seat->seat) == keyboard->device->keyboard) {
@@ -291,7 +290,7 @@ destroy_empty_wlr_keyboard_group(void *data)
 }
 
 static void
-cg_keyboard_group_remove(struct cg_keyboard *keyboard)
+cg_keyboard_group_remove_keyboard(struct cg_keyboard *keyboard)
 {
 	struct wlr_keyboard_group *wlr_group = keyboard->device->keyboard->group;
 
