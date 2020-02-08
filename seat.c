@@ -209,7 +209,8 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 }
 
 static void
-handle_modifier_event(struct cg_keyboard *keyboard) {
+handle_modifier_event(struct cg_keyboard *keyboard)
+{
 	wlr_seat_set_keyboard(keyboard->seat->seat, keyboard->device);
 	wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat, &keyboard->device->keyboard->modifiers);
 
@@ -331,14 +332,16 @@ handle_keyboard_group_key(struct wl_listener *listener, void *data) {
 }
 
 static void
-handle_keyboard_group_modifiers(struct wl_listener *listener, void *data) {
+handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
+{
 	struct cg_keyboard_group *group =
 	    wl_container_of(listener, group, modifiers);
 	handle_modifier_event(group->keyboard);
 }
 
 static bool
-keymaps_match(struct xkb_keymap *km1, struct xkb_keymap *km2) {
+keymaps_match(struct xkb_keymap *km1, struct xkb_keymap *km2)
+{
 	char *km1_str = xkb_keymap_get_as_string(km1, XKB_KEYMAP_FORMAT_TEXT_V1);
 	char *km2_str = xkb_keymap_get_as_string(km2, XKB_KEYMAP_FORMAT_TEXT_V1);
 	bool result = strcmp(km1_str, km2_str) == 0;
@@ -348,13 +351,15 @@ keymaps_match(struct xkb_keymap *km1, struct xkb_keymap *km2) {
 }
 
 static bool
-repeat_info_match(struct cg_keyboard *a, struct wlr_keyboard *b) {
+repeat_info_match(struct cg_keyboard *a, struct wlr_keyboard *b)
+{
 	return a->device->keyboard->repeat_info.rate == b->repeat_info.rate &&
 	       a->device->keyboard->repeat_info.delay == b->repeat_info.delay;
 }
 
 struct cg_keyboard *
-cg_keyboard_from_seat(struct cg_seat *seat, struct wlr_input_device *device) {
+cg_keyboard_from_seat(struct cg_seat *seat, struct wlr_input_device *device)
+{
 	struct cg_keyboard *keyboard = calloc(1, sizeof(struct cg_keyboard));
 	if (keyboard == NULL) {
 		wlr_log(WLR_ERROR, "Could not allocate new cg_keyboard.");
@@ -368,7 +373,8 @@ cg_keyboard_from_seat(struct cg_seat *seat, struct wlr_input_device *device) {
 }
 
 static void
-keyboard_group_add(struct cg_keyboard *keyboard) {
+keyboard_group_add(struct cg_keyboard *keyboard)
+{
 	struct cg_seat *seat = keyboard->seat;
 	struct wlr_keyboard *wlr_keyboard = keyboard->device->keyboard;
 	struct cg_keyboard_group *group;
