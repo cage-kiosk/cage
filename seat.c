@@ -394,10 +394,10 @@ cg_keyboard_group_add(struct cg_keyboard *keyboard)
 
 	wl_signal_add(&cg_group->wlr_group->keyboard.events.key, &cg_group->key);
 	cg_group->key.notify = handle_keyboard_group_key;
-
 	wl_signal_add(&cg_group->wlr_group->keyboard.events.modifiers,
 	              &cg_group->modifiers);
 	cg_group->modifiers.notify = handle_keyboard_group_modifiers;
+
 	return;
 
 cleanup:
