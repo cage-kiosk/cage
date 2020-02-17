@@ -131,7 +131,8 @@ view_is_primary(struct cg_view *view)
 }
 
 bool
-view_is_transient_for(struct cg_view *child, struct cg_view *parent) {
+view_is_transient_for(struct cg_view *child, struct cg_view *parent)
+{
 	return child->impl->is_transient_for(child, parent);
 }
 
@@ -286,8 +287,7 @@ view_destroy(struct cg_view *view)
 }
 
 void
-view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type,
-	  const struct cg_view_impl *impl)
+view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type, const struct cg_view_impl *impl)
 {
 	view->server = server;
 	view->type = type;

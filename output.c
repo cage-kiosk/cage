@@ -10,13 +10,13 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include "config.h"
-#include <wlr/config.h>
 
 #include <stdlib.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/wayland.h>
+#include <wlr/config.h>
 #if WLR_HAS_X11_BACKEND
 #include <wlr/backend/x11.h>
 #endif
@@ -91,9 +91,8 @@ output_for_each_surface_iterator(struct wlr_surface *surface, int sx, int sy, vo
 }
 
 void
-output_surface_for_each_surface(struct cg_output *output, struct wlr_surface *surface,
-				double ox, double oy, cg_surface_iterator_func_t iterator,
-				void *user_data)
+output_surface_for_each_surface(struct cg_output *output, struct wlr_surface *surface, double ox, double oy,
+				cg_surface_iterator_func_t iterator, void *user_data)
 {
 	struct surface_iterator_data data = {
 		.user_iterator = iterator,
@@ -107,8 +106,8 @@ output_surface_for_each_surface(struct cg_output *output, struct wlr_surface *su
 }
 
 static void
-output_view_for_each_surface(struct cg_output *output, struct cg_view *view,
-			     cg_surface_iterator_func_t iterator, void *user_data)
+output_view_for_each_surface(struct cg_output *output, struct cg_view *view, cg_surface_iterator_func_t iterator,
+			     void *user_data)
 {
 	struct surface_iterator_data data = {
 		.user_iterator = iterator,
@@ -123,8 +122,8 @@ output_view_for_each_surface(struct cg_output *output, struct cg_view *view,
 }
 
 void
-output_view_for_each_popup(struct cg_output *output, struct cg_view *view,
-			   cg_surface_iterator_func_t iterator, void *user_data)
+output_view_for_each_popup(struct cg_output *output, struct cg_view *view, cg_surface_iterator_func_t iterator,
+			   void *user_data)
 {
 	struct surface_iterator_data data = {
 		.user_iterator = iterator,
@@ -148,8 +147,8 @@ output_drag_icons_for_each_surface(struct cg_output *output, struct wl_list *dra
 			double ox = drag_icon->lx;
 			double oy = drag_icon->ly;
 			wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
-			output_surface_for_each_surface(output, drag_icon->wlr_drag_icon->surface,
-				ox, oy, iterator, user_data);
+			output_surface_for_each_surface(output, drag_icon->wlr_drag_icon->surface, ox, oy, iterator,
+							user_data);
 		}
 	}
 }
@@ -183,8 +182,7 @@ send_frame_done(struct cg_output *output, struct send_frame_done_data *data)
 }
 
 static void
-count_surface_iterator(struct cg_output *output, struct wlr_surface *surface,
-		       struct wlr_box *_box, void *data)
+count_surface_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *_box, void *data)
 {
 	size_t *n = data;
 	n++;
@@ -229,7 +227,8 @@ scan_out_primary_view(struct cg_output *output)
 		return false;
 	}
 
-	if ((float) surface->current.scale != wlr_output->scale || surface->current.transform != wlr_output->transform) {
+	if ((float) surface->current.scale != wlr_output->scale ||
+	    surface->current.transform != wlr_output->transform) {
 		return false;
 	}
 
@@ -260,8 +259,7 @@ damage_surface_iterator(struct cg_output *output, struct wlr_surface *surface, s
 			/* When scaling up a surface it'll become
 			   blurry, so we need to expand the damage
 			   region. */
-			wlr_region_expand(&damage, &damage,
-					  ceil(wlr_output->scale) - surface->current.scale);
+			wlr_region_expand(&damage, &damage, ceil(wlr_output->scale) - surface->current.scale);
 		}
 		pixman_region32_translate(&damage, box->x, box->y);
 		wlr_output_damage_add(output->damage, &damage);
@@ -270,8 +268,7 @@ damage_surface_iterator(struct cg_output *output, struct wlr_surface *surface, s
 }
 
 void
-output_damage_surface(struct cg_output *output, struct wlr_surface *surface,
-		      double lx, double ly, bool whole)
+output_damage_surface(struct cg_output *output, struct wlr_surface *surface, double lx, double ly, bool whole)
 {
 	double ox = lx, oy = ly;
 	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
@@ -319,10 +316,10 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 
 	output_render(output, &damage);
 
- damage_finish:
+damage_finish:
 	pixman_region32_fini(&damage);
 
- frame_done:
+frame_done:
 	clock_gettime(CLOCK_MONOTONIC, &frame_data.when);
 	send_frame_done(output, &frame_data);
 }
@@ -439,8 +436,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 	}
 
 	if (wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
-		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f",
-			wlr_output->name,
+		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
 			wlr_output->scale);
 	}
 
