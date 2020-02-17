@@ -27,3 +27,9 @@ tasks:
       cd cage
       CC=clang meson build --werror -Dxwayland=true
       CC=clang ninja -C build scan-build
+  - clang-format: |
+      cd cage
+      meson build --werror -Dxwayland=true
+      ninja -C build clang-format
+      rm -rf build
+      git diff --exit-code
