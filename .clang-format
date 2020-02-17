@@ -1,0 +1,13 @@
+AlignAfterOpenBracket: Align
+AlignTrailingComments: false
+AlwaysBreakAfterReturnType: TopLevelDefinitions
+BreakBeforeBraces: Linux
+ColumnLimit: 120
+ContinuationIndentWidth: 8
+ForEachMacros: [wl_list_for_each, wl_list_for_each_safe, wl_list_for_each_reverse]
+IndentWidth: 8
+ReflowComments: true
+SortIncludes: true
+SpaceAfterCStyleCast: true
+TabWidth: 8
+UseTab: Always
