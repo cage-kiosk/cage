@@ -8,8 +8,8 @@
 
 #include "config.h"
 
-#include <stdlib.h>
 #include <linux/input-event-codes.h>
+#include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_cursor.h>
@@ -40,8 +40,7 @@ static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
  * surface pointer to that wlr_surface and the sx and sy coordinates to the
  * coordinates relative to that surface's top-left corner. */
 static bool
-view_at(struct cg_view *view, double lx, double ly,
-	struct wlr_surface **surface, double *sx, double *sy)
+view_at(struct cg_view *view, double lx, double ly, struct wlr_surface **surface, double *sx, double *sy)
 {
 	double view_sx = lx - view->lx;
 	double view_sy = ly - view->ly;
@@ -64,8 +63,7 @@ view_at(struct cg_view *view, double lx, double ly,
  * surface. There cannot be a surface without a view, either. It's
  * both or nothing. */
 static struct cg_view *
-desktop_view_at(struct cg_server *server, double lx, double ly,
-		struct wlr_surface **surface, double *sx, double *sy)
+desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surface **surface, double *sx, double *sy)
 {
 	struct cg_view *view;
 
@@ -79,17 +77,15 @@ desktop_view_at(struct cg_server *server, double lx, double ly,
 }
 
 static void
-press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device,
-		    uint32_t time, uint32_t button, uint32_t state,
-		    double lx, double ly)
+press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device, uint32_t time, uint32_t button,
+		    uint32_t state, double lx, double ly)
 {
 	struct cg_server *server = seat->server;
 
 	if (state == WLR_BUTTON_PRESSED) {
 		double sx, sy;
 		struct wlr_surface *surface;
-		struct cg_view *view = desktop_view_at(server, lx, ly,
-						       &surface, &sx, &sy);
+		struct cg_view *view = desktop_view_at(server, lx, ly, &surface, &sx, &sy);
 		struct cg_view *current = seat_get_focus(seat);
 		if (view == current) {
 			return;
@@ -104,7 +100,8 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device,
 }
 
 static void
-update_capabilities(struct cg_seat *seat) {
+update_capabilities(struct cg_seat *seat)
+{
 	uint32_t caps = 0;
 
 	if (!wl_list_empty(&seat->keyboards)) {
@@ -122,14 +119,13 @@ update_capabilities(struct cg_seat *seat) {
 	if ((caps & WL_SEAT_CAPABILITY_POINTER) == 0) {
 		wlr_cursor_set_image(seat->cursor, NULL, 0, 0, 0, 0, 0, 0);
 	} else {
-		wlr_xcursor_manager_set_cursor_image(seat->xcursor_manager,
-						     DEFAULT_XCURSOR,
-						     seat->cursor);
+		wlr_xcursor_manager_set_cursor_image(seat->xcursor_manager, DEFAULT_XCURSOR, seat->cursor);
 	}
 }
 
 static void
-handle_touch_destroy(struct wl_listener *listener, void *data) {
+handle_touch_destroy(struct wl_listener *listener, void *data)
+{
 	struct cg_touch *touch = wl_container_of(listener, touch, destroy);
 	struct cg_seat *seat = touch->seat;
 
@@ -217,8 +213,7 @@ handle_keyboard_modifiers(struct wl_listener *listener, void *data)
 	struct cg_keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
 
 	wlr_seat_set_keyboard(keyboard->seat->seat, keyboard->device);
-	wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat,
-					   &keyboard->device->keyboard->modifiers);
+	wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat, &keyboard->device->keyboard->modifiers);
 
 	wlr_idle_notify_activity(keyboard->seat->server->idle, keyboard->seat->seat);
 }
@@ -266,8 +261,7 @@ handle_keyboard_key(struct wl_listener *listener, void *data)
 	if (!handled) {
 		/* Otherwise, we pass it along to the client. */
 		wlr_seat_set_keyboard(seat->seat, keyboard->device);
-		wlr_seat_keyboard_notify_key(seat->seat, event->time_msec,
-					     event->keycode, event->state);
+		wlr_seat_keyboard_notify_key(seat->seat, event->time_msec, event->keycode, event->state);
 	}
 
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
@@ -304,14 +298,13 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 		return;
 	}
 
-	struct xkb_rule_names rules = { 0 };
+	struct xkb_rule_names rules = {0};
 	rules.rules = getenv("XKB_DEFAULT_RULES");
 	rules.model = getenv("XKB_DEFAULT_MODEL");
 	rules.layout = getenv("XKB_DEFAULT_LAYOUT");
 	rules.variant = getenv("XKB_DEFAULT_VARIANT");
 	rules.options = getenv("XKB_DEFAULT_OPTIONS");
-	struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules,
-							   XKB_KEYMAP_COMPILE_NO_FLAGS);
+	struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!keymap) {
 		wlr_log(WLR_ERROR, "Unable to configure keyboard: keymap does not exist");
 		free(keyboard);
@@ -399,8 +392,7 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 	/* This can be sent by any client, so we check to make sure
 	 * this one actually has pointer focus first. */
 	if (focused_client == event->seat_client->client) {
-		wlr_cursor_set_surface(seat->cursor, event->surface,
-				       event->hotspot_x, event->hotspot_y);
+		wlr_cursor_set_surface(seat->cursor, event->surface, event->hotspot_x, event->hotspot_y);
 	}
 }
 
@@ -411,27 +403,22 @@ handle_touch_down(struct wl_listener *listener, void *data)
 	struct wlr_event_touch_down *event = data;
 
 	double lx, ly;
-	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device,
-					     event->x, event->y, &lx, &ly);
+	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device, event->x, event->y, &lx, &ly);
 
 	double sx, sy;
 	struct wlr_surface *surface;
-	struct cg_view *view = desktop_view_at(seat->server, lx, ly,
-					       &surface, &sx, &sy);
+	struct cg_view *view = desktop_view_at(seat->server, lx, ly, &surface, &sx, &sy);
 
 	uint32_t serial = 0;
 	if (view) {
-		serial = wlr_seat_touch_notify_down(seat->seat, surface,
-						    event->time_msec, event->touch_id,
-						    sx, sy);
+		serial = wlr_seat_touch_notify_down(seat->seat, surface, event->time_msec, event->touch_id, sx, sy);
 	}
 
 	if (serial && wlr_seat_touch_num_points(seat->seat) == 1) {
 		seat->touch_id = event->touch_id;
 		seat->touch_lx = lx;
 		seat->touch_ly = ly;
-		press_cursor_button(seat, event->device, event->time_msec,
-				    BTN_LEFT, WLR_BUTTON_PRESSED, lx, ly);
+		press_cursor_button(seat, event->device, event->time_msec, BTN_LEFT, WLR_BUTTON_PRESSED, lx, ly);
 	}
 
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
@@ -448,8 +435,7 @@ handle_touch_up(struct wl_listener *listener, void *data)
 	}
 
 	if (wlr_seat_touch_num_points(seat->seat) == 1) {
-		press_cursor_button(seat, event->device, event->time_msec,
-				    BTN_LEFT, WLR_BUTTON_RELEASED,
+		press_cursor_button(seat, event->device, event->time_msec, BTN_LEFT, WLR_BUTTON_RELEASED,
 				    seat->touch_lx, seat->touch_ly);
 	}
 
@@ -468,22 +454,17 @@ handle_touch_motion(struct wl_listener *listener, void *data)
 	}
 
 	double lx, ly;
-	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device,
-					     event->x, event->y, &lx, &ly);
+	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device, event->x, event->y, &lx, &ly);
 
 	double sx, sy;
 	struct wlr_surface *surface;
-	struct cg_view *view = desktop_view_at(seat->server, lx, ly,
-					       &surface, &sx, &sy);
+	struct cg_view *view = desktop_view_at(seat->server, lx, ly, &surface, &sx, &sy);
 
 	if (view) {
-		wlr_seat_touch_point_focus(seat->seat, surface,
-					   event->time_msec, event->touch_id, sx, sy);
-		wlr_seat_touch_notify_motion(seat->seat, event->time_msec,
-					     event->touch_id, sx, sy);
+		wlr_seat_touch_point_focus(seat->seat, surface, event->time_msec, event->touch_id, sx, sy);
+		wlr_seat_touch_notify_motion(seat->seat, event->time_msec, event->touch_id, sx, sy);
 	} else {
-		wlr_seat_touch_point_clear_focus(seat->seat, event->time_msec,
-						 event->touch_id);
+		wlr_seat_touch_point_clear_focus(seat->seat, event->time_msec, event->touch_id);
 	}
 
 	if (event->touch_id == seat->touch_id) {
@@ -509,8 +490,7 @@ handle_cursor_axis(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_axis);
 	struct wlr_event_pointer_axis *event = data;
 
-	wlr_seat_pointer_notify_axis(seat->seat,
-				     event->time_msec, event->orientation, event->delta,
+	wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
 				     event->delta_discrete, event->source);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
@@ -521,11 +501,9 @@ handle_cursor_button(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_button);
 	struct wlr_event_pointer_button *event = data;
 
-	wlr_seat_pointer_notify_button(seat->seat, event->time_msec,
-				       event->button, event->state);
-	press_cursor_button(seat, event->device, event->time_msec,
-			    event->button, event->state,
-			    seat->cursor->x, seat->cursor->y);
+	wlr_seat_pointer_notify_button(seat->seat, event->time_msec, event->button, event->state);
+	press_cursor_button(seat, event->device, event->time_msec, event->button, event->state, seat->cursor->x,
+			    seat->cursor->y);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
 
@@ -536,9 +514,7 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time)
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct wlr_surface *surface = NULL;
 
-	struct cg_view *view = desktop_view_at(seat->server,
-					       seat->cursor->x, seat->cursor->y,
-					       &surface, &sx, &sy);
+	struct cg_view *view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
 
 	if (!view) {
 		wlr_seat_pointer_clear_focus(wlr_seat);
@@ -586,8 +562,7 @@ drag_icon_damage(struct cg_drag_icon *drag_icon)
 {
 	struct cg_output *output;
 	wl_list_for_each(output, &drag_icon->seat->server->outputs, link) {
-		output_damage_surface(output, drag_icon->wlr_drag_icon->surface,
-			drag_icon->lx, drag_icon->ly, true);
+		output_damage_surface(output, drag_icon->wlr_drag_icon->surface, drag_icon->lx, drag_icon->ly, true);
 	}
 }
 
@@ -636,23 +611,20 @@ handle_request_start_drag(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, request_start_drag);
 	struct wlr_seat_request_start_drag_event *event = data;
 
-	if (wlr_seat_validate_pointer_grab_serial(seat->seat,
-				event->origin, event->serial)) {
+	if (wlr_seat_validate_pointer_grab_serial(seat->seat, event->origin, event->serial)) {
 		wlr_seat_start_pointer_drag(seat->seat, event->drag, event->serial);
 		return;
 	}
 
 	struct wlr_touch_point *point;
-	if (wlr_seat_validate_touch_grab_serial(seat->seat,
-				event->origin, event->serial, &point)) {
-		wlr_seat_start_touch_drag(seat->seat,
-				event->drag, event->serial, point);
+	if (wlr_seat_validate_touch_grab_serial(seat->seat, event->origin, event->serial, &point)) {
+		wlr_seat_start_touch_drag(seat->seat, event->drag, event->serial, point);
 		return;
 	}
 
 	// TODO: tablet grabs
-	wlr_log(WLR_DEBUG, "Ignoring start_drag request: "
-			"could not validate pointer/touch serial %" PRIu32, event->serial);
+	wlr_log(WLR_DEBUG, "Ignoring start_drag request: could not validate pointer/touch serial %" PRIu32,
+		event->serial);
 	wlr_data_source_destroy(event->drag->source);
 }
 
@@ -792,8 +764,7 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 
 	wl_list_init(&seat->drag_icons);
 	seat->request_start_drag.notify = handle_request_start_drag;
-	wl_signal_add(&seat->seat->events.request_start_drag,
-			&seat->request_start_drag);
+	wl_signal_add(&seat->seat->events.request_start_drag, &seat->request_start_drag);
 	seat->start_drag.notify = handle_start_drag;
 	wl_signal_add(&seat->seat->events.start_drag, &seat->start_drag);
 
@@ -863,13 +834,10 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 
 	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(wlr_seat);
 	if (keyboard) {
-		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface,
-					       keyboard->keycodes,
-					       keyboard->num_keycodes,
+		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, keyboard->keycodes, keyboard->num_keycodes,
 					       &keyboard->modifiers);
 	} else {
-		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface,
-					       NULL, 0, NULL);
+		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, NULL, 0, NULL);
 	}
 
 	process_cursor_motion(seat, -1);

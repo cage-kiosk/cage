@@ -33,8 +33,8 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
 #include <wlr/types/wlr_xdg_decoration_v1.h>
-#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -153,8 +153,8 @@ drop_permissions(void)
 	}
 
 	if (setuid(0) != -1) {
-		wlr_log(WLR_ERROR, "Unable to drop root (we shouldn't be able to "
-			"restore it after setuid), refusing to start");
+		wlr_log(WLR_ERROR,
+			"Unable to drop root (we shouldn't be able to restore it after setuid), refusing to start");
 		return false;
 	}
 
@@ -180,7 +180,8 @@ handle_signal(int signal, void *data)
 static void
 usage(FILE *file, const char *cage)
 {
-	fprintf(file, "Usage: %s [OPTIONS] [--] APPLICATION\n"
+	fprintf(file,
+		"Usage: %s [OPTIONS] [--] APPLICATION\n"
 		"\n"
 		" -d\t Don't draw client side decorations, when possible\n"
 		" -r\t Rotate the output 90 degrees clockwise, specify up to three times\n"
@@ -383,10 +384,9 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
-	wlr_server_decoration_manager_set_default_mode(server_decoration_manager,
-						       server.xdg_decoration ?
-						       WLR_SERVER_DECORATION_MANAGER_MODE_SERVER :
-						       WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
+	wlr_server_decoration_manager_set_default_mode(
+		server_decoration_manager, server.xdg_decoration ? WLR_SERVER_DECORATION_MANAGER_MODE_SERVER
+								 : WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
 
 	export_dmabuf_manager = wlr_export_dmabuf_manager_v1_create(server.wl_display);
 	if (!export_dmabuf_manager) {
@@ -434,8 +434,7 @@ main(int argc, char *argv[])
 	}
 
 	if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
-		wlr_log_errno(WLR_ERROR, "Unable to set DISPLAY for XWayland.",
-			      "Clients may not be able to connect");
+		wlr_log_errno(WLR_ERROR, "Unable to set DISPLAY for XWayland. Clients may not be able to connect");
 	} else {
 		wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
 	}
@@ -443,12 +442,10 @@ main(int argc, char *argv[])
 	if (wlr_xcursor_manager_load(xcursor_manager, 1)) {
 		wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
 	}
-	struct wlr_xcursor *xcursor =
-		wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
+	struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
 	if (xcursor) {
 		struct wlr_xcursor_image *image = xcursor->images[0];
-		wlr_xwayland_set_cursor(xwayland, image->buffer,
-					image->width * 4, image->width, image->height,
+		wlr_xwayland_set_cursor(xwayland, image->buffer, image->width * 4, image->width, image->height,
 					image->hotspot_x, image->hotspot_y);
 	}
 #endif
@@ -467,8 +464,7 @@ main(int argc, char *argv[])
 	}
 
 	if (setenv("WAYLAND_DISPLAY", socket, true) < 0) {
-		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY.",
-			      "Clients may not be able to connect");
+		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY. Clients may not be able to connect");
 	} else {
 		wlr_log(WLR_DEBUG, "Cage " CAGE_VERSION " is running on Wayland display %s", socket);
 	}

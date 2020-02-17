@@ -49,9 +49,8 @@ struct render_data {
 };
 
 static void
-render_texture(struct wlr_output *wlr_output, pixman_region32_t *output_damage,
-	       struct wlr_texture *texture, const struct wlr_box *box,
-	       const float matrix[static 9])
+render_texture(struct wlr_output *wlr_output, pixman_region32_t *output_damage, struct wlr_texture *texture,
+	       const struct wlr_box *box, const float matrix[static 9])
 {
 	struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
 
@@ -70,13 +69,12 @@ render_texture(struct wlr_output *wlr_output, pixman_region32_t *output_damage,
 		wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0f);
 	}
 
- damage_finish:
+damage_finish:
 	pixman_region32_fini(&damage);
 }
 
 static void
-render_surface_iterator(struct cg_output *output, struct wlr_surface *surface,
-			struct wlr_box *box, void *user_data)
+render_surface_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box, void *user_data)
 {
 	struct render_data *data = user_data;
 	struct wlr_output *wlr_output = output->wlr_output;
@@ -118,20 +116,17 @@ render_view_toplevels(struct cg_view *view, struct cg_output *output, pixman_reg
 	double ox = view->lx;
 	double oy = view->ly;
 	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
-	output_surface_for_each_surface(output, view->wlr_surface, ox, oy,
-					render_surface_iterator, &data);
+	output_surface_for_each_surface(output, view->wlr_surface, ox, oy, render_surface_iterator, &data);
 }
 
 static void
-render_popup_iterator(struct cg_output *output, struct wlr_surface *surface,
-		      struct wlr_box *box, void *data)
+render_popup_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box, void *data)
 {
 	/* Render this popup's surface. */
 	render_surface_iterator(output, surface, box, data);
 
 	/* Render this popup's child toplevels. */
-	output_surface_for_each_surface(output, surface, box->x, box->y,
-					render_surface_iterator, data);
+	output_surface_for_each_surface(output, surface, box->x, box->y, render_surface_iterator, data);
 }
 
 static void
@@ -189,7 +184,7 @@ output_render(struct cg_output *output, pixman_region32_t *damage)
 
 	render_drag_icons(output, damage, &server->seat->drag_icons);
 
- renderer_end:
+renderer_end:
 	/* Draw software cursor in case hardware cursors aren't
 	   available. This is a no-op when they are. */
 	wlr_output_render_software_cursors(wlr_output, damage);
