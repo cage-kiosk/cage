@@ -25,3 +25,9 @@ tasks:
       cd cage
       meson build --werror -Dxwayland=true
       ninja -C build
+      rm -rf build
+  - build-no-xwayland: |
+      cd cage
+      meson build --werror -Dxwayland=false
+      ninja -C build
+      rm -rf build

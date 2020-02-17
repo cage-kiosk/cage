@@ -26,3 +26,9 @@ tasks:
       cd cage
       PKG_CONFIG_PATH=/usr/local/lib/pkgconfig meson build --werror -Dxwayland=true
       PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ninja -C build
+      rm -rf build
+  - build-no-xwayland: |
+      cd cage
+      PKG_CONFIG_PATH=/usr/local/lib/pkgconfig meson build --werror -Dxwayland=false
+      PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ninja -C build
+      rm -rf build
