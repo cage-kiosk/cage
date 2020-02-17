@@ -23,10 +23,17 @@ tasks:
       cd cage
       meson build --werror -Dxwayland=true
       ninja -C build
+      rm -rf build
+  - build-no-xwayland: |
+      cd cage
+      meson build --werror -Dxwayland=false
+      ninja -C build
+      rm -rf build
   - scan-build: |
       cd cage
       CC=clang meson build --werror -Dxwayland=true
       CC=clang ninja -C build scan-build
+      rm -rf build
   - clang-format: |
       cd cage
       meson build --werror -Dxwayland=true
