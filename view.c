@@ -140,7 +140,7 @@ void
 view_damage_part(struct cg_view *view)
 {
 	struct cg_output *output;
-	wl_list_for_each(output, &view->server->outputs, link) {
+	wl_list_for_each (output, &view->server->outputs, link) {
 		output_damage_surface(output, view->wlr_surface, view->lx, view->ly, false);
 	}
 }
@@ -149,7 +149,7 @@ void
 view_damage_whole(struct cg_view *view)
 {
 	struct cg_output *output;
-	wl_list_for_each(output, &view->server->outputs, link) {
+	wl_list_for_each (output, &view->server->outputs, link) {
 		output_damage_surface(output, view->wlr_surface, view->lx, view->ly, true);
 	}
 }
@@ -222,7 +222,7 @@ view_unmap(struct cg_view *view)
 	wl_list_remove(&view->new_subsurface.link);
 
 	struct cg_view_child *child, *tmp;
-	wl_list_for_each_safe(child, tmp, &view->children, link) {
+	wl_list_for_each_safe (child, tmp, &view->children, link) {
 		child->destroy(child);
 	}
 
@@ -235,7 +235,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 	view->wlr_surface = surface;
 
 	struct wlr_subsurface *subsurface;
-	wl_list_for_each(subsurface, &view->wlr_surface->subsurfaces, parent_link) {
+	wl_list_for_each (subsurface, &view->wlr_surface->subsurfaces, parent_link) {
 		subsurface_create(view, subsurface);
 	}
 
@@ -300,7 +300,7 @@ struct cg_view *
 view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface)
 {
 	struct cg_view *view;
-	wl_list_for_each(view, &server->views, link) {
+	wl_list_for_each (view, &server->views, link) {
 		if (view->wlr_surface == surface) {
 			return view;
 		}

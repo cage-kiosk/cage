@@ -173,7 +173,7 @@ output_render(struct cg_output *output, pixman_region32_t *damage)
 
 	// TODO: render only top view, possibly use focused view for this, see #35.
 	struct cg_view *view;
-	wl_list_for_each_reverse(view, &server->views, link) {
+	wl_list_for_each_reverse (view, &server->views, link) {
 		render_view_toplevels(view, output, damage);
 	}
 
