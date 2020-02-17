@@ -75,6 +75,7 @@ else
   have_xwayland = false
 endif
 
+version = '@0@'.format(meson.project_version())
 git = find_program('git', native: true, required: false)
 if git.found()
   git_commit = run_command([git, 'rev-parse', '--short', 'HEAD'])
@@ -86,8 +87,6 @@ if git.found()
       git_branch.stdout().strip(),
     )
   endif
-else
-  version = '@0@'.format(meson.project_version())
 endif
 
 conf_data = configuration_data()
