@@ -142,7 +142,7 @@ output_drag_icons_for_each_surface(struct cg_output *output, struct wl_list *dra
 				   cg_surface_iterator_func_t iterator, void *user_data)
 {
 	struct cg_drag_icon *drag_icon;
-	wl_list_for_each(drag_icon, drag_icons, link) {
+	wl_list_for_each (drag_icon, drag_icons, link) {
 		if (drag_icon->wlr_drag_icon->mapped) {
 			double ox = drag_icon->lx;
 			double oy = drag_icon->ly;
@@ -157,7 +157,7 @@ static void
 output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data)
 {
 	struct cg_view *view;
-	wl_list_for_each_reverse(view, &output->server->views, link) {
+	wl_list_for_each_reverse (view, &output->server->views, link) {
 		output_view_for_each_surface(output, view, iterator, user_data);
 	}
 
@@ -195,7 +195,7 @@ scan_out_primary_view(struct cg_output *output)
 	struct wlr_output *wlr_output = output->wlr_output;
 
 	struct cg_drag_icon *drag_icon;
-	wl_list_for_each(drag_icon, &server->seat->drag_icons, link) {
+	wl_list_for_each (drag_icon, &server->seat->drag_icons, link) {
 		if (drag_icon->wlr_drag_icon->mapped) {
 			return false;
 		}
@@ -334,7 +334,7 @@ handle_output_transform(struct wl_listener *listener, void *data)
 	}
 
 	struct cg_view *view;
-	wl_list_for_each(view, &output->server->views, link) {
+	wl_list_for_each (view, &output->server->views, link) {
 		view_position(view);
 	}
 }
@@ -349,7 +349,7 @@ handle_output_mode(struct wl_listener *listener, void *data)
 	}
 
 	struct cg_view *view;
-	wl_list_for_each(view, &output->server->views, link) {
+	wl_list_for_each (view, &output->server->views, link) {
 		view_position(view);
 	}
 }
@@ -369,7 +369,7 @@ output_destroy(struct cg_output *output)
 	wlr_output_layout_remove(server->output_layout, output->wlr_output);
 
 	struct cg_view *view;
-	wl_list_for_each(view, &output->server->views, link) {
+	wl_list_for_each (view, &output->server->views, link) {
 		view_position(view);
 	}
 
@@ -431,7 +431,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wlr_output_layout_add_auto(server->output_layout, wlr_output);
 
 	struct cg_view *view;
-	wl_list_for_each(view, &output->server->views, link) {
+	wl_list_for_each (view, &output->server->views, link) {
 		view_position(view);
 	}
 

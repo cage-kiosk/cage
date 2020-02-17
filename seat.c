@@ -67,7 +67,7 @@ desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surfa
 {
 	struct cg_view *view;
 
-	wl_list_for_each(view, &server->views, link) {
+	wl_list_for_each (view, &server->views, link) {
 		if (view_at(view, lx, ly, surface, sx, sy)) {
 			return view;
 		}
@@ -156,7 +156,7 @@ handle_new_touch(struct cg_seat *seat, struct wlr_input_device *device)
 
 	if (device->output_name != NULL) {
 		struct cg_output *output;
-		wl_list_for_each(output, &seat->server->outputs, link) {
+		wl_list_for_each (output, &seat->server->outputs, link) {
 			if (strcmp(device->output_name, output->wlr_output->name) == 0) {
 				wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
 				break;
@@ -198,7 +198,7 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 
 	if (device->output_name != NULL) {
 		struct cg_output *output;
-		wl_list_for_each(output, &seat->server->outputs, link) {
+		wl_list_for_each (output, &seat->server->outputs, link) {
 			if (strcmp(device->output_name, output->wlr_output->name) == 0) {
 				wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
 				break;
@@ -528,7 +528,7 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time)
 	}
 
 	struct cg_drag_icon *drag_icon;
-	wl_list_for_each(drag_icon, &seat->drag_icons, link) {
+	wl_list_for_each (drag_icon, &seat->drag_icons, link) {
 		drag_icon_update_position(drag_icon);
 	}
 
@@ -561,7 +561,7 @@ static void
 drag_icon_damage(struct cg_drag_icon *drag_icon)
 {
 	struct cg_output *output;
-	wl_list_for_each(output, &drag_icon->seat->server->outputs, link) {
+	wl_list_for_each (output, &drag_icon->seat->server->outputs, link) {
 		output_damage_surface(output, drag_icon->wlr_drag_icon->surface, drag_icon->lx, drag_icon->ly, true);
 	}
 }
@@ -660,15 +660,15 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&seat->destroy.link);
 
 	struct cg_keyboard *keyboard, *keyboard_tmp;
-	wl_list_for_each_safe(keyboard, keyboard_tmp, &seat->keyboards, link) {
+	wl_list_for_each_safe (keyboard, keyboard_tmp, &seat->keyboards, link) {
 		handle_keyboard_destroy(&keyboard->destroy, NULL);
 	}
 	struct cg_pointer *pointer, *pointer_tmp;
-	wl_list_for_each_safe(pointer, pointer_tmp, &seat->pointers, link) {
+	wl_list_for_each_safe (pointer, pointer_tmp, &seat->pointers, link) {
 		handle_pointer_destroy(&pointer->destroy, NULL);
 	}
 	struct cg_touch *touch, *touch_tmp;
-	wl_list_for_each_safe(touch, touch_tmp, &seat->touch, link) {
+	wl_list_for_each_safe (touch, touch_tmp, &seat->touch, link) {
 		handle_touch_destroy(&touch->destroy, NULL);
 	}
 	wl_list_remove(&seat->new_input.link);
@@ -827,7 +827,7 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	view_activate(view, true);
 	char *title = view_get_title(view);
 	struct cg_output *output;
-	wl_list_for_each(output, &server->outputs, link) {
+	wl_list_for_each (output, &server->outputs, link) {
 		output_set_window_title(output, title);
 	}
 	free(title);
