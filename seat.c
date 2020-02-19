@@ -371,7 +371,6 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 
 	cg_keyboard_group_add(device, seat);
 
-	wl_signal_init(&device->events.destroy);
 	wlr_seat_set_keyboard(seat->seat, device);
 }
 
