@@ -295,11 +295,11 @@ cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
 	/* This is reached if and only if the keyboard could not be inserted into
 	 * any group */
 	struct cg_keyboard_group *cg_group = calloc(1, sizeof(struct cg_keyboard_group));
-	cg_group->seat = seat;
 	if (cg_group == NULL) {
 		wlr_log(WLR_ERROR, "Failed to allocate keyboard group.");
 		return;
 	}
+	cg_group->seat = seat;
 	cg_group->wlr_group = wlr_keyboard_group_create();
 	if (cg_group->wlr_group == NULL) {
 		wlr_log(WLR_ERROR, "Failed to create wlr keyboard group.");
