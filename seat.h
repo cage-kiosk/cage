@@ -56,7 +56,7 @@ struct cg_keyboard_group {
 	struct cg_seat *seat;
 	struct wl_listener key;
 	struct wl_listener modifiers;
-	struct wl_list link;// cg_seat::keyboard_groups
+	struct wl_list link; // cg_seat::keyboard_groups
 };
 
 struct cg_pointer {
