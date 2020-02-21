@@ -314,12 +314,6 @@ cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
 
 	wlr_log(WLR_DEBUG, "Created keyboard group");
 
-	cg_group->keyboard = &cg_group->wlr_group->keyboard;
-	if (cg_group->keyboard == NULL) {
-		wlr_log(WLR_ERROR, "Failed to create keyboard from seat.");
-		goto cleanup;
-	}
-
 	wlr_keyboard_group_add_keyboard(cg_group->wlr_group, wlr_keyboard);
 	wl_list_insert(&seat->keyboard_groups, &cg_group->link);
 

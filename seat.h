@@ -50,8 +50,6 @@ struct cg_seat {
 };
 
 struct cg_keyboard_group {
-	struct wlr_keyboard *keyboard;
-
 	struct wlr_keyboard_group *wlr_group;
 	struct cg_seat *seat;
 	struct wl_listener key;
