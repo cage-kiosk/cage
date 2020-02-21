@@ -20,6 +20,7 @@ struct cg_seat {
 	struct wl_listener destroy;
 
 	struct wl_list keyboards;
+	struct wl_list keyboard_groups;
 	struct wl_list pointers;
 	struct wl_list touch;
 	struct wl_listener new_input;
@@ -48,14 +49,12 @@ struct cg_seat {
 	struct wl_listener request_set_primary_selection;
 };
 
-struct cg_keyboard {
-	struct wl_list link; // seat::keyboards
+struct cg_keyboard_group {
+	struct wlr_keyboard_group *wlr_group;
 	struct cg_seat *seat;
-	struct wlr_input_device *device;
-
-	struct wl_listener modifiers;
 	struct wl_listener key;
-	struct wl_listener destroy;
+	struct wl_listener modifiers;
+	struct wl_list link; // cg_seat::keyboard_groups
 };
 
 struct cg_pointer {
