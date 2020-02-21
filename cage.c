@@ -495,7 +495,9 @@ end:
 
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
-	wl_event_source_remove(sigchld_source);
+	if (sigchld_source) {
+		wl_event_source_remove(sigchld_source);
+	}
 	seat_destroy(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
