@@ -92,6 +92,7 @@ endif
 cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
+  'layer_shell_v1.c',
   'output.c',
   'seat.c',
   'view.c',
@@ -103,6 +104,7 @@ cage_headers = [
                  output: 'config.h',
                  configuration: conf_data),
   'idle_inhibit_v1.h',
+  'layer_shell_v1.h',
   'output.h',
   'seat.h',
   'server.h',
