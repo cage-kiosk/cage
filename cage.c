@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2020 Jente Hidskes
+ * Copyright (C) 2018-2021 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
@@ -27,6 +27,7 @@
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_scene.h>
@@ -45,6 +46,7 @@
 #endif
 
 #include "idle_inhibit_v1.h"
+#include "layer_shell_v1.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -430,6 +432,10 @@ main(int argc, char *argv[])
 		goto end;
 	}
 	wlr_scene_set_presentation(server.scene, presentation);
+
+	server.layer_shell_v1 = wlr_layer_shell_v1_create(server.wl_display);
+	wl_signal_add(&server.layer_shell_v1->events.new_surface, &server.new_layer_shell_v1_surface);
+	server.new_layer_shell_v1_surface.notify = handle_layer_shell_v1_surface_new;
 
 	export_dmabuf_manager = wlr_export_dmabuf_manager_v1_create(server.wl_display);
 	if (!export_dmabuf_manager) {
