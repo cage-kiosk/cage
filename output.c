@@ -56,6 +56,8 @@ output_enable(struct cg_output *output)
 	wlr_output_enable(wlr_output, true);
 	wlr_output_commit(wlr_output);
 
+	output->usable_area = *wlr_output_layout_get_box(output->server->output_layout, wlr_output);
+
 	struct wlr_scene_output *scene_output;
 	wl_list_for_each (scene_output, &output->server->scene->outputs, link) {
 		if (scene_output->output == wlr_output) {

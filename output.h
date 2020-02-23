@@ -4,6 +4,7 @@
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_damage.h>
+#include <wlr/util/box.h>
 
 #include "server.h"
 #include "view.h"
@@ -20,6 +21,7 @@ struct cg_output {
 	struct cg_server *server;
 	struct wlr_output *wlr_output;
 	struct wlr_scene_output *scene_output;
+	struct wlr_box usable_area;
 
 	struct wl_listener commit;
 	struct wl_listener mode;
