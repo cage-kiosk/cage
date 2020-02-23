@@ -125,6 +125,27 @@ update_capabilities(struct cg_seat *seat)
 }
 
 static void
+map_input_device_to_output(struct cg_seat *seat, struct wlr_input_device *device)
+{
+	if (!device->output_name) {
+		wlr_log(WLR_INFO, "Input device %s cannot be mapped to an output device\n", device->name);
+		return;
+	}
+
+	struct cg_output *output;
+	wl_list_for_each (output, &seat->server->outputs, link) {
+		if (strcmp(device->output_name, output->wlr_output->name) == 0) {
+			wlr_log(WLR_INFO, "Mapping input device %s to output device %s\n", device->name,
+				output->wlr_output->name);
+			wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
+			return;
+		}
+	}
+
+	wlr_log(WLR_INFO, "Couldn't map input device %s to an output\n", device->name);
+}
+
+static void
 handle_touch_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_touch *touch = wl_container_of(listener, touch, destroy);
@@ -155,15 +176,7 @@ handle_new_touch(struct cg_seat *seat, struct wlr_input_device *device)
 	touch->destroy.notify = handle_touch_destroy;
 	wl_signal_add(&touch->device->events.destroy, &touch->destroy);
 
-	if (device->output_name != NULL) {
-		struct cg_output *output;
-		wl_list_for_each (output, &seat->server->outputs, link) {
-			if (strcmp(device->output_name, output->wlr_output->name) == 0) {
-				wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
-				break;
-			}
-		}
-	}
+	map_input_device_to_output(seat, device);
 }
 
 static void
@@ -197,15 +210,7 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 	pointer->destroy.notify = handle_pointer_destroy;
 	wl_signal_add(&device->events.destroy, &pointer->destroy);
 
-	if (device->output_name != NULL) {
-		struct cg_output *output;
-		wl_list_for_each (output, &seat->server->outputs, link) {
-			if (strcmp(device->output_name, output->wlr_output->name) == 0) {
-				wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
-				break;
-			}
-		}
-	}
+	map_input_device_to_output(seat, device);
 }
 
 static void
