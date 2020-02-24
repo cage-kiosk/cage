@@ -320,6 +320,10 @@ handle_new_output(struct wl_listener *listener, void *data)
 		output_disable(next);
 	}
 
+	for (size_t i = 0; i < sizeof(output->layers) / sizeof(output->layers[0]); i++) {
+		wl_list_init(&output->layers[i]);
+	}
+
 	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
 			wlr_output->scale);
