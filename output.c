@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2020 Jente Hidskes
+ * Copyright (C) 2018-2021 Jente Hidskes
  * Copyright (C) 2019 The Sway authors
  *
  * See the LICENSE file accompanying this file.
@@ -228,6 +228,10 @@ handle_new_output(struct wl_listener *listener, void *data)
 		if (next) {
 			output_disable(next);
 		}
+	}
+
+	for (size_t i = 0; i < sizeof(output->layers) / sizeof(output->layers[0]); i++) {
+		wl_list_init(&output->layers[i]);
 	}
 
 	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
