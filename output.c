@@ -190,6 +190,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 	}
 
 	output->wlr_output = wlr_output;
+	wlr_output->data = output;
 	output->server = server;
 
 	wl_list_insert(&server->outputs, &output->link);
