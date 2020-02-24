@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2020 Jente Hidskes
+ * Copyright (C) 2018-2021 Jente Hidskes
  * Copyright (C) 2019 The Sway authors
  *
  * See the LICENSE file accompanying this file.
@@ -138,6 +138,8 @@ output_destroy(struct cg_output *output)
 {
 	struct cg_server *server = output->server;
 
+	output->wlr_output->data = NULL;
+
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->commit.link);
 	wl_list_remove(&output->mode.link);
@@ -188,6 +190,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 	}
 
 	output->wlr_output = wlr_output;
+	wlr_output->data = output;
 	output->server = server;
 
 	wl_list_insert(&server->outputs, &output->link);
