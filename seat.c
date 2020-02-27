@@ -696,6 +696,17 @@ handle_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, destroy);
 	wl_list_remove(&seat->destroy.link);
+	wl_list_remove(&seat->cursor_motion.link);
+	wl_list_remove(&seat->cursor_motion_absolute.link);
+	wl_list_remove(&seat->cursor_button.link);
+	wl_list_remove(&seat->cursor_axis.link);
+	wl_list_remove(&seat->cursor_frame.link);
+	wl_list_remove(&seat->touch_down.link);
+	wl_list_remove(&seat->touch_up.link);
+	wl_list_remove(&seat->touch_motion.link);
+	wl_list_remove(&seat->request_set_cursor.link);
+	wl_list_remove(&seat->request_set_selection.link);
+	wl_list_remove(&seat->request_set_primary_selection.link);
 
 	struct cg_keyboard_group *group, *group_tmp;
 	wl_list_for_each_safe (group, group_tmp, &seat->keyboard_groups, link) {
@@ -716,17 +727,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 	if (seat->cursor) {
 		wlr_cursor_destroy(seat->cursor);
 	}
-	wl_list_remove(&seat->cursor_motion.link);
-	wl_list_remove(&seat->cursor_motion_absolute.link);
-	wl_list_remove(&seat->cursor_button.link);
-	wl_list_remove(&seat->cursor_axis.link);
-	wl_list_remove(&seat->cursor_frame.link);
-	wl_list_remove(&seat->touch_down.link);
-	wl_list_remove(&seat->touch_up.link);
-	wl_list_remove(&seat->touch_motion.link);
-	wl_list_remove(&seat->request_set_cursor.link);
-	wl_list_remove(&seat->request_set_selection.link);
-	wl_list_remove(&seat->request_set_primary_selection.link);
 	free(seat);
 }
 
