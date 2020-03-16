@@ -150,7 +150,6 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 	xwayland_view->commit.notify = handle_xwayland_surface_commit;
 	wl_signal_add(&xwayland_view->xwayland_surface->surface->events.commit, &xwayland_view->commit);
 
-	xwayland_view->ever_been_mapped = true;
 	view_map(view, xwayland_view->xwayland_surface->surface);
 
 	view_damage_whole(view);
