@@ -259,14 +259,6 @@ void
 view_destroy(struct cg_view *view)
 {
 	struct cg_server *server = view->server;
-	bool ever_been_mapped = true;
-
-#if CAGE_HAS_XWAYLAND
-	if (view->type == CAGE_XWAYLAND_VIEW) {
-		struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
-		ever_been_mapped = xwayland_view->ever_been_mapped;
-	}
-#endif
 
 	if (view->wlr_surface != NULL) {
 		view_unmap(view);
@@ -279,10 +271,6 @@ view_destroy(struct cg_view *view)
 	if (!empty) {
 		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
 		seat_set_focus(server->seat, prev);
-	} else if (ever_been_mapped) {
-		/* The list is empty and the last view has been
-		   mapped, so we can safely exit. */
-		wl_display_terminate(server->wl_display);
 	}
 }
 
