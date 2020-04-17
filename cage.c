@@ -146,13 +146,14 @@ static bool
 drop_permissions(void)
 {
 	if (getuid() != geteuid() || getgid() != getegid()) {
-		if (setuid(getuid()) != 0 || setgid(getgid()) != 0) {
+		// Set the gid and uid in the correct order.
+		if (setgid(getgid()) != 0 || setuid(getuid()) != 0) {
 			wlr_log(WLR_ERROR, "Unable to drop root, refusing to start");
 			return false;
 		}
 	}
 
-	if (setuid(0) != -1) {
+	if (setgid(0) != -1 || setuid(0) != -1) {
 		wlr_log(WLR_ERROR,
 			"Unable to drop root (we shouldn't be able to restore it after setuid), refusing to start");
 		return false;
