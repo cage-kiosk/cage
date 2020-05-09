@@ -232,10 +232,7 @@ scan_out_primary_view(struct cg_output *output)
 		return false;
 	}
 
-	if (!wlr_output_attach_buffer(wlr_output, surface->buffer)) {
-		return false;
-	}
-
+	wlr_output_attach_buffer(wlr_output, &surface->buffer->base);
 	return wlr_output_commit(wlr_output);
 }
 
