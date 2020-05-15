@@ -12,6 +12,7 @@
 
 #include <fcntl.h>
 #include <getopt.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -162,6 +163,8 @@ drop_permissions(void)
 	return true;
 }
 
+sigjmp_buf end_mark;
+
 static int
 handle_signal(int signal, void *data)
 {
@@ -172,6 +175,7 @@ handle_signal(int signal, void *data)
 		/* Fallthrough */
 	case SIGTERM:
 		wl_display_terminate(display);
+		siglongjmp(end_mark, -1);
 		return 0;
 	default:
 		return 0;
@@ -474,16 +478,18 @@ main(int argc, char *argv[])
 	wlr_xwayland_set_seat(xwayland, server.seat->seat);
 #endif
 
-	if (!spawn_primary_client(server.wl_display, argv + optind, &pid, &sigchld_source)) {
-		ret = 1;
-		goto end;
+	if (sigsetjmp(end_mark, 0) == 0) {
+		if (!spawn_primary_client(server.wl_display, argv + optind, &pid, &sigchld_source)) {
+			ret = 1;
+			goto end;
+		}
+
+		/* Place the cursor in the center of the output layout. */
+		struct wlr_box *layout_box = wlr_output_layout_get_box(server.output_layout, NULL);
+		wlr_cursor_warp(server.seat->cursor, NULL, layout_box->width / 2, layout_box->height / 2);
+
+		wl_display_run(server.wl_display);
 	}
-
-	/* Place the cursor in the center of the output layout. */
-	struct wlr_box *layout_box = wlr_output_layout_get_box(server.output_layout, NULL);
-	wlr_cursor_warp(server.seat->cursor, NULL, layout_box->width / 2, layout_box->height / 2);
-
-	wl_display_run(server.wl_display);
 
 #if CAGE_HAS_XWAYLAND
 	wlr_xwayland_destroy(xwayland);
