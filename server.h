@@ -33,7 +33,9 @@ struct cg_server {
 
 	enum cg_multi_output_mode output_mode;
 	struct wlr_output_layout *output_layout;
-	struct wl_list outputs;
+	/* Includes disabled outputs; depending on the output_mode
+	 * some outputs may be disabled. */
+	struct wl_list outputs; // cg_output::link
 	struct wl_listener new_output;
 
 	struct wl_listener xdg_toplevel_decoration;
