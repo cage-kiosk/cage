@@ -6,6 +6,7 @@ packages:
   - libinput-dev
   - libxkbcommon-dev
   - pixman-dev
+  - scdoc
   - wayland-dev
   - wayland-protocols
   - xorg-server-xwayland

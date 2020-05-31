@@ -4,6 +4,7 @@ packages:
   - meson
   - libinput
   - libxkbcommon
+  - scdoc
   - wayland
   - wayland-protocols
   - xorg-server-xwayland

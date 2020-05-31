@@ -93,6 +93,32 @@ conf_data = configuration_data()
 conf_data.set10('CAGE_HAS_XWAYLAND', have_xwayland)
 conf_data.set_quoted('CAGE_VERSION', version)
 
+scdoc = dependency('scdoc', version: '>=1.9.2', native: true, required: get_option('man-pages'))
+if scdoc.found()
+  scdoc_prog = find_program(scdoc.get_pkgconfig_variable('scdoc'), native: true)
+  sh = find_program('sh', native: true)
+  mandir = get_option('mandir')
+  man_files = [
+    'cage.1.scd'
+  ]
+  foreach filename : man_files
+    topic = filename.split('.')[-3].split('/')[-1]
+    section = filename.split('.')[-2]
+    output = '@0@.@1@'.format(topic, section)
+
+    custom_target(
+      output,
+      input: filename,
+      output: output,
+      command: [
+        sh, '-c', '@0@ < @INPUT@ > @1@'.format(scdoc_prog.path(), output)
+      ],
+      install: true,
+      install_dir: '@0@/man@1@'.format(mandir, section)
+    )
+  endforeach
+endif
+
 cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
