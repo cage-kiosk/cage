@@ -404,15 +404,20 @@ output_destroy(struct cg_output *output)
 
 	wlr_output_layout_remove(server->output_layout, output->wlr_output);
 
-	struct cg_view *view;
-	wl_list_for_each (view, &output->server->views, link) {
-		view_position(view);
-	}
-
 	free(output);
 
 	if (wl_list_empty(&server->outputs)) {
 		wl_display_terminate(server->wl_display);
+	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
+		if (prev) {
+			output_enable(prev);
+
+			struct cg_view *view;
+			wl_list_for_each (view, &server->views, link) {
+				view_position(view);
+			}
+		}
 	}
 }
 
@@ -465,6 +470,12 @@ handle_new_output(struct wl_listener *listener, void *data)
 	}
 	wlr_output_set_transform(wlr_output, output->server->output_transform);
 
+	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+		struct cg_output *next = wl_container_of(output->link.next, next, link);
+		if (next) {
+			output_disable(next);
+		}
+	}
 
 	if (wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
