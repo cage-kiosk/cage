@@ -270,6 +270,8 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
+	server.output_mode = CAGE_MULTI_OUTPUT_MODE_EXTEND;
+
 #ifdef DEBUG
 	wlr_log_init(WLR_DEBUG, NULL);
 #else
