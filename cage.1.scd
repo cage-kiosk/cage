@@ -6,7 +6,7 @@ cage - a Wayland kiosk compsitor
 
 # SYNOPSIS
 
-*cage* [-dhrv] [--] _application_ [application argument ...]
+*cage* [-dhmrv] [--] _application_ [application argument ...]
 
 # DESCRIPTION
 
@@ -21,6 +21,11 @@ activities outside the scope of the running application are prevented.
 
 *-h*
 	Show the help message.
+
+*-m* <mode>
+	Set the multi-monitor behaviour. Supported modes are:
+	*last* Cage uses only the last connected monitor.
+	*extend* Cage extends the display across all connected monitors.
 
 *-r*
 	Rotate the output 90 degrees clockwise. This can be specifed up to three

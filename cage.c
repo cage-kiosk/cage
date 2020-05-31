@@ -185,11 +185,13 @@ usage(FILE *file, const char *cage)
 		"Usage: %s [OPTIONS] [--] APPLICATION\n"
 		"\n"
 		" -d\t Don't draw client side decorations, when possible\n"
-		" -r\t Rotate the output 90 degrees clockwise, specify up to three times\n"
 #ifdef DEBUG
 		" -D\t Turn on damage tracking debugging\n"
 #endif
 		" -h\t Display this help message\n"
+		" -m extend Extend the display across all connected outputs (default)\n"
+		" -m last Use only the last connected output\n"
+		" -r\t Rotate the output 90 degrees clockwise, specify up to three times\n"
 		" -v\t Show the version number and exit\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
@@ -201,19 +203,13 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
 #ifdef DEBUG
-	while ((c = getopt(argc, argv, "drDhv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:rv")) != -1) {
 #else
-	while ((c = getopt(argc, argv, "drhv")) != -1) {
+	while ((c = getopt(argc, argv, "dhm:rv")) != -1) {
 #endif
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
-			break;
-		case 'r':
-			server->output_transform++;
-			if (server->output_transform > WL_OUTPUT_TRANSFORM_270) {
-				server->output_transform = WL_OUTPUT_TRANSFORM_NORMAL;
-			}
 			break;
 #ifdef DEBUG
 		case 'D':
@@ -223,6 +219,19 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 		case 'h':
 			usage(stdout, argv[0]);
 			return false;
+		case 'm':
+			if (strcmp(optarg, "last") == 0) {
+				server->output_mode = CAGE_MULTI_OUTPUT_MODE_LAST;
+			} else if (strcmp(optarg, "extend") == 0) {
+				server->output_mode = CAGE_MULTI_OUTPUT_MODE_EXTEND;
+			}
+			break;
+		case 'r':
+			server->output_transform++;
+			if (server->output_transform > WL_OUTPUT_TRANSFORM_270) {
+				server->output_transform = WL_OUTPUT_TRANSFORM_NORMAL;
+			}
+			break;
 		case 'v':
 			fprintf(stdout, "Cage version " CAGE_VERSION "\n");
 			exit(0);
@@ -269,8 +278,6 @@ main(int argc, char *argv[])
 	if (!parse_args(&server, argc, argv)) {
 		return 1;
 	}
-
-	server.output_mode = CAGE_MULTI_OUTPUT_MODE_EXTEND;
 
 #ifdef DEBUG
 	wlr_log_init(WLR_DEBUG, NULL);
