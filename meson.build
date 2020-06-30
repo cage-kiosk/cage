@@ -1,5 +1,5 @@
 project('cage', 'c',
-  version: '0.1.2',
+  version: '0.2.0',
   license: 'MIT',
   default_options: [
     'c_std=c11',
@@ -119,39 +119,27 @@ if scdoc.found()
   endforeach
 endif
 
-cage_sources = [
-  'cage.c',
-  'idle_inhibit_v1.c',
-  'output.c',
-  'render.c',
-  'seat.c',
-  'util.c',
-  'view.c',
-  'xdg_shell.c',
+cageng_sources = [
+  'desktop/output.c',
+  'cageng.c',
 ]
 
-cage_headers = [
+cageng_headers = [
   configure_file(input: 'config.h.in',
 		 output: 'config.h',
 		 configuration: conf_data),
-  'idle_inhibit_v1.h',
-  'output.h',
-  'render.h',
-  'seat.h',
-  'server.h',
-  'util.h',
-  'view.h',
-  'xdg_shell.h',
+  'desktop/output.h',
+  'serverng.h',
 ]
 
-if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
-  cage_sources += 'xwayland.c'
-  cage_headers += 'xwayland.h'
-endif
+# if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
+#   cage_sources += 'xwayland.c'
+#   cage_headers += 'xwayland.h'
+# endif
 
 executable(
-  meson.project_name(),
-  cage_sources + cage_headers,
+  meson.project_name() + 'ng',
+  cageng_sources + cageng_headers,
   dependencies: [
     server_protos,
     wayland_server,
