@@ -7,8 +7,11 @@
  * See the LICENSE file accompanying this file.
  */
 
+#define _POSIX_C_SOURCE 200112L
+
 #include <assert.h>
 #include <stdlib.h>
+#include <time.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/wayland.h>
@@ -18,11 +21,67 @@
 #include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_damage.h>
+#include <wlr/types/wlr_surface.h>
+
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 
 #include "output.h"
 #include "view.h"
+
+struct send_frame_done_data {
+	struct timespec when;
+};
+
+static void
+output_for_each_surface(struct cg_output *output, wlr_surface_iterator_func_t iterator, void *user_data)
+{
+	struct cg_view *view;
+	wl_list_for_each_reverse (view, &output->views, link) {
+		cage_view_for_each_surface(view, iterator, user_data);
+	}
+}
+
+static void
+send_frame_done_iterator(struct wlr_surface *surface, int sx, int sy, void *user_data)
+{
+	struct send_frame_done_data *data = user_data;
+	wlr_surface_send_frame_done(surface, &data->when);
+}
+
+static void
+send_frame_done(struct cg_output *output, struct send_frame_done_data *data)
+{
+	output_for_each_surface(output, send_frame_done_iterator, data);
+}
+
+static void
+handle_output_damage_frame(struct wl_listener *listener, void *user_data)
+{
+	struct cg_output *output = wl_container_of(listener, output, damage_frame);
+	struct send_frame_done_data frame_data = {0};
+
+	bool needs_frame;
+	pixman_region32_t damage;
+	pixman_region32_init(&damage);
+	if (!wlr_output_damage_attach_render(output->damage, &needs_frame, &damage)) {
+		wlr_log(WLR_ERROR, "Cannot make damage output current");
+		goto damage_finish;
+	}
+
+	if (!needs_frame) {
+		wlr_output_rollback(output->wlr_output);
+		goto damage_finish;
+	}
+
+	// cage_renderer_render_output(output->wlr_output, &damage);
+
+damage_finish:
+	pixman_region32_fini(&damage);
+
+	clock_gettime(CLOCK_MONOTONIC, &frame_data.when);
+	send_frame_done(output, &frame_data);
+}
 
 static void
 handle_output_damage_destroy(struct wl_listener *listener, void *user_data)
@@ -119,7 +178,7 @@ cage_output_enable(struct cg_output *output)
 	output->transform.notify = handle_output_transform;
 	wl_signal_add(&wlr_output->events.transform, &output->transform);
 	wl_list_remove(&output->damage_frame.link);
-	// output->damage_frame.notify = handle_output_damage_frame;
+	output->damage_frame.notify = handle_output_damage_frame;
 	wl_signal_add(&output->damage->events.frame, &output->damage_frame);
 
 	wlr_output_enable(wlr_output, true);
