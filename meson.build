@@ -21,6 +21,10 @@ if get_option('buildtype').startswith('debug')
   add_project_arguments('-DDEBUG', language : 'c')
 endif
 
+if get_option('debug-damage-tracking')
+  add_project_arguments('-DDEBUG_DAMAGE_TRACKING', language : 'c')
+endif
+
 cc = meson.get_compiler('c')
 
 is_freebsd = host_machine.system().startswith('freebsd')
@@ -121,6 +125,8 @@ endif
 
 cageng_sources = [
   'desktop/output.c',
+  'desktop/renderer.c',
+  'desktop/util.c',
   'desktop/view.c',
   'desktop/xdg_shell.c',
   'cageng.c',
@@ -131,6 +137,8 @@ cageng_headers = [
 		 output: 'config.h',
 		 configuration: conf_data),
   'desktop/output.h',
+  'desktop/renderer.h',
+  'desktop/util.h',
   'desktop/view.h',
   'desktop/xdg_shell.h',
   'serverng.h',
@@ -159,6 +167,8 @@ summary = [
 	'',
 	'Cage @0@'.format(version),
 	'',
+  '    debug: @0@'.format(get_option('buildtype').startswith('debug')),
+  '    debug damage tracking: @0@'.format(get_option('debug-damage-tracking')),
 	'    xwayland: @0@'.format(have_xwayland),
 	''
 ]

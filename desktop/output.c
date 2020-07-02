@@ -27,6 +27,7 @@
 #include <wlr/util/region.h>
 
 #include "output.h"
+#include "renderer.h"
 #include "view.h"
 
 struct send_frame_done_data {
@@ -74,7 +75,7 @@ handle_output_damage_frame(struct wl_listener *listener, void *user_data)
 		goto damage_finish;
 	}
 
-	// cage_renderer_render_output(output->wlr_output, &damage);
+	cage_renderer_render_output(output, &damage);
 
 damage_finish:
 	pixman_region32_fini(&damage);
