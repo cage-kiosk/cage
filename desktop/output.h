@@ -24,6 +24,8 @@ struct cg_output {
 	struct wl_list link; // cg_server::outputs
 };
 
+void cage_output_damage_whole(struct cg_output *output);
+void cage_output_damage_region(struct cg_output *output, struct wlr_box *region);
 void cage_output_get_geometry(struct cg_output *output, struct wlr_box *geometry);
 void cage_output_disable(struct cg_output *output);
 void cage_output_enable(struct cg_output *output);

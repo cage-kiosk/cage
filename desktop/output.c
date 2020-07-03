@@ -30,6 +30,24 @@
 #include "renderer.h"
 #include "view.h"
 
+void
+cage_output_damage_whole(struct cg_output *output)
+{
+	assert(output != NULL);
+
+	wlr_output_damage_add_whole(output->damage);
+}
+
+void
+cage_output_damage_region(struct cg_output *output, struct wlr_box *region)
+{
+	assert(output != NULL);
+	assert(region != NULL);
+	assert(output->wlr_output->enabled);
+
+	wlr_output_damage_add_box(output->damage, region);
+}
+
 struct send_frame_done_data {
 	struct timespec when;
 };
@@ -184,7 +202,7 @@ cage_output_enable(struct cg_output *output)
 
 	wlr_output_enable(wlr_output, true);
 	wlr_output_commit(wlr_output);
-	wlr_output_damage_add_whole(output->damage);
+	cage_output_damage_whole(output);
 }
 
 void
