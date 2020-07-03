@@ -81,6 +81,8 @@ handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *user_data)
 
 	assert(cage_view_is_mapped(view));
 
+	cage_view_damage_whole(view);
+
 	wl_list_remove(&xdg_shell_view->commit.link);
 	wl_list_remove(&xdg_shell_view->request_fullscreen.link);
 
@@ -100,6 +102,9 @@ handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *
 static void
 handle_xdg_shell_surface_commit(struct wl_listener *listener, void *user_data)
 {
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
+	struct cg_view *view = &xdg_shell_view->view;
+	cage_view_damage_part(view);
 }
 
 static void
@@ -137,6 +142,7 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *user_data)
 
 	cage_view_map(view, xdg_shell_view->xdg_surface->surface);
 
+	cage_view_damage_whole(view);
 	assert(cage_view_is_mapped(view));
 }
 

@@ -12,8 +12,10 @@
 #include <stdbool.h>
 #include <string.h>
 #include <wlr/types/wlr_surface.h>
+#include <wlr/util/region.h>
 
 #include "output.h"
+#include "util.h"
 #include "view.h"
 
 static bool
@@ -64,6 +66,31 @@ cage_view_position(struct cg_view *view)
 	}
 }
 
+static void
+damage_surface_iterator(struct wlr_surface *surface, int sx, int sy, void *user_data)
+{
+	struct cg_view *view = (struct cg_view *) surface->data;
+	struct cg_output *output = view->output;
+	struct wlr_output *wlr_output = output->wlr_output;
+
+	if (pixman_region32_not_empty(&surface->buffer_damage)) {
+		pixman_region32_t damage;
+		pixman_region32_init(&damage);
+		wlr_surface_get_effective_damage(surface, &damage);
+
+		wlr_region_scale(&damage, &damage, wlr_output->scale);
+		if (ceil(wlr_output->scale) > surface->current.scale) {
+			/* When scaling up a surface it'll become
+			   blurry, so we need to expand the damage
+			   region. */
+			wlr_region_expand(&damage, &damage, ceil(wlr_output->scale) - surface->current.scale);
+		}
+		pixman_region32_translate(&damage, sx, sy);
+		wlr_output_damage_add(output->damage, &damage);
+		pixman_region32_fini(&damage);
+	}
+}
+
 void
 cage_view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *user_data)
 {
@@ -83,6 +110,27 @@ cage_view_get_title(struct cg_view *view)
 		return NULL;
 	}
 	return strndup(title, strlen(title));
+}
+
+void
+cage_view_damage_whole(struct cg_view *view)
+{
+	assert(view != NULL);
+	assert(view->impl->get_geometry != NULL);
+	struct cg_output *output = view->output;
+	struct wlr_box box = {0};
+
+	view->impl->get_geometry(view, &box.width, &box.height);
+
+	scale_box(&box, output->wlr_output->scale);
+	cage_output_damage_region(output, &box);
+}
+
+void
+cage_view_damage_part(struct cg_view *view)
+{
+	assert(view != NULL);
+	cage_view_for_each_surface(view, damage_surface_iterator, NULL);
 }
 
 void
@@ -111,6 +159,7 @@ cage_view_unmap(struct cg_view *view)
 	wl_list_remove(&view->link);
 	wl_list_init(&view->link);
 
+	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
 
 	assert(!cage_view_is_mapped(view));
@@ -124,6 +173,7 @@ cage_view_map(struct cg_view *view, struct wlr_surface *surface)
 	assert(!cage_view_is_mapped(view));
 
 	view->wlr_surface = surface;
+	surface->data = view;
 
 	wl_list_insert(&view->output->views, &view->link);
 	cage_view_position(view);

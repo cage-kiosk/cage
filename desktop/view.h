@@ -80,6 +80,8 @@ bool cage_view_is_primary(struct cg_view *view);
 void cage_view_position(struct cg_view *view);
 void cage_view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *user_data);
 char *cage_view_get_title(struct cg_view *view);
+void cage_view_damage_whole(struct cg_view *view);
+void cage_view_damage_part(struct cg_view *view);
 void cage_view_activate(struct cg_view *view, bool activate);
 bool cage_view_is_mapped(struct cg_view *view);
 void cage_view_unmap(struct cg_view *view);
