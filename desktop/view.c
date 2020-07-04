@@ -15,7 +15,6 @@
 #include <wlr/util/region.h>
 
 #include "output.h"
-#include "util.h"
 #include "view.h"
 
 static bool
@@ -99,13 +98,11 @@ cage_view_damage_whole(struct cg_view *view)
 {
 	assert(view != NULL);
 	assert(view->impl->get_geometry != NULL);
-	struct cg_output *output = view->output;
 	struct wlr_box box = {0};
 
 	view->impl->get_geometry(view, &box.width, &box.height);
 
-	scale_box(&box, output->wlr_output->scale);
-	cage_output_damage_region(output, &box);
+	cage_output_damage_region(view->output, &box);
 }
 
 void

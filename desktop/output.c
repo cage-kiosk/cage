@@ -28,6 +28,7 @@
 
 #include "output.h"
 #include "renderer.h"
+#include "util.h"
 #include "view.h"
 
 void
@@ -45,6 +46,7 @@ cage_output_damage_region(struct cg_output *output, struct wlr_box *region)
 	assert(region != NULL);
 	assert(output->wlr_output->enabled);
 
+	scale_box(region, output->wlr_output->scale);
 	wlr_output_damage_add_box(output->damage, region);
 }
 
