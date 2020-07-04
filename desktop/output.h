@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_damage.h>
+#include <wlr/types/wlr_surface.h>
 
 struct cg_output {
 	struct wlr_output *wlr_output;
@@ -26,6 +27,7 @@ struct cg_output {
 
 void cage_output_damage_whole(struct cg_output *output);
 void cage_output_damage_region(struct cg_output *output, struct wlr_box *region);
+void cage_output_damage_surface(struct cg_output *output, struct wlr_surface *surface, int sx, int sy);
 void cage_output_get_geometry(struct cg_output *output, struct wlr_box *geometry);
 void cage_output_disable(struct cg_output *output);
 void cage_output_enable(struct cg_output *output);

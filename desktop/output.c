@@ -48,6 +48,33 @@ cage_output_damage_region(struct cg_output *output, struct wlr_box *region)
 	wlr_output_damage_add_box(output->damage, region);
 }
 
+void
+cage_output_damage_surface(struct cg_output *output, struct wlr_surface *surface, int sx, int sy)
+{
+	assert(output != NULL);
+	assert(surface != NULL);
+	struct wlr_output *wlr_output = output->wlr_output;
+
+	assert(wlr_output->enabled);
+
+	if (pixman_region32_not_empty(&surface->buffer_damage)) {
+		pixman_region32_t damage;
+		pixman_region32_init(&damage);
+		wlr_surface_get_effective_damage(surface, &damage);
+
+		wlr_region_scale(&damage, &damage, wlr_output->scale);
+		if (ceil(wlr_output->scale) > surface->current.scale) {
+			/* When scaling up a surface it'll becomevblurry, so we
+			 * need to expand the damage region. */
+			wlr_region_expand(&damage, &damage, ceil(wlr_output->scale) - surface->current.scale);
+		}
+
+		pixman_region32_translate(&damage, sx, sy);
+		wlr_output_damage_add(output->damage, &damage);
+		pixman_region32_fini(&damage);
+	}
+}
+
 struct send_frame_done_data {
 	struct timespec when;
 };
