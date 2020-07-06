@@ -21,9 +21,11 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
 #include "desktop/output.h"
+#include "desktop/xdg_shell.h"
 #include "serverng.h"
 
 static int
@@ -155,6 +157,49 @@ handle_signal(int signal, void *user_data)
 }
 
 static void
+handle_view_unmapped(struct wl_listener *listener, void *user_data)
+{
+	// struct cg_server *server = wl_container_of(listener, server, view_unmapped);
+	// struct cg_view *view = user_data;
+
+	// no-op
+}
+
+static void
+handle_view_mapped(struct wl_listener *listener, void *user_data)
+{
+	// struct cg_server *server = wl_container_of(listener, server, view_mapped);
+	// struct cg_view *view = user_data;
+
+	// no-op
+}
+
+static void
+handle_xdg_shell_surface_new(struct wl_listener *listener, void *user_data)
+{
+	struct cg_server *server = wl_container_of(listener, server, new_xdg_shell_surface);
+	struct wlr_xdg_surface *xdg_surface = user_data;
+
+	if (xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		return;
+	}
+
+	struct cg_xdg_shell_view *xdg_shell_view = calloc(1, sizeof(struct cg_xdg_shell_view));
+	if (!xdg_shell_view) {
+		wlr_log(WLR_ERROR, "Failed to allocate XDG Shell view");
+		return;
+	}
+
+	struct cg_output *output = wl_container_of(server->outputs.next, output, link);
+	cage_xdg_shell_view_init(xdg_shell_view, xdg_surface, output);
+
+	server->view_mapped.notify = handle_view_mapped;
+	wl_signal_add(&xdg_shell_view->view.events.map, &server->view_mapped);
+	server->view_unmapped.notify = handle_view_unmapped;
+	wl_signal_add(&xdg_shell_view->view.events.unmap, &server->view_unmapped);
+}
+
+static void
 handle_new_output(struct wl_listener *listener, void *user_data)
 {
 	struct cg_server *server = wl_container_of(listener, server, new_output);
@@ -223,6 +268,7 @@ main(int argc, char *argv[])
 	struct wlr_backend *backend = NULL;
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
+	struct wlr_xdg_shell *xdg_shell = NULL;
 	pid_t pid = 0;
 	int ret = 0;
 
@@ -284,6 +330,15 @@ main(int argc, char *argv[])
 	wl_list_init(&server.outputs);
 	server.new_output.notify = handle_new_output;
 	wl_signal_add(&backend->events.new_output, &server.new_output);
+
+	xdg_shell = wlr_xdg_shell_create(server.wl_display);
+	if (!xdg_shell) {
+		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
+		ret = 1;
+		goto end;
+	}
+	server.new_xdg_shell_surface.notify = handle_xdg_shell_surface_new;
+	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
 
 	const char *socket = wl_display_add_socket_auto(server.wl_display);
 	if (!socket) {

@@ -17,7 +17,7 @@
 #include "view.h"
 
 static bool
-cage_view_extends_output_layout(struct cg_view *view, struct wlr_box *output_box)
+cage_view_extends_output(struct cg_view *view, struct wlr_box *output_box)
 {
 	assert(view->impl->get_geometry != NULL);
 
@@ -57,7 +57,7 @@ cage_view_position(struct cg_view *view)
 	struct wlr_box output_box = {0};
 	cage_output_get_geometry(view->output, &output_box);
 
-	if (cage_view_is_primary(view) || cage_view_extends_output_layout(view, &output_box)) {
+	if (cage_view_is_primary(view) || cage_view_extends_output(view, &output_box)) {
 		cage_view_maximize(view, &output_box);
 	} else {
 		cage_view_center(view, &output_box);

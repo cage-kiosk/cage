@@ -13,6 +13,11 @@ struct cg_server {
 	struct wl_list outputs; // cg_output::link
 	struct wlr_output_layout *output_layout;
 	struct wl_listener new_output;
+
+	struct wl_listener new_xdg_shell_surface;
+
+	struct wl_listener view_mapped;
+	struct wl_listener view_unmapped;
 };
 
 #endif
