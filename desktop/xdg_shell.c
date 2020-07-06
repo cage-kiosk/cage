@@ -66,6 +66,13 @@ get_title(struct cg_view *view)
 	return xdg_shell_view->xdg_surface->toplevel->title;
 }
 
+static struct wlr_surface *
+wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	return wlr_xdg_surface_surface_at(xdg_shell_view->xdg_surface, sx, sy, sub_x, sub_y);
+}
+
 static void
 activate(struct cg_view *view, bool activate)
 {
@@ -153,6 +160,7 @@ static const struct cg_view_impl xdg_shell_view_impl = {
 	.is_primary = is_primary,
 	.get_title = get_title,
 	.activate = activate,
+	.wlr_surface_at = wlr_surface_at,
 };
 
 void

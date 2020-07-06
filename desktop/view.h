@@ -74,6 +74,15 @@ struct cg_view_impl {
 	 * Activate a view.
 	 */
 	void (*activate)(struct cg_view *view, bool activate);
+
+	/**
+	 * XDG toplevels may have nested surfaces, such as popup windows
+	 * for context menus or tooltips. This tests if any of those are
+	 * underneath the coordinates lx and ly (in output Layout Coordinates).
+	 * If so, it sets the surface pointer to that wlr_surface and the
+	 * sx and sy coordinates to the coordinates relative to that
+	 * surface's top-left corner. */
+	struct wlr_surface *(*wlr_surface_at)(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y);
 };
 
 bool cage_view_is_primary(struct cg_view *view);
@@ -82,6 +91,7 @@ void cage_view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_
 char *cage_view_get_title(struct cg_view *view);
 void cage_view_damage_whole(struct cg_view *view);
 void cage_view_damage_part(struct cg_view *view);
+struct wlr_surface *cage_view_wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y);
 void cage_view_activate(struct cg_view *view, bool activate);
 bool cage_view_is_mapped(struct cg_view *view);
 void cage_view_unmap(struct cg_view *view);

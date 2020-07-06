@@ -32,6 +32,28 @@
 #include "view.h"
 
 void
+cage_output_surface_at(struct cg_output *output, double lx, double ly, struct wlr_surface **surface, double *sx,
+		       double *sy)
+{
+	struct cg_view *view;
+	wl_list_for_each (view, &output->views, link) {
+		// TODO: this only works because all views are currently maximized on a single output.
+		// When multi-monitor setups and dialogs are added, this will need extending.
+		double view_sx = lx;
+		double view_sy = ly;
+
+		double _sx, _sy;
+		struct wlr_surface *_surface = cage_view_wlr_surface_at(view, view_sx, view_sy, &_sx, &_sy);
+		if (_surface != NULL) {
+			*sx = _sx;
+			*sy = _sy;
+			*surface = _surface;
+			break;
+		}
+	}
+}
+
+void
 cage_output_damage_whole(struct cg_output *output)
 {
 	assert(output != NULL);

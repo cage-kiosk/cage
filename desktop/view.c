@@ -112,6 +112,17 @@ cage_view_damage_part(struct cg_view *view)
 	cage_view_for_each_surface(view, damage_surface_iterator, NULL);
 }
 
+struct wlr_surface *
+cage_view_wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
+{
+	assert(view != NULL);
+	assert(sub_x != NULL);
+	assert(sub_y != NULL);
+	assert(view->impl->wlr_surface_at != NULL);
+
+	return view->impl->wlr_surface_at(view, sx, sy, sub_x, sub_y);
+}
+
 void
 cage_view_activate(struct cg_view *view, bool activate)
 {

@@ -25,6 +25,11 @@ struct cg_output {
 	struct wl_list link; // cg_server::outputs
 };
 
+/**
+ * Iterates over all the views on an output and attempts to find the surface under the cursor.
+ */
+void cage_output_surface_at(struct cg_output *output, double lx, double ly, struct wlr_surface **surface, double *sx,
+			    double *sy);
 void cage_output_damage_whole(struct cg_output *output);
 void cage_output_damage_region(struct cg_output *output, struct wlr_box *region);
 void cage_output_damage_surface(struct cg_output *output, struct wlr_surface *surface, int sx, int sy);
