@@ -12,6 +12,7 @@ struct cg_server {
 
 	struct cg_seat *seat;
 	struct wl_listener new_input;
+	struct wl_listener cursor_motion;
 
 	/* Includes disabled outputs. */
 	struct wl_list outputs; // cg_output::link

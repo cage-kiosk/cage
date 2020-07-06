@@ -224,6 +224,39 @@ handle_new_output(struct wl_listener *listener, void *user_data)
 }
 
 static void
+desktop_surface_at(struct cg_server *server, double lx, double ly, struct wlr_surface **surface, double *sx, double *sy)
+{
+	struct wlr_output *wlr_output = wlr_output_layout_output_at(server->output_layout, lx, ly);
+	struct cg_output *output = wlr_output->data;
+
+	cage_output_surface_at(output, lx, ly, surface, sx, sy);
+}
+
+static void
+handle_cursor_motion(struct wl_listener *listener, void *user_data)
+{
+	struct cg_server *server = wl_container_of(listener, server, cursor_motion);
+	struct wlr_cursor *wlr_cursor = server->seat->cursor->wlr_cursor;
+	struct wlr_seat *wlr_seat = server->seat->wlr_seat;
+	uint32_t time = *(uint32_t *) user_data;
+
+	double sx, sy;
+	struct wlr_surface *surface = NULL;
+	desktop_surface_at(server, wlr_cursor->x, wlr_cursor->y, &surface, &sx, &sy);
+
+	if (!surface) {
+		wlr_seat_pointer_clear_focus(wlr_seat);
+	} else {
+		wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
+
+		bool focus_changed = wlr_seat->pointer_state.focused_surface != surface;
+		if (!focus_changed && time > 0) {
+			wlr_seat_pointer_notify_motion(wlr_seat, time, sx, sy);
+		}
+	}
+}
+
+static void
 handle_new_input(struct wl_listener *listener, void *user_data)
 {
 	struct cg_server *server = wl_container_of(listener, server, new_input);
@@ -431,6 +464,8 @@ main(int argc, char *argv[])
 	server.seat = seat;
 	server.new_input.notify = handle_new_input;
 	wl_signal_add(&backend->events.new_input, &server.new_input);
+	server.cursor_motion.notify = handle_cursor_motion;
+	wl_signal_add(&seat->cursor->events.motion, &server.cursor_motion);
 
 	const char *socket = wl_display_add_socket_auto(server.wl_display);
 	if (!socket) {
