@@ -22,6 +22,7 @@
 #include <wlr/util/region.h>
 
 #include "output.h"
+#include "view.h"
 
 static void
 handle_output_damage_destroy(struct wl_listener *listener, void *user_data)
@@ -42,7 +43,10 @@ handle_output_transform(struct wl_listener *listener, void *user_data)
 
 	assert(!output->wlr_output->enabled);
 
-	// no-op
+	struct cg_view *view;
+	wl_list_for_each (view, &output->views, link) {
+		cage_view_position(view);
+	}
 }
 
 static void
@@ -52,7 +56,10 @@ handle_output_mode(struct wl_listener *listener, void *user_data)
 
 	assert(!output->wlr_output->enabled);
 
-	// no-op
+	struct cg_view *view;
+	wl_list_for_each (view, &output->views, link) {
+		cage_view_position(view);
+	}
 }
 
 static void
