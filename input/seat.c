@@ -18,6 +18,14 @@
 #include "pointer.h"
 #include "seat.h"
 
+struct wlr_surface *
+cage_seat_get_focus(struct cg_seat *seat)
+{
+	assert(seat != NULL);
+
+	return seat->wlr_seat->keyboard_state.focused_surface;
+}
+
 void
 cage_seat_add_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 {
