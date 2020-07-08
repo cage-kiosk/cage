@@ -21,11 +21,16 @@
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
 #include "desktop/output.h"
 #include "desktop/xdg_shell.h"
+#include "input/cursor.h"
+#include "input/seat.h"
 #include "serverng.h"
 
 static int
@@ -219,6 +224,35 @@ handle_new_output(struct wl_listener *listener, void *user_data)
 }
 
 static void
+handle_new_input(struct wl_listener *listener, void *user_data)
+{
+	struct cg_server *server = wl_container_of(listener, server, new_input);
+	struct cg_seat *seat = server->seat;
+	struct wlr_input_device *device = user_data;
+
+	switch (device->type) {
+	case WLR_INPUT_DEVICE_KEYBOARD:
+		cage_seat_add_new_keyboard(seat, device);
+		break;
+	case WLR_INPUT_DEVICE_POINTER:
+		cage_seat_add_new_pointer(seat, device);
+		break;
+	case WLR_INPUT_DEVICE_TOUCH:
+		wlr_log(WLR_DEBUG, "Touch input is not implemented");
+		break;
+	case WLR_INPUT_DEVICE_SWITCH:
+		wlr_log(WLR_DEBUG, "Switch input is not implemented");
+		return;
+	case WLR_INPUT_DEVICE_TABLET_TOOL:
+	case WLR_INPUT_DEVICE_TABLET_PAD:
+		wlr_log(WLR_DEBUG, "Tablet input is not implemented");
+		return;
+	}
+
+	cage_seat_update_capabilities(seat);
+}
+
+static void
 usage(FILE *file, const char *cage)
 {
 	fprintf(file,
@@ -255,6 +289,55 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 	}
 
 	return true;
+}
+
+static struct cg_seat *
+setup_seat(struct wl_display *wl_display, struct wlr_output_layout *output_layout)
+{
+	struct cg_seat *seat = calloc(1, sizeof(struct cg_seat));
+	if (!seat) {
+		wlr_log(WLR_ERROR, "Cannot allocate seat");
+		goto fail;
+	}
+
+	struct wlr_seat *wlr_seat = wlr_seat_create(wl_display, "seat0");
+	if (!wlr_seat) {
+		wlr_log(WLR_ERROR, "Cannot allocate seat0");
+		goto fail;
+	}
+
+	struct wlr_xcursor_manager *xcursor_manager = wlr_xcursor_manager_create(NULL, XCURSOR_SIZE);
+	if (!xcursor_manager) {
+		wlr_log(WLR_ERROR, "Cannot create XCursor manager");
+		goto fail;
+	}
+
+	struct wlr_cursor *wlr_cursor = wlr_cursor_create();
+	if (!wlr_cursor) {
+		wlr_log(WLR_ERROR, "Unable to create wlr cursor");
+		goto fail;
+	}
+	wlr_cursor_attach_output_layout(wlr_cursor, output_layout);
+
+	struct cg_cursor *cursor = calloc(1, sizeof(struct cg_cursor));
+	if (!cursor) {
+		wlr_log(WLR_ERROR, "Cannot allocate cursor");
+		goto fail;
+	}
+
+	cage_cursor_init(cursor, wlr_cursor, xcursor_manager, wlr_seat);
+	cage_seat_init(seat, wlr_seat, cursor);
+	return seat;
+
+fail:
+	free(cursor);
+	if (wlr_cursor != NULL) {
+		wlr_cursor_destroy(wlr_cursor);
+	}
+	wlr_xcursor_manager_destroy(xcursor_manager);
+	wlr_seat_destroy(wlr_seat);
+	free(seat);
+	return NULL;
 }
 
 int
@@ -340,6 +423,15 @@ main(int argc, char *argv[])
 	server.new_xdg_shell_surface.notify = handle_xdg_shell_surface_new;
 	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
 
+	struct cg_seat *seat = setup_seat(server.wl_display, server.output_layout);
+	if (!seat) {
+		ret = 1;
+		goto end;
+	}
+	server.seat = seat;
+	server.new_input.notify = handle_new_input;
+	wl_signal_add(&backend->events.new_input, &server.new_input);
+
 	const char *socket = wl_display_add_socket_auto(server.wl_display);
 	if (!socket) {
 		wlr_log_errno(WLR_ERROR, "Unable to open Wayland socket");
@@ -375,6 +467,7 @@ end:
 	if (sigchld_source) {
 		wl_event_source_remove(sigchld_source);
 	}
+	cage_seat_fini(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
 	wl_display_destroy(server.wl_display);

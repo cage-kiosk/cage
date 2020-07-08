@@ -5,9 +5,13 @@
 #include <wlr/types/wlr_output_layout.h>
 
 #include "desktop/output.h"
+#include "input/seat.h"
 
 struct cg_server {
 	struct wl_display *wl_display;
+
+	struct cg_seat *seat;
+	struct wl_listener new_input;
 
 	/* Includes disabled outputs. */
 	struct wl_list outputs; // cg_output::link
