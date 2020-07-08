@@ -14,8 +14,67 @@
 #include <wlr/util/log.h>
 
 #include "cursor.h"
+#include "keyboard_group.h"
 #include "pointer.h"
 #include "seat.h"
+
+void
+cage_seat_add_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
+{
+	assert(seat != NULL);
+	assert(device != NULL);
+
+	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+	if (!context) {
+		wlr_log(WLR_ERROR, "Unable to create XBK context");
+		return;
+	}
+
+	struct xkb_rule_names rules = {0};
+	rules.rules = getenv("XKB_DEFAULT_RULES");
+	rules.model = getenv("XKB_DEFAULT_MODEL");
+	rules.layout = getenv("XKB_DEFAULT_LAYOUT");
+	rules.variant = getenv("XKB_DEFAULT_VARIANT");
+	rules.options = getenv("XKB_DEFAULT_OPTIONS");
+	struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+	if (!keymap) {
+		wlr_log(WLR_ERROR, "Unable to configure keyboard: keymap does not exist");
+		xkb_context_unref(context);
+		return;
+	}
+
+	wlr_keyboard_set_keymap(device->keyboard, keymap);
+
+	xkb_keymap_unref(keymap);
+	xkb_context_unref(context);
+	wlr_keyboard_set_repeat_info(device->keyboard, 25, 600);
+
+	struct cg_keyboard_group *group;
+	wl_list_for_each (group, &seat->keyboard_groups, link) {
+		if (cage_keyboard_group_add(group, device)) {
+			wlr_log(WLR_DEBUG, "Added new keyboard to existing group");
+			return;
+		}
+	}
+
+	wlr_log(WLR_DEBUG, "Created new keyboard group");
+
+	/* This is reached if and only if the keyboard could not be inserted into
+	 * any group. */
+	struct cg_keyboard_group *keyboard_group = calloc(1, sizeof(struct cg_keyboard_group));
+	if (!keyboard_group) {
+		wlr_log(WLR_ERROR, "Cannot allocate keyboard group");
+		return;
+	}
+
+	if (!cage_keyboard_group_init(keyboard_group, device, seat->wlr_seat)) {
+		wlr_log(WLR_ERROR, "Failed setting up keyboard group");
+		cage_keyboard_group_fini(keyboard_group);
+		return;
+	}
+
+	wl_list_insert(&seat->keyboard_groups, &keyboard_group->link);
+}
 
 void
 cage_seat_add_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
@@ -38,6 +97,9 @@ cage_seat_update_capabilities(struct cg_seat *seat)
 
 	if (!wl_list_empty(&seat->pointers)) {
 		caps |= WL_SEAT_CAPABILITY_POINTER;
+	}
+	if (!wl_list_empty(&seat->keyboard_groups)) {
+		caps |= WL_SEAT_CAPABILITY_KEYBOARD;
 	}
 	wlr_seat_set_capabilities(seat->wlr_seat, caps);
 
@@ -70,6 +132,7 @@ cage_seat_init(struct cg_seat *seat, struct wlr_seat *wlr_seat, struct cg_cursor
 	wl_signal_add(&seat->wlr_seat->events.destroy, &seat->seat_destroy);
 
 	wl_list_init(&seat->pointers);
+	wl_list_init(&seat->keyboard_groups);
 }
 
 void
@@ -87,6 +150,11 @@ cage_seat_fini(struct cg_seat *seat)
 	struct cg_pointer *pointer, *pointer_tmp;
 	wl_list_for_each_safe (pointer, pointer_tmp, &seat->pointers, link) {
 		cage_pointer_fini(pointer);
+	}
+
+	struct cg_keyboard_group *keyboard_group, *keyboard_group_tmp;
+	wl_list_for_each_safe (keyboard_group, keyboard_group_tmp, &seat->keyboard_groups, link) {
+		cage_keyboard_group_fini(keyboard_group);
 	}
 
 	free(seat);

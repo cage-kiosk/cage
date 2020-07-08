@@ -14,8 +14,10 @@ struct cg_seat {
 	struct cg_cursor *cursor;
 
 	struct wl_list pointers; // cg_pointer::link
+	struct wl_list keyboard_groups; // cg_keyboard_group::link
 };
 
+void cage_seat_add_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device);
 void cage_seat_add_new_pointer(struct cg_seat *seat, struct wlr_input_device *device);
 void cage_seat_update_capabilities(struct cg_seat *seat);
 void cage_seat_init(struct cg_seat *seat, struct wlr_seat *wlr_seat, struct cg_cursor *cursor);
