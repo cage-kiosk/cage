@@ -129,6 +129,8 @@ cageng_sources = [
   'desktop/util.c',
   'desktop/view.c',
   'desktop/xdg_shell.c',
+  'input/cursor.c',
+  'input/seat.c',
   'cageng.c',
 ]
 
@@ -141,6 +143,8 @@ cageng_headers = [
   'desktop/util.h',
   'desktop/view.h',
   'desktop/xdg_shell.h',
+  'input/cursor.h',
+  'input/seat.h',
   'serverng.h',
 ]
 
