@@ -192,6 +192,7 @@ usage(FILE *file, const char *cage)
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
 		" -r\t Rotate the output 90 degrees clockwise, specify up to three times\n"
+		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
@@ -203,9 +204,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
 #ifdef DEBUG
-	while ((c = getopt(argc, argv, "dDhm:rv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:rsv")) != -1) {
 #else
-	while ((c = getopt(argc, argv, "dhm:rv")) != -1) {
+	while ((c = getopt(argc, argv, "dhm:rsv")) != -1) {
 #endif
 		switch (c) {
 		case 'd':
@@ -232,6 +233,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 				server->output_transform = WL_OUTPUT_TRANSFORM_NORMAL;
 			}
 			break;
+		case 's':
+			server->allow_vt_switch = true;
+			break;
 		case 'v':
 			fprintf(stdout, "Cage version " CAGE_VERSION "\n");
 			exit(0);
@@ -257,7 +261,6 @@ main(int argc, char *argv[])
 	struct wl_event_source *sigint_source = NULL;
 	struct wl_event_source *sigterm_source = NULL;
 	struct wl_event_source *sigchld_source = NULL;
-	struct wlr_backend *backend = NULL;
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_manager = NULL;
@@ -301,8 +304,8 @@ main(int argc, char *argv[])
 	sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
 	sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
-	backend = wlr_backend_autocreate(server.wl_display, NULL);
-	if (!backend) {
+	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
+	if (!server.backend) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots backend");
 		ret = 1;
 		goto end;
@@ -313,7 +316,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	renderer = wlr_backend_get_renderer(backend);
+	renderer = wlr_backend_get_renderer(server.backend);
 	wlr_renderer_init_wl_display(renderer, server.wl_display);
 
 	wl_list_init(&server.views);
@@ -344,9 +347,9 @@ main(int argc, char *argv[])
 	 * available on the backend. We use this only to detect the
 	 * first output and ignore subsequent outputs. */
 	server.new_output.notify = handle_new_output;
-	wl_signal_add(&backend->events.new_output, &server.new_output);
+	wl_signal_add(&server.backend->events.new_output, &server.new_output);
 
-	server.seat = seat_create(&server, backend);
+	server.seat = seat_create(&server, server.backend);
 	if (!server.seat) {
 		wlr_log(WLR_ERROR, "Unable to create the seat");
 		ret = 1;
@@ -467,7 +470,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	if (!wlr_backend_start(backend)) {
+	if (!wlr_backend_start(server.backend)) {
 		wlr_log(WLR_ERROR, "Unable to start the wlroots backend");
 		ret = 1;
 		goto end;
