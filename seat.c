@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
+#include <wlr/backend/multi.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle.h>
@@ -225,13 +226,22 @@ handle_modifier_event(struct wlr_input_device *device, struct cg_seat *seat)
 static bool
 handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 {
-	switch (sym) {
 #ifdef DEBUG
-	case XKB_KEY_Escape:
+	if (sym == XKB_KEY_Escape) {
 		wl_display_terminate(server->wl_display);
-		break;
+	} else
 #endif
-	default:
+	if (server->allow_vt_switch && sym >= XKB_KEY_XF86Switch_VT_1
+			&& sym <= XKB_KEY_XF86Switch_VT_12) {
+		if (wlr_backend_is_multi(server->backend)) {
+			struct wlr_session *session =
+				wlr_backend_get_session(server->backend);
+			if (session) {
+				unsigned vt = sym - XKB_KEY_XF86Switch_VT_1 + 1;
+				wlr_session_change_vt(session, vt);
+			}
+		}
+	} else {
 		return false;
 	}
 	wlr_idle_notify_activity(server->idle, server->seat->seat);

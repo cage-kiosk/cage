@@ -24,6 +24,7 @@ enum cg_multi_output_mode {
 struct cg_server {
 	struct wl_display *wl_display;
 	struct wl_list views;
+	struct wlr_backend *backend;
 
 	struct cg_seat *seat;
 	struct wlr_idle *idle;
@@ -45,6 +46,7 @@ struct cg_server {
 #endif
 
 	bool xdg_decoration;
+	bool allow_vt_switch;
 	enum wl_output_transform output_transform;
 #ifdef DEBUG
 	bool debug_damage_tracking;
