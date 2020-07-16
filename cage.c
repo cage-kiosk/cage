@@ -449,7 +449,7 @@ main(int argc, char *argv[])
 		wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
 	}
 
-	if (wlr_xcursor_manager_load(xcursor_manager, 1)) {
+	if (!wlr_xcursor_manager_load(xcursor_manager, 1)) {
 		wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
 	}
 	struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
