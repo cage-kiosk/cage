@@ -39,6 +39,8 @@ wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 pixman         = dependency('pixman-1')
 xkbcommon      = dependency('xkbcommon')
+udev           = dependency('libudev')
+egl            = dependency('egl')
 math           = cc.find_library('m')
 
 wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
@@ -70,9 +72,11 @@ if get_option('xwayland')
     error('Cannot build Cage with XWayland support: wlroots has been built without it')
   else
     have_xwayland = true
+    xcb = dependency('xcb')
   endif
 else
   have_xwayland = false
+  xcb = dependency('', required : false)
 endif
 
 version = '@0@'.format(meson.project_version())
@@ -158,7 +162,10 @@ executable(
     wlroots,
     xkbcommon,
     pixman,
+    udev,
+    egl,
     math,
+    xcb,
   ],
   install: true,
 )
