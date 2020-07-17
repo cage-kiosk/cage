@@ -229,13 +229,12 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 #ifdef DEBUG
 	if (sym == XKB_KEY_Escape) {
 		wl_display_terminate(server->wl_display);
-	} else
+		return true;
+	}
 #endif
-	if (server->allow_vt_switch && sym >= XKB_KEY_XF86Switch_VT_1
-			&& sym <= XKB_KEY_XF86Switch_VT_12) {
+	if (server->allow_vt_switch && sym >= XKB_KEY_XF86Switch_VT_1 && sym <= XKB_KEY_XF86Switch_VT_12) {
 		if (wlr_backend_is_multi(server->backend)) {
-			struct wlr_session *session =
-				wlr_backend_get_session(server->backend);
+			struct wlr_session *session = wlr_backend_get_session(server->backend);
 			if (session) {
 				unsigned vt = sym - XKB_KEY_XF86Switch_VT_1 + 1;
 				wlr_session_change_vt(session, vt);
