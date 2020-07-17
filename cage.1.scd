@@ -32,7 +32,7 @@ activities outside the scope of the running application are prevented.
 	times, each resulting in an additional 90 degrees clockwise rotation.
 
 *-s*
-  Allow VT switching
+	Allow VT switching
 
 *-v*
 	Show the version number and exit.
