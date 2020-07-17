@@ -132,8 +132,8 @@ cage_sources = [
 
 cage_headers = [
   configure_file(input: 'config.h.in',
-		 output: 'config.h',
-		 configuration: conf_data),
+                 output: 'config.h',
+                 configuration: conf_data),
   'idle_inhibit_v1.h',
   'output.h',
   'render.h',
@@ -164,10 +164,10 @@ executable(
 )
 
 summary = [
-	'',
-	'Cage @0@'.format(version),
-	'',
-	'    xwayland: @0@'.format(have_xwayland),
-	''
+  '',
+  'Cage @0@'.format(version),
+  '',
+  '    xwayland: @0@'.format(have_xwayland),
+  ''
 ]
 message('\n'.join(summary))
