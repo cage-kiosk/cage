@@ -128,12 +128,22 @@ update_capabilities(struct cg_seat *seat)
 static void
 map_input_device_to_output(struct cg_seat *seat, struct wlr_input_device *device)
 {
+	struct cg_output *output;
+
 	if (!device->output_name) {
-		wlr_log(WLR_INFO, "Input device %s cannot be mapped to an output device\n", device->name);
-		return;
+		if (wl_list_length(&seat->server->outputs) == 1) {
+			wl_list_for_each (output, &seat->server->outputs, link) {
+				wlr_log(WLR_INFO, "Input device %s does not have an output name, mapping to only output %s\n", device->name,
+					output->wlr_output->name);
+				wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
+				return;
+			}
+		} else {
+			wlr_log(WLR_INFO, "Input device %s cannot be mapped to an output device\n", device->name);
+			return;
+		}
 	}
 
-	struct cg_output *output;
 	wl_list_for_each (output, &seat->server->outputs, link) {
 		if (strcmp(device->output_name, output->wlr_output->name) == 0) {
 			wlr_log(WLR_INFO, "Mapping input device %s to output device %s\n", device->name,
