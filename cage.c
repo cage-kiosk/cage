@@ -128,7 +128,7 @@ spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, s
 	return true;
 }
 
-static void
+static int
 cleanup_primary_client(pid_t pid)
 {
 	int status;
@@ -137,9 +137,12 @@ cleanup_primary_client(pid_t pid)
 
 	if (WIFEXITED(status)) {
 		wlr_log(WLR_DEBUG, "Child exited normally with exit status %d", WEXITSTATUS(status));
+		return WEXITSTATUS(status);
 	} else if (WIFSIGNALED(status)) {
 		wlr_log(WLR_DEBUG, "Child was terminated by a signal (%d)", WTERMSIG(status));
 	}
+
+	return 0;
 }
 
 static bool
@@ -188,6 +191,7 @@ usage(FILE *file, const char *cage)
 #ifdef DEBUG
 		" -D\t Turn on damage tracking debugging\n"
 #endif
+		" -e\t Return application's exit code if it exited normally\n"
 		" -h\t Display this help message\n"
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
@@ -204,9 +208,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
 #ifdef DEBUG
-	while ((c = getopt(argc, argv, "dDhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "dDehm:rsv")) != -1) {
 #else
-	while ((c = getopt(argc, argv, "dhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "dhem:rsv")) != -1) {
 #endif
 		switch (c) {
 		case 'd':
@@ -217,6 +221,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 			server->debug_damage_tracking = true;
 			break;
 #endif
+		case 'e':
+			server->return_app_code = true;
+			break;
 		case 'h':
 			usage(stdout, argv[0]);
 			return false;
@@ -276,7 +283,7 @@ main(int argc, char *argv[])
 	struct wlr_xcursor_manager *xcursor_manager = NULL;
 #endif
 	pid_t pid = 0;
-	int ret = 0;
+	int ret = 0, app_ret = 0;
 
 	if (!parse_args(&server, argc, argv)) {
 		return 1;
@@ -504,7 +511,9 @@ main(int argc, char *argv[])
 	wl_display_destroy_clients(server.wl_display);
 
 end:
-	cleanup_primary_client(pid);
+	app_ret = cleanup_primary_client(pid);
+	if (!ret && server.return_app_code)
+		ret = app_ret;
 
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);

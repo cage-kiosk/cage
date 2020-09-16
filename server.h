@@ -51,6 +51,7 @@ struct cg_server {
 #ifdef DEBUG
 	bool debug_damage_tracking;
 #endif
+    bool return_app_code;
 };
 
 #endif
