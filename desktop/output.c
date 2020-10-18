@@ -183,8 +183,6 @@ handle_output_mode(struct wl_listener *listener, void *user_data)
 {
 	struct cg_output *output = wl_container_of(listener, output, mode);
 
-	assert(!output->wlr_output->enabled);
-
 	struct cg_view *view;
 	wl_list_for_each (view, &output->views, link) {
 		cage_view_position(view);
