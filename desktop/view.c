@@ -68,8 +68,8 @@ cage_view_position(struct cg_view *view)
 static void
 damage_surface_iterator(struct wlr_surface *surface, int sx, int sy, void *user_data)
 {
-	struct cg_view *view = (struct cg_view *) surface->data;
-	cage_output_damage_surface(view->output, surface, sx, sy);
+	struct cg_output *output = (struct cg_output *) user_data;
+	cage_output_damage_surface(output, surface, sx, sy);
 }
 
 void
@@ -109,7 +109,7 @@ void
 cage_view_damage_part(struct cg_view *view)
 {
 	assert(view != NULL);
-	cage_view_for_each_surface(view, damage_surface_iterator, NULL);
+	cage_view_for_each_surface(view, damage_surface_iterator, (void *) view->output);
 }
 
 struct wlr_surface *
