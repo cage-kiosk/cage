@@ -22,6 +22,7 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -385,6 +386,7 @@ main(int argc, char *argv[])
 	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
+	struct wlr_data_device_manager *data_device_manager = NULL;
 	pid_t pid = 0;
 	int ret = 0;
 
@@ -439,6 +441,13 @@ main(int argc, char *argv[])
 	server.output_layout = wlr_output_layout_create();
 	if (!server.output_layout) {
 		wlr_log(WLR_ERROR, "Unable to create output layout");
+		ret = 1;
+		goto end;
+	}
+
+	data_device_manager = wlr_data_device_manager_create(server.wl_display);
+	if (!data_device_manager) {
+		wlr_log(WLR_ERROR, "Unable to create the data device manager");
 		ret = 1;
 		goto end;
 	}
