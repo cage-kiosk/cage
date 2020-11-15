@@ -260,7 +260,7 @@ handle_key_event(struct wlr_input_device *device, struct cg_seat *seat, void *da
 
 	bool handled = false;
 	uint32_t modifiers = wlr_keyboard_get_modifiers(device->keyboard);
-	if ((modifiers & WLR_MODIFIER_ALT) && event->state == WLR_KEY_PRESSED) {
+	if ((modifiers & WLR_MODIFIER_ALT) && event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 		/* If Alt is held down and this button was pressed, we
 		 * attempt to process it as a compositor
 		 * keybinding. */
