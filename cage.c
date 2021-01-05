@@ -304,7 +304,7 @@ main(int argc, char *argv[])
 	sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
 	sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
-	server.backend = wlr_backend_autocreate(server.wl_display, NULL);
+	server.backend = wlr_backend_autocreate(server.wl_display);
 	if (!server.backend) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots backend");
 		ret = 1;
