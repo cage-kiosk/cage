@@ -21,7 +21,7 @@ tasks:
   # version, instead of master, to avoid any breaking changes in wlroots.
   - wlroots: |
       cd wlroots
-      git checkout 0.11.0
+      git checkout 0.13.0
       meson --prefix=/usr/local build -Dexamples=false
       ninja -C build
       sudo ninja -C build install
