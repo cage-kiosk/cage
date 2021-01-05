@@ -4,6 +4,7 @@ packages:
   - meson
   - libinput
   - libxkbcommon
+  - mesa
   - scdoc
   - wayland
   - wayland-protocols
