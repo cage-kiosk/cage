@@ -181,7 +181,7 @@ static const struct cg_view_impl xwayland_view_impl = {
 	.destroy = destroy,
 	.for_each_surface = for_each_surface,
 	/* XWayland doesn't have a separate popup iterator. */
-	.for_each_popup = NULL,
+	.for_each_popup_surface = NULL,
 	.wlr_surface_at = wlr_surface_at,
 };
 

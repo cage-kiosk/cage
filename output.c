@@ -122,8 +122,8 @@ output_view_for_each_surface(struct cg_output *output, struct cg_view *view, cg_
 }
 
 void
-output_view_for_each_popup(struct cg_output *output, struct cg_view *view, cg_surface_iterator_func_t iterator,
-			   void *user_data)
+output_view_for_each_popup_surface(struct cg_output *output, struct cg_view *view, cg_surface_iterator_func_t iterator,
+				   void *user_data)
 {
 	struct surface_iterator_data data = {
 		.user_iterator = iterator,
@@ -134,7 +134,7 @@ output_view_for_each_popup(struct cg_output *output, struct cg_view *view, cg_su
 	};
 
 	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
-	view_for_each_popup(view, output_for_each_surface_iterator, &data);
+	view_for_each_popup_surface(view, output_for_each_surface_iterator, &data);
 }
 
 void

@@ -206,12 +206,12 @@ view_for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator
 }
 
 void
-view_for_each_popup(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
+view_for_each_popup_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
 {
-	if (!view->impl->for_each_popup) {
+	if (!view->impl->for_each_popup_surface) {
 		return;
 	}
-	view->impl->for_each_popup(view, iterator, data);
+	view->impl->for_each_popup_surface(view, iterator, data);
 }
 
 void
