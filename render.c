@@ -120,22 +120,12 @@ render_view_toplevels(struct cg_view *view, struct cg_output *output, pixman_reg
 }
 
 static void
-render_popup_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box, void *data)
-{
-	/* Render this popup's surface. */
-	render_surface_iterator(output, surface, box, data);
-
-	/* Render this popup's child toplevels. */
-	output_surface_for_each_surface(output, surface, box->x, box->y, render_surface_iterator, data);
-}
-
-static void
 render_view_popups(struct cg_view *view, struct cg_output *output, pixman_region32_t *damage)
 {
 	struct render_data data = {
 		.damage = damage,
 	};
-	output_view_for_each_popup(output, view, render_popup_iterator, &data);
+	output_view_for_each_popup_surface(output, view, render_surface_iterator, &data);
 }
 
 void
