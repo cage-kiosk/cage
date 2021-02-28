@@ -191,9 +191,11 @@ usage(FILE *file, const char *cage)
 		" -h\t Display this help message\n"
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
+		" -P\t Disable pointer input\n"
 		" -r\t Rotate the output 90 degrees clockwise, specify up to three times\n"
 		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
+		" -T\t Disable touch input\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
 		cage);
@@ -204,9 +206,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
 #ifdef DEBUG
-	while ((c = getopt(argc, argv, "dDhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:rsvPT")) != -1) {
 #else
-	while ((c = getopt(argc, argv, "dhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "dhm:rsvPT")) != -1) {
 #endif
 		switch (c) {
 		case 'd':
@@ -235,6 +237,12 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 			break;
 		case 's':
 			server->allow_vt_switch = true;
+			break;
+		case 'P':
+			server->disable_pointer = true;
+			break;
+		case 'T':
+			server->disable_touch = true;
 			break;
 		case 'v':
 			fprintf(stdout, "Cage version " CAGE_VERSION "\n");

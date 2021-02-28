@@ -47,6 +47,8 @@ struct cg_server {
 
 	bool xdg_decoration;
 	bool allow_vt_switch;
+	bool disable_pointer;
+	bool disable_touch;
 	enum wl_output_transform output_transform;
 #ifdef DEBUG
 	bool debug_damage_tracking;

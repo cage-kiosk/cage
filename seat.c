@@ -390,10 +390,12 @@ handle_new_input(struct wl_listener *listener, void *data)
 		handle_new_keyboard(seat, device);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
-		handle_new_pointer(seat, device);
+		if(!seat->server->disable_pointer)
+			handle_new_pointer(seat, device);
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
-		handle_new_touch(seat, device);
+		if(!seat->server->disable_touch)
+			handle_new_touch(seat, device);
 		break;
 	case WLR_INPUT_DEVICE_SWITCH:
 		wlr_log(WLR_DEBUG, "Switch input is not implemented");

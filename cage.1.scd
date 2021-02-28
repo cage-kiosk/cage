@@ -27,12 +27,20 @@ activities outside the scope of the running application are prevented.
 	*last* Cage uses only the last connected monitor.
 	*extend* Cage extends the display across all connected monitors.
 
+*-P*
+	Disable pointer device. This comes in handy if a pointer device
+	is attached to the computer running *cage*, but undesirable for
+	application.
+
 *-r*
 	Rotate the output 90 degrees clockwise. This can be specified up to three
 	times, each resulting in an additional 90 degrees clockwise rotation.
 
 *-s*
 	Allow VT switching
+
+*-T*
+	Disable touch device. Like *-P*, but for touchscreens.
 
 *-v*
 	Show the version number and exit.
