@@ -7,7 +7,7 @@ packages:
   - scdoc
   - wayland
   - wayland-protocols
-  - xorg-server-xwayland
+  - xorg-xwayland
 sources:
   - https://github.com/swaywm/wlroots
   - https://github.com/Hjdskes/cage
