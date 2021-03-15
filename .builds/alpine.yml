@@ -9,7 +9,7 @@ packages:
   - scdoc
   - wayland-dev
   - wayland-protocols
-  - xorg-server-xwayland
+  - xwayland
 sources:
   - https://github.com/swaywm/wlroots
   - https://github.com/Hjdskes/cage
