@@ -7,6 +7,7 @@ packages:
   - scdoc
   - wayland
   - wayland-protocols
+  - xcb-util-wm
   - xorg-xwayland
 sources:
   - https://github.com/swaywm/wlroots
