@@ -9,6 +9,7 @@ packages:
   - scdoc
   - wayland-dev
   - wayland-protocols
+  - xcb-util-wm-dev
   - xwayland
 sources:
   - https://github.com/swaywm/wlroots

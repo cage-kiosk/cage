@@ -11,6 +11,7 @@ packages:
   - x11/libinput
   - x11/libxkbcommon
   - x11/pixman
+  - x11/xcb-util-wm
   - x11-servers/xwayland
 sources:
   - https://github.com/swaywm/wlroots
