@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+if [ "$#" -ne 1 ]; then
+  echo "usage: $0 <new-version>" >&2
+  exit 1
+fi
+
+new_version="$1"
+
+if [ "$new_version" != "${new_version#v}" ]; then
+  echo "Error: The new version shouldn't be prefixed with a \"v\"." >&2
+  exit 1
+fi
+
+set -x
+
+./increment_version "$new_version"
+./tag-release "$new_version"
+./sign-release
+
+git push --tags

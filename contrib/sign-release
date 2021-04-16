@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -x
+
+project="$(basename "$(pwd)")"
+last=$(git describe --tags --abbrev=0)
+
+prefix="$project-${last#v}"
+archive="$prefix.tar.gz"
+
+git archive --prefix="$prefix/" -o "$archive" "$last"
+gpg --output "$archive".sig --detach-sig "$archive"

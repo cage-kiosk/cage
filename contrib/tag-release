@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -x
+
+if [ "$#" -ne 1 ]; then
+  echo "usage: $0 <new-version>" >&2
+  exit 1
+fi
+
+last=$(git describe --tags --abbrev=0)
+echo "Last release was $last"
+
+next="v$1"
+
+shortlog="$(git shortlog --no-merges "$last"..)"
+
+printf "Shortlog: \n\n%s\n\nRelease $next? [y/N] " "$shortlog"
+read -r answer
+
+if [ "$answer" != "y" ]; then
+  exit 0
+fi
+
+project="$(basename "$(pwd)")"
+
+(echo "$project $next"; echo ""; echo "$shortlog") | git tag "$next" -ase -F -
