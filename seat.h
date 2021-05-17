@@ -27,7 +27,9 @@ struct cg_seat {
 
 	// These belong to higher level if multiple seats are allowed
 	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard;
+	struct wlr_virtual_pointer_manager_v1 *virtual_pointer;
 	struct wl_listener new_virtual_keyboard;
+	struct wl_listener new_virtual_pointer;
 
 	struct wlr_cursor *cursor;
 	struct wlr_xcursor_manager *xcursor_manager;

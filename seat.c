@@ -24,6 +24,7 @@
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
@@ -205,6 +206,18 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 	wl_signal_add(&device->events.destroy, &pointer->destroy);
 
 	map_input_device_to_output(seat, device);
+}
+
+static void
+handle_virtual_pointer(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, new_virtual_pointer);
+	struct wlr_virtual_pointer_v1_new_pointer_event *event = data;
+	struct wlr_virtual_pointer_v1 *pointer = event->new_pointer;
+	struct wlr_input_device *device = &pointer->input_device;
+
+	/* event->suggested_seat should be checked if we handle multiple seats */
+	handle_new_pointer(seat, device);
 }
 
 static void
@@ -823,6 +836,10 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	seat->virtual_keyboard = wlr_virtual_keyboard_manager_v1_create(server->wl_display);
 	wl_signal_add(&seat->virtual_keyboard->events.new_virtual_keyboard, &seat->new_virtual_keyboard);
 	seat->new_virtual_keyboard.notify = handle_virtual_keyboard;
+
+	seat->virtual_pointer = wlr_virtual_pointer_manager_v1_create(server->wl_display);
+	wl_signal_add(&seat->virtual_pointer->events.new_virtual_pointer, &seat->new_virtual_pointer);
+	seat->new_virtual_pointer.notify = handle_virtual_pointer;
 
 	return seat;
 }
