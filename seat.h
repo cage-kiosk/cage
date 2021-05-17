@@ -25,6 +25,10 @@ struct cg_seat {
 	struct wl_list touch;
 	struct wl_listener new_input;
 
+	// These belong to higher level if multiple seats are allowed
+	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard;
+	struct wl_listener new_virtual_keyboard;
+
 	struct wlr_cursor *cursor;
 	struct wlr_xcursor_manager *xcursor_manager;
 	struct wl_listener cursor_motion;

@@ -23,6 +23,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_touch.h>
+#include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
@@ -285,9 +286,15 @@ handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
 }
 
 static void
-cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
+cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat, bool virtual)
 {
 	struct wlr_keyboard *wlr_keyboard = device->keyboard;
+
+	if (virtual)
+		/* We apparently should not group virtual keyboards,
+		 * so create a new group with it
+		 */
+		goto create_new;
 
 	struct cg_keyboard_group *group;
 	wl_list_for_each (group, &seat->keyboard_groups, link) {
@@ -300,7 +307,9 @@ cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
 
 	/* This is reached if and only if the keyboard could not be inserted into
 	 * any group */
-	struct cg_keyboard_group *cg_group = calloc(1, sizeof(struct cg_keyboard_group));
+	struct cg_keyboard_group *cg_group;
+create_new:
+	cg_group = calloc(1, sizeof(struct cg_keyboard_group));
 	if (cg_group == NULL) {
 		wlr_log(WLR_ERROR, "Failed to allocate keyboard group.");
 		return;
@@ -313,7 +322,7 @@ cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
 	}
 
 	cg_group->wlr_group->data = cg_group;
-	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard, device->keyboard->keymap);
+	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard, wlr_keyboard->keymap);
 
 	wlr_keyboard_set_repeat_info(&cg_group->wlr_group->keyboard, wlr_keyboard->repeat_info.rate,
 				     wlr_keyboard->repeat_info.delay);
@@ -321,7 +330,10 @@ cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
 	wlr_log(WLR_DEBUG, "Created keyboard group");
 
 	wlr_keyboard_group_add_keyboard(cg_group->wlr_group, wlr_keyboard);
-	wl_list_insert(&seat->keyboard_groups, &cg_group->link);
+	if (!virtual)
+		wl_list_insert(&seat->keyboard_groups, &cg_group->link);
+	else
+		wl_list_init(&cg_group->link);
 
 	wl_signal_add(&cg_group->wlr_group->keyboard.events.key, &cg_group->key);
 	cg_group->key.notify = handle_keyboard_group_key;
@@ -338,7 +350,7 @@ cleanup:
 }
 
 static void
-handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
+handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device, bool virtual)
 {
 	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!context) {
@@ -359,9 +371,22 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 	xkb_context_unref(context);
 	wlr_keyboard_set_repeat_info(device->keyboard, 25, 600);
 
-	cg_keyboard_group_add(device, seat);
+	cg_keyboard_group_add(device, seat, virtual);
 
 	wlr_seat_set_keyboard(seat->seat, device);
+}
+
+static void
+handle_virtual_keyboard(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, new_virtual_keyboard);
+	struct wlr_virtual_keyboard_v1 *keyboard = data;
+	struct wlr_input_device *device = &keyboard->input_device;
+
+	/* If multiple seats are supported, check keyboard->seat
+	 * to select the appropriate one */
+
+	handle_new_keyboard(seat, device, true);
 }
 
 static void
@@ -372,7 +397,7 @@ handle_new_input(struct wl_listener *listener, void *data)
 
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
-		handle_new_keyboard(seat, device);
+		handle_new_keyboard(seat, device, false);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
 		handle_new_pointer(seat, device);
@@ -794,6 +819,10 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	wl_signal_add(&seat->seat->events.request_start_drag, &seat->request_start_drag);
 	seat->start_drag.notify = handle_start_drag;
 	wl_signal_add(&seat->seat->events.start_drag, &seat->start_drag);
+
+	seat->virtual_keyboard = wlr_virtual_keyboard_manager_v1_create(server->wl_display);
+	wl_signal_add(&seat->virtual_keyboard->events.new_virtual_keyboard, &seat->new_virtual_keyboard);
+	seat->new_virtual_keyboard.notify = handle_virtual_keyboard;
 
 	return seat;
 }
