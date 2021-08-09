@@ -13,6 +13,7 @@
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
@@ -46,84 +47,6 @@ struct render_data {
 	pixman_region32_t *damage;
 };
 
-static void
-render_texture(struct wlr_output *wlr_output, pixman_region32_t *output_damage, struct wlr_texture *texture,
-	       const struct wlr_box *box, const float matrix[static 9])
-{
-	pixman_region32_t damage;
-	pixman_region32_init(&damage);
-	pixman_region32_union_rect(&damage, &damage, box->x, box->y, box->width, box->height);
-	pixman_region32_intersect(&damage, &damage, output_damage);
-	if (!pixman_region32_not_empty(&damage)) {
-		goto damage_finish;
-	}
-
-	int nrects;
-	pixman_box32_t *rects = pixman_region32_rectangles(&damage, &nrects);
-	for (int i = 0; i < nrects; i++) {
-		scissor_output(wlr_output, &rects[i]);
-		wlr_render_texture_with_matrix(wlr_output->renderer, texture, matrix, 1.0f);
-	}
-
-damage_finish:
-	pixman_region32_fini(&damage);
-}
-
-static void
-render_surface_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box, void *user_data)
-{
-	struct render_data *data = user_data;
-	struct wlr_output *wlr_output = output->wlr_output;
-	pixman_region32_t *output_damage = data->damage;
-
-	struct wlr_texture *texture = wlr_surface_get_texture(surface);
-	if (!texture) {
-		wlr_log(WLR_DEBUG, "Cannot obtain surface texture");
-		return;
-	}
-
-	scale_box(box, wlr_output->scale);
-
-	float matrix[9];
-	enum wl_output_transform transform = wlr_output_transform_invert(surface->current.transform);
-	wlr_matrix_project_box(matrix, box, transform, 0.0f, wlr_output->transform_matrix);
-
-	render_texture(wlr_output, output_damage, texture, box, matrix);
-}
-
-static void
-render_drag_icons(struct cg_output *output, pixman_region32_t *damage, struct wl_list *drag_icons)
-{
-	struct render_data data = {
-		.damage = damage,
-	};
-	output_drag_icons_for_each_surface(output, drag_icons, render_surface_iterator, &data);
-}
-
-/**
- * Render all toplevels without descending into popups.
- */
-static void
-render_view_toplevels(struct cg_view *view, struct cg_output *output, pixman_region32_t *damage)
-{
-	struct render_data data = {
-		.damage = damage,
-	};
-	double ox = view->lx;
-	double oy = view->ly;
-	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
-	output_surface_for_each_surface(output, view->wlr_surface, ox, oy, render_surface_iterator, &data);
-}
-
-static void
-render_view_popups(struct cg_view *view, struct cg_output *output, pixman_region32_t *damage)
-{
-	struct render_data data = {
-		.damage = damage,
-	};
-	output_view_for_each_popup_surface(output, view, render_surface_iterator, &data);
-}
-
 void
 output_render(struct cg_output *output, pixman_region32_t *damage)
 {
@@ -151,18 +74,9 @@ output_render(struct cg_output *output, pixman_region32_t *damage)
 		wlr_renderer_clear(server->renderer, color);
 	}
 
-	// TODO: render only top view, possibly use focused view for this, see #35.
-	struct cg_view *view;
-	wl_list_for_each_reverse (view, &server->views, link) {
-		render_view_toplevels(view, output, damage);
-	}
-
-	struct cg_view *focused_view = seat_get_focus(server->seat);
-	if (focused_view) {
-		render_view_popups(focused_view, output, damage);
-	}
-
-	render_drag_icons(output, damage, &server->seat->drag_icons);
+	double lx = 0, ly = 0;
+	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &lx, &ly);
+	wlr_scene_render_output(server->scene, wlr_output, lx, ly, damage);
 
 renderer_end:
 	/* Draw software cursor in case hardware cursors aren't
