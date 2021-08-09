@@ -648,6 +648,7 @@ handle_drag_icon_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_drag_icon *drag_icon = wl_container_of(listener, drag_icon, destroy);
 
+	drag_icon_damage(drag_icon);
 	wl_list_remove(&drag_icon->link);
 	wl_list_remove(&drag_icon->destroy.link);
 	free(drag_icon);
