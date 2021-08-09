@@ -355,13 +355,7 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 		return;
 	}
 
-	struct xkb_rule_names rules = {0};
-	rules.rules = getenv("XKB_DEFAULT_RULES");
-	rules.model = getenv("XKB_DEFAULT_MODEL");
-	rules.layout = getenv("XKB_DEFAULT_LAYOUT");
-	rules.variant = getenv("XKB_DEFAULT_VARIANT");
-	rules.options = getenv("XKB_DEFAULT_OPTIONS");
-	struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+	struct xkb_keymap *keymap = xkb_keymap_new_from_names(context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
 	if (!keymap) {
 		wlr_log(WLR_ERROR, "Unable to configure keyboard: keymap does not exist");
 		xkb_context_unref(context);
