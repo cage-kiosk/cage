@@ -26,6 +26,7 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_damage.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
@@ -106,62 +107,18 @@ output_surface_for_each_surface(struct cg_output *output, struct wlr_surface *su
 }
 
 static void
-output_view_for_each_surface(struct cg_output *output, struct cg_view *view, cg_surface_iterator_func_t iterator,
-			     void *user_data)
-{
-	struct surface_iterator_data data = {
-		.user_iterator = iterator,
-		.user_data = user_data,
-		.output = output,
-		.ox = view->lx,
-		.oy = view->ly,
-	};
-
-	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
-	view_for_each_surface(view, output_for_each_surface_iterator, &data);
-}
-
-void
-output_view_for_each_popup_surface(struct cg_output *output, struct cg_view *view, cg_surface_iterator_func_t iterator,
-				   void *user_data)
-{
-	struct surface_iterator_data data = {
-		.user_iterator = iterator,
-		.user_data = user_data,
-		.output = output,
-		.ox = view->lx,
-		.oy = view->ly,
-	};
-
-	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
-	view_for_each_popup_surface(view, output_for_each_surface_iterator, &data);
-}
-
-void
-output_drag_icons_for_each_surface(struct cg_output *output, struct wl_list *drag_icons,
-				   cg_surface_iterator_func_t iterator, void *user_data)
-{
-	struct cg_drag_icon *drag_icon;
-	wl_list_for_each (drag_icon, drag_icons, link) {
-		if (drag_icon->wlr_drag_icon->mapped) {
-			double ox = drag_icon->lx;
-			double oy = drag_icon->ly;
-			wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
-			output_surface_for_each_surface(output, drag_icon->wlr_drag_icon->surface, ox, oy, iterator,
-							user_data);
-		}
-	}
-}
-
-static void
 output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data)
 {
-	struct cg_view *view;
-	wl_list_for_each_reverse (view, &output->server->views, link) {
-		output_view_for_each_surface(output, view, iterator, user_data);
-	}
+	struct surface_iterator_data data = {
+		.user_iterator = iterator,
+		.user_data = user_data,
+		.output = output,
+		.ox = 0,
+		.oy = 0,
+	};
+	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
 
-	output_drag_icons_for_each_surface(output, &output->server->seat->drag_icons, iterator, user_data);
+	wlr_scene_node_for_each_surface(&output->server->scene->node, output_for_each_surface_iterator, &data);
 }
 
 struct send_frame_done_data {
@@ -182,7 +139,7 @@ send_frame_done(struct cg_output *output, struct send_frame_done_data *data)
 }
 
 static void
-count_surface_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *_box, void *data)
+count_surface_iterator(struct wlr_surface *surface, int sx, int sy, void *data)
 {
 	size_t *n = data;
 	(*n)++;
@@ -207,7 +164,7 @@ scan_out_primary_view(struct cg_output *output)
 	}
 
 	size_t n_surfaces = 0;
-	output_view_for_each_surface(output, view, count_surface_iterator, &n_surfaces);
+	wlr_scene_node_for_each_surface(&view->scene_surface->node, count_surface_iterator, &n_surfaces);
 	if (n_surfaces > 1) {
 		return false;
 	}

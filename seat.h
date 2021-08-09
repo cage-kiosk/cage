@@ -77,6 +77,7 @@ struct cg_drag_icon {
 	struct wl_list link; // seat::drag_icons
 	struct cg_seat *seat;
 	struct wlr_drag_icon *wlr_drag_icon;
+	struct wlr_scene_surface *scene_surface;
 
 	/* The drag icon has a position in layout coordinates. */
 	double lx, ly;

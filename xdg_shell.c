@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
@@ -60,6 +61,14 @@ static void
 handle_xdg_popup_map(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_popup *popup = wl_container_of(listener, popup, map);
+	struct wlr_scene_node *parent_node = &popup->view_child.view->scene_surface->node;
+	popup->scene_surface = wlr_scene_surface_create(parent_node, popup->view_child.wlr_surface);
+	if (!popup->scene_surface) {
+		return;
+	}
+	double sx, sy;
+	wlr_xdg_popup_get_position(popup->wlr_popup, &sx, &sy);
+	wlr_scene_node_set_position(&popup->scene_surface->node, sx, sy);
 	view_damage_whole(popup->view_child.view);
 }
 
@@ -67,6 +76,7 @@ static void
 handle_xdg_popup_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_popup *popup = wl_container_of(listener, popup, unmap);
+	wlr_scene_node_destroy(&popup->scene_surface->node);
 	view_damage_whole(popup->view_child.view);
 }
 
