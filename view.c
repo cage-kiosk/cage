@@ -15,6 +15,7 @@
 #include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_surface.h>
+#include <wlr/types/wlr_scene.h>
 
 #include "output.h"
 #include "seat.h"
@@ -174,6 +175,9 @@ view_maximize(struct cg_view *view, struct wlr_box *layout_box)
 {
 	view->lx = layout_box->x;
 	view->ly = layout_box->y;
+
+	wlr_scene_node_set_position(&view->scene_surface->node, view->lx, view->ly);
+
 	view->impl->maximize(view, layout_box->width, layout_box->height);
 }
 
@@ -185,6 +189,8 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 
 	view->lx = (layout_box->width - width) / 2;
 	view->ly = (layout_box->height - height) / 2;
+
+	wlr_scene_node_set_position(&view->scene_surface->node, view->lx, view->ly);
 }
 
 void
@@ -226,6 +232,8 @@ view_unmap(struct cg_view *view)
 		child->destroy(child);
 	}
 
+	wlr_scene_node_destroy(&view->scene_surface->node);
+
 	view->wlr_surface = NULL;
 }
 
@@ -233,6 +241,11 @@ void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
 	view->wlr_surface = surface;
+
+	view->scene_surface = wlr_scene_surface_create(&view->server->scene->node, surface);
+	if (!view->scene_surface) {
+		return;
+	}
 
 	struct wlr_subsurface *subsurface;
 	wl_list_for_each (subsurface, &view->wlr_surface->subsurfaces_below, parent_link) {

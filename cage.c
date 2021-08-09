@@ -27,6 +27,7 @@
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
 #if CAGE_HAS_XWAYLAND
@@ -325,6 +326,13 @@ main(int argc, char *argv[])
 	server.output_layout = wlr_output_layout_create();
 	if (!server.output_layout) {
 		wlr_log(WLR_ERROR, "Unable to create output layout");
+		ret = 1;
+		goto end;
+	}
+
+	server.scene = wlr_scene_create();
+	if (!server.scene) {
+		wlr_log(WLR_ERROR, "Unable to create scene");
 		ret = 1;
 		goto end;
 	}

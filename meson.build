@@ -34,7 +34,7 @@ if is_freebsd
   )
 endif
 
-wlroots        = dependency('wlroots', version: '>= 0.14.0', fallback: ['wlroots', 'wlroots'])
+wlroots        = dependency('wlroots', version: '>= 0.15.0', fallback: ['wlroots', 'wlroots'])
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 pixman         = dependency('pixman-1')
