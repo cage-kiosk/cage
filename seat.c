@@ -8,6 +8,7 @@
 
 #include "config.h"
 
+#include <assert.h>
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
@@ -42,42 +43,31 @@ static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
  * menus or tooltips. This function tests if any of those are underneath the
  * coordinates lx and ly (in output Layout Coordinates). If so, it sets the
  * surface pointer to that wlr_surface and the sx and sy coordinates to the
- * coordinates relative to that surface's top-left corner. */
-static bool
-view_at(struct cg_view *view, double lx, double ly, struct wlr_surface **surface, double *sx, double *sy)
-{
-	double view_sx = lx - view->lx;
-	double view_sy = ly - view->ly;
-
-	double _sx, _sy;
-	struct wlr_surface *_surface = view_wlr_surface_at(view, view_sx, view_sy, &_sx, &_sy);
-	if (_surface != NULL) {
-		*sx = _sx;
-		*sy = _sy;
-		*surface = _surface;
-		return true;
-	}
-
-	return false;
-}
-
-/* This iterates over all of our surfaces and attempts to find one
- * under the cursor. This relies on server->views being ordered from
- * top-to-bottom. If desktop_view_at returns a view, there is also a
- * surface. There cannot be a surface without a view, either. It's
- * both or nothing. */
+ * coordinates relative to that surface's top-left corner.
+ *
+ * This function iterates over all of our surfaces and attempts to find one
+ * under the cursor. If desktop_view_at returns a view, there is also a
+ * surface. There cannot be a surface without a view, either. It's both or
+ * nothing.
+ */
 static struct cg_view *
 desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surface **surface, double *sx, double *sy)
 {
-	struct cg_view *view;
-
-	wl_list_for_each (view, &server->views, link) {
-		if (view_at(view, lx, ly, surface, sx, sy)) {
-			return view;
-		}
+	struct wlr_scene_node *node = wlr_scene_node_at(&server->scene->node, lx, ly, sx, sy);
+	if (node == NULL || node->type != WLR_SCENE_NODE_SURFACE) {
+		return NULL;
 	}
 
-	return NULL;
+	*surface = wlr_scene_surface_from_node(node)->surface;
+
+	/* Walk up the tree until we find a node with a data pointer. When done,
+	 * we've found the node representing the view. */
+	while (node != NULL && node->data == NULL) {
+		node = node->parent;
+	}
+	assert(node != NULL);
+
+	return node->data;
 }
 
 static void

@@ -95,12 +95,6 @@ destroy(struct cg_view *view)
 	free(xwayland_view);
 }
 
-static struct wlr_surface *
-wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
-{
-	return wlr_surface_surface_at(view->wlr_surface, sx, sy, sub_x, sub_y);
-}
-
 static void
 handle_xwayland_surface_request_fullscreen(struct wl_listener *listener, void *data)
 {
@@ -172,7 +166,6 @@ static const struct cg_view_impl xwayland_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
-	.wlr_surface_at = wlr_surface_at,
 };
 
 void

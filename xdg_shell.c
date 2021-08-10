@@ -225,13 +225,6 @@ destroy(struct cg_view *view)
 	free(xdg_shell_view);
 }
 
-static struct wlr_surface *
-wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
-{
-	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	return wlr_xdg_surface_surface_at(xdg_shell_view->xdg_surface, sx, sy, sub_x, sub_y);
-}
-
 static void
 handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *data)
 {
@@ -301,7 +294,6 @@ static const struct cg_view_impl xdg_shell_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
-	.wlr_surface_at = wlr_surface_at,
 };
 
 void
