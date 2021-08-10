@@ -300,5 +300,5 @@ view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface)
 struct wlr_surface *
 view_wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
 {
-	return view->impl->wlr_surface_at(view, sx, sy, sub_x, sub_y);
+	return wlr_scene_node_surface_at(&view->scene_surface->node, sx, sy, sub_x, sub_y);
 }

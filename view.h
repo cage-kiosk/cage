@@ -45,7 +45,6 @@ struct cg_view_impl {
 	void (*activate)(struct cg_view *view, bool activate);
 	void (*maximize)(struct cg_view *view, int output_width, int output_height);
 	void (*destroy)(struct cg_view *view);
-	struct wlr_surface *(*wlr_surface_at)(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y);
 };
 
 struct cg_view_child {
