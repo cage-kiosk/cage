@@ -226,20 +226,6 @@ destroy(struct cg_view *view)
 	free(xdg_shell_view);
 }
 
-static void
-for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
-{
-	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	wlr_xdg_surface_for_each_surface(xdg_shell_view->xdg_surface, iterator, data);
-}
-
-static void
-for_each_popup_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
-{
-	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	wlr_xdg_surface_for_each_popup_surface(xdg_shell_view->xdg_surface, iterator, data);
-}
-
 static struct wlr_surface *
 wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
 {
@@ -314,8 +300,6 @@ static const struct cg_view_impl xdg_shell_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
-	.for_each_surface = for_each_surface,
-	.for_each_popup_surface = for_each_popup_surface,
 	.wlr_surface_at = wlr_surface_at,
 };
 
