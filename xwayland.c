@@ -95,12 +95,6 @@ destroy(struct cg_view *view)
 	free(xwayland_view);
 }
 
-static void
-for_each_surface(struct cg_view *view, wlr_surface_iterator_func_t iterator, void *data)
-{
-	wlr_surface_for_each_surface(view->wlr_surface, iterator, data);
-}
-
 static struct wlr_surface *
 wlr_surface_at(struct cg_view *view, double sx, double sy, double *sub_x, double *sub_y)
 {
@@ -178,9 +172,6 @@ static const struct cg_view_impl xwayland_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
-	.for_each_surface = for_each_surface,
-	/* XWayland doesn't have a separate popup iterator. */
-	.for_each_popup_surface = NULL,
 	.wlr_surface_at = wlr_surface_at,
 };
 
