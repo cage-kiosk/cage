@@ -185,7 +185,7 @@ static void
 count_surface_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *_box, void *data)
 {
 	size_t *n = data;
-	n++;
+	(*n)++;
 }
 
 static bool
