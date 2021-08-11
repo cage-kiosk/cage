@@ -25,6 +25,8 @@ struct cg_server {
 	struct wl_display *wl_display;
 	struct wl_list views;
 	struct wlr_backend *backend;
+	struct wlr_renderer *renderer;
+	struct wlr_allocator *allocator;
 
 	struct cg_seat *seat;
 	struct wlr_idle *idle;

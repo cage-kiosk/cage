@@ -1,7 +1,7 @@
 #ifndef CG_UTIL_H
 #define CG_UTIL_H
 
-#include <wlr/types/wlr_box.h>
+#include <wlr/util/box.h>
 
 /** Apply scale to a width or height. */
 int scale_length(int length, int offset, float scale);

@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
+#include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
@@ -261,7 +262,6 @@ main(int argc, char *argv[])
 	struct wl_event_source *sigint_source = NULL;
 	struct wl_event_source *sigterm_source = NULL;
 	struct wl_event_source *sigchld_source = NULL;
-	struct wlr_renderer *renderer = NULL;
 	struct wlr_compositor *compositor = NULL;
 	struct wlr_data_device_manager *data_device_manager = NULL;
 	struct wlr_server_decoration_manager *server_decoration_manager = NULL;
@@ -316,8 +316,21 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	renderer = wlr_backend_get_renderer(server.backend);
-	wlr_renderer_init_wl_display(renderer, server.wl_display);
+	server.renderer = wlr_renderer_autocreate(server.backend);
+	if (!server.renderer) {
+		wlr_log(WLR_ERROR, "Unable to create the wlroots renderer");
+		ret = 1;
+		goto end;
+	}
+
+	server.allocator = wlr_allocator_autocreate(server.backend, server.renderer);
+	if (!server.allocator) {
+		wlr_log(WLR_ERROR, "Unable to create the wlroots allocator");
+		ret = 1;
+		goto end;
+	}
+
+	wlr_renderer_init_wl_display(server.renderer, server.wl_display);
 
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
@@ -329,7 +342,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	compositor = wlr_compositor_create(server.wl_display, renderer);
+	compositor = wlr_compositor_create(server.wl_display, server.renderer);
 	if (!compositor) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots compositor");
 		ret = 1;

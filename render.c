@@ -10,11 +10,11 @@
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
-#include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_surface.h>
+#include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 
@@ -27,8 +27,6 @@
 static void
 scissor_output(struct wlr_output *output, pixman_box32_t *rect)
 {
-	struct wlr_renderer *renderer = wlr_backend_get_renderer(output->backend);
-
 	struct wlr_box box = {
 		.x = rect->x1,
 		.y = rect->y1,
@@ -41,7 +39,7 @@ scissor_output(struct wlr_output *output, pixman_box32_t *rect)
 	enum wl_output_transform transform = wlr_output_transform_invert(output->transform);
 	wlr_box_transform(&box, &box, transform, output_width, output_height);
 
-	wlr_renderer_scissor(renderer, &box);
+	wlr_renderer_scissor(output->renderer, &box);
 }
 
 struct render_data {
@@ -52,8 +50,6 @@ static void
 render_texture(struct wlr_output *wlr_output, pixman_region32_t *output_damage, struct wlr_texture *texture,
 	       const struct wlr_box *box, const float matrix[static 9])
 {
-	struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
-
 	pixman_region32_t damage;
 	pixman_region32_init(&damage);
 	pixman_region32_union_rect(&damage, &damage, box->x, box->y, box->width, box->height);
@@ -66,7 +62,7 @@ render_texture(struct wlr_output *wlr_output, pixman_region32_t *output_damage, 
 	pixman_box32_t *rects = pixman_region32_rectangles(&damage, &nrects);
 	for (int i = 0; i < nrects; i++) {
 		scissor_output(wlr_output, &rects[i]);
-		wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0f);
+		wlr_render_texture_with_matrix(wlr_output->renderer, texture, matrix, 1.0f);
 	}
 
 damage_finish:
@@ -134,13 +130,7 @@ output_render(struct cg_output *output, pixman_region32_t *damage)
 	struct cg_server *server = output->server;
 	struct wlr_output *wlr_output = output->wlr_output;
 
-	struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
-	if (!renderer) {
-		wlr_log(WLR_DEBUG, "Expected the output backend to have a renderer");
-		return;
-	}
-
-	wlr_renderer_begin(renderer, wlr_output->width, wlr_output->height);
+	wlr_renderer_begin(server->renderer, wlr_output->width, wlr_output->height);
 
 	if (!pixman_region32_not_empty(damage)) {
 		wlr_log(WLR_DEBUG, "Output isn't damaged but needs a buffer swap");
@@ -149,7 +139,7 @@ output_render(struct cg_output *output, pixman_region32_t *damage)
 
 #ifdef DEBUG
 	if (server->debug_damage_tracking) {
-		wlr_renderer_clear(renderer, (float[]){1.0f, 0.0f, 0.0f, 1.0f});
+		wlr_renderer_clear(server->renderer, (float[]){1.0f, 0.0f, 0.0f, 1.0f});
 	}
 #endif
 
@@ -158,7 +148,7 @@ output_render(struct cg_output *output, pixman_region32_t *damage)
 	pixman_box32_t *rects = pixman_region32_rectangles(damage, &nrects);
 	for (int i = 0; i < nrects; i++) {
 		scissor_output(wlr_output, &rects[i]);
-		wlr_renderer_clear(renderer, color);
+		wlr_renderer_clear(server->renderer, color);
 	}
 
 	// TODO: render only top view, possibly use focused view for this, see #35.
@@ -178,8 +168,8 @@ renderer_end:
 	/* Draw software cursor in case hardware cursors aren't
 	   available. This is a no-op when they are. */
 	wlr_output_render_software_cursors(wlr_output, damage);
-	wlr_renderer_scissor(renderer, NULL);
-	wlr_renderer_end(renderer);
+	wlr_renderer_scissor(server->renderer, NULL);
+	wlr_renderer_end(server->renderer);
 
 	int output_width, output_height;
 	wlr_output_transformed_resolution(wlr_output, &output_width, &output_height);

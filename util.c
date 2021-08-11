@@ -6,8 +6,6 @@
  * See the LICENSE file accompanying this file.
  */
 
-#include <wlr/types/wlr_box.h>
-
 #include "util.h"
 
 int
