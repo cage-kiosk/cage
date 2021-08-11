@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-server-core.h>
-#include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_surface.h>
 
@@ -235,10 +234,10 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 	view->wlr_surface = surface;
 
 	struct wlr_subsurface *subsurface;
-	wl_list_for_each (subsurface, &view->wlr_surface->subsurfaces_below, parent_link) {
+	wl_list_for_each (subsurface, &view->wlr_surface->current.subsurfaces_below, current.link) {
 		subsurface_create(view, subsurface);
 	}
-	wl_list_for_each (subsurface, &view->wlr_surface->subsurfaces_above, parent_link) {
+	wl_list_for_each (subsurface, &view->wlr_surface->current.subsurfaces_above, current.link) {
 		subsurface_create(view, subsurface);
 	}
 
