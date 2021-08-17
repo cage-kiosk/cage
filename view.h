@@ -50,16 +50,12 @@ struct cg_view_child {
 	struct wlr_surface *wlr_surface;
 	struct wl_list link;
 
-	struct wl_listener commit;
-
 	void (*destroy)(struct cg_view_child *child);
 };
 
 char *view_get_title(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
 bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
-void view_damage_part(struct cg_view *view);
-void view_damage_whole(struct cg_view *view);
 void view_activate(struct cg_view *view, bool activate);
 void view_position(struct cg_view *view);
 void view_unmap(struct cg_view *view);
