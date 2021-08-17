@@ -122,7 +122,6 @@ cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
   'output.c',
-  'render.c',
   'seat.c',
   'util.c',
   'view.c',

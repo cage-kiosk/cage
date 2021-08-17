@@ -24,13 +24,6 @@
 #include "xwayland.h"
 #endif
 
-static void
-view_child_handle_commit(struct wl_listener *listener, void *data)
-{
-	struct cg_view_child *child = wl_container_of(listener, child, commit);
-	view_damage_part(child->view);
-}
-
 static void subsurface_create(struct cg_view *view, struct wlr_subsurface *wlr_subsurface);
 
 static void
@@ -48,10 +41,7 @@ view_child_finish(struct cg_view_child *child)
 		return;
 	}
 
-	view_damage_whole(child->view);
-
 	wl_list_remove(&child->link);
-	wl_list_remove(&child->commit.link);
 	wl_list_remove(&child->new_subsurface.link);
 }
 
@@ -61,8 +51,6 @@ view_child_init(struct cg_view_child *child, struct cg_view *view, struct wlr_su
 	child->view = view;
 	child->wlr_surface = wlr_surface;
 
-	child->commit.notify = view_child_handle_commit;
-	wl_signal_add(&wlr_surface->events.commit, &child->commit);
 	child->new_subsurface.notify = view_child_handle_new_subsurface;
 	wl_signal_add(&wlr_surface->events.new_subsurface, &child->new_subsurface);
 
@@ -134,24 +122,6 @@ bool
 view_is_transient_for(struct cg_view *child, struct cg_view *parent)
 {
 	return child->impl->is_transient_for(child, parent);
-}
-
-void
-view_damage_part(struct cg_view *view)
-{
-	struct cg_output *output;
-	wl_list_for_each (output, &view->server->outputs, link) {
-		output_damage_surface(output, view->wlr_surface, view->lx, view->ly, false);
-	}
-}
-
-void
-view_damage_whole(struct cg_view *view)
-{
-	struct cg_output *output;
-	wl_list_for_each (output, &view->server->outputs, link) {
-		output_damage_surface(output, view->wlr_surface, view->lx, view->ly, true);
-	}
 }
 
 void

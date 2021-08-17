@@ -225,50 +225,9 @@ output_disable(struct cg_output *output)
 }
 
 static void
-damage_surface_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box, void *user_data)
+handle_output_frame(struct wl_listener *listener, void *data)
 {
-	struct wlr_output *wlr_output = output->wlr_output;
-	bool whole = *(bool *) user_data;
-
-	scale_box(box, output->wlr_output->scale);
-
-	if (whole) {
-		wlr_output_damage_add_box(output->damage, box);
-	} else if (pixman_region32_not_empty(&surface->buffer_damage)) {
-		pixman_region32_t damage;
-		pixman_region32_init(&damage);
-		wlr_surface_get_effective_damage(surface, &damage);
-
-		wlr_region_scale(&damage, &damage, wlr_output->scale);
-		if (ceil(wlr_output->scale) > surface->current.scale) {
-			/* When scaling up a surface it'll become
-			   blurry, so we need to expand the damage
-			   region. */
-			wlr_region_expand(&damage, &damage, ceil(wlr_output->scale) - surface->current.scale);
-		}
-		pixman_region32_translate(&damage, box->x, box->y);
-		wlr_output_damage_add(output->damage, &damage);
-		pixman_region32_fini(&damage);
-	}
-}
-
-void
-output_damage_surface(struct cg_output *output, struct wlr_surface *surface, double lx, double ly, bool whole)
-{
-	if (!output->wlr_output->enabled) {
-		wlr_log(WLR_DEBUG, "Not adding damage for disabled output %s", output->wlr_output->name);
-		return;
-	}
-
-	double ox = lx, oy = ly;
-	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &ox, &oy);
-	output_surface_for_each_surface(output, surface, ox, oy, damage_surface_iterator, &whole);
-}
-
-static void
-handle_output_damage_frame(struct wl_listener *listener, void *data)
-{
-	struct cg_output *output = wl_container_of(listener, output, damage_frame);
+	struct cg_output *output = wl_container_of(listener, output, frame);
 	struct send_frame_done_data frame_data = {0};
 
 	if (!output->wlr_output->enabled) {
@@ -287,29 +246,10 @@ handle_output_damage_frame(struct wl_listener *listener, void *data)
 	}
 	last_scanned_out = scanned_out;
 
-	if (scanned_out) {
-		goto frame_done;
+	if (!scanned_out) {
+		wlr_scene_output_commit(output->scene_output);
 	}
 
-	bool needs_frame;
-	pixman_region32_t damage;
-	pixman_region32_init(&damage);
-	if (!wlr_output_damage_attach_render(output->damage, &needs_frame, &damage)) {
-		wlr_log(WLR_ERROR, "Cannot make damage output current");
-		goto damage_finish;
-	}
-
-	if (!needs_frame) {
-		wlr_output_rollback(output->wlr_output);
-		goto damage_finish;
-	}
-
-	output_render(output, &damage);
-
-damage_finish:
-	pixman_region32_fini(&damage);
-
-frame_done:
 	clock_gettime(CLOCK_MONOTONIC, &frame_data.when);
 	send_frame_done(output, &frame_data);
 }
@@ -355,8 +295,7 @@ output_destroy(struct cg_output *output)
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->commit.link);
 	wl_list_remove(&output->mode.link);
-	wl_list_remove(&output->damage_frame.link);
-	wl_list_remove(&output->damage_destroy.link);
+	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
 
 	wlr_output_layout_remove(server->output_layout, output->wlr_output);
@@ -379,17 +318,9 @@ output_destroy(struct cg_output *output)
 }
 
 static void
-handle_output_damage_destroy(struct wl_listener *listener, void *data)
-{
-	struct cg_output *output = wl_container_of(listener, output, damage_destroy);
-	output_destroy(output);
-}
-
-static void
 handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, destroy);
-	wlr_output_damage_destroy(output->damage);
 	output_destroy(output);
 }
 
@@ -407,7 +338,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	output->wlr_output = wlr_output;
 	output->server = server;
-	output->damage = wlr_output_damage_create(wlr_output);
+	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
+
 	wl_list_insert(&server->outputs, &output->link);
 
 	output->commit.notify = handle_output_commit;
@@ -416,10 +348,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wl_signal_add(&wlr_output->events.mode, &output->mode);
 	output->destroy.notify = handle_output_destroy;
 	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
-	output->damage_frame.notify = handle_output_damage_frame;
-	wl_signal_add(&output->damage->events.frame, &output->damage_frame);
-	output->damage_destroy.notify = handle_output_damage_destroy;
-	wl_signal_add(&output->damage->events.destroy, &output->damage_destroy);
+	output->frame.notify = handle_output_frame;
+	wl_signal_add(&wlr_output->events.frame, &output->frame);
 
 	struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
 	if (preferred_mode) {

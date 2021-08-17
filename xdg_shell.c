@@ -69,7 +69,6 @@ handle_xdg_popup_map(struct wl_listener *listener, void *data)
 	double sx, sy;
 	wlr_xdg_popup_get_position(popup->wlr_popup, &sx, &sy);
 	wlr_scene_node_set_position(&popup->scene_surface->node, sx, sy);
-	view_damage_whole(popup->view_child.view);
 }
 
 static void
@@ -77,7 +76,6 @@ handle_xdg_popup_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_popup *popup = wl_container_of(listener, popup, unmap);
 	wlr_scene_node_destroy(&popup->scene_surface->node);
-	view_damage_whole(popup->view_child.view);
 }
 
 static void
@@ -234,22 +232,10 @@ handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *
 }
 
 static void
-handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
-{
-	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
-	struct cg_view *view = &xdg_shell_view->view;
-	view_damage_part(view);
-}
-
-static void
 handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
-
-	view_damage_whole(view);
-
-	wl_list_remove(&xdg_shell_view->commit.link);
 
 	view_unmap(view);
 }
@@ -260,12 +246,7 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
 	struct cg_view *view = &xdg_shell_view->view;
 
-	xdg_shell_view->commit.notify = handle_xdg_shell_surface_commit;
-	wl_signal_add(&xdg_shell_view->xdg_surface->surface->events.commit, &xdg_shell_view->commit);
-
 	view_map(view, xdg_shell_view->xdg_surface->surface);
-
-	view_damage_whole(view);
 }
 
 static void

@@ -601,22 +601,11 @@ handle_cursor_motion(struct wl_listener *listener, void *data)
 }
 
 static void
-drag_icon_damage(struct cg_drag_icon *drag_icon)
-{
-	struct cg_output *output;
-	wl_list_for_each (output, &drag_icon->seat->server->outputs, link) {
-		output_damage_surface(output, drag_icon->wlr_drag_icon->surface, drag_icon->lx, drag_icon->ly, true);
-	}
-}
-
-static void
 drag_icon_update_position(struct cg_drag_icon *drag_icon)
 {
 	struct wlr_drag_icon *wlr_icon = drag_icon->wlr_drag_icon;
 	struct cg_seat *seat = drag_icon->seat;
 	struct wlr_touch_point *point;
-
-	drag_icon_damage(drag_icon);
 
 	switch (wlr_icon->drag->grab_type) {
 	case WLR_DRAG_GRAB_KEYBOARD:
@@ -635,8 +624,6 @@ drag_icon_update_position(struct cg_drag_icon *drag_icon)
 		break;
 	}
 
-	drag_icon_damage(drag_icon);
-
 	wlr_scene_node_set_position(&drag_icon->scene_surface->node, drag_icon->lx, drag_icon->ly);
 }
 
@@ -645,7 +632,6 @@ handle_drag_icon_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_drag_icon *drag_icon = wl_container_of(listener, drag_icon, destroy);
 
-	drag_icon_damage(drag_icon);
 	wl_list_remove(&drag_icon->link);
 	wl_list_remove(&drag_icon->destroy.link);
 	wlr_scene_node_destroy(&drag_icon->scene_surface->node);
