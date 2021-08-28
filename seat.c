@@ -624,7 +624,7 @@ drag_icon_update_position(struct cg_drag_icon *drag_icon)
 
 	drag_icon_damage(drag_icon);
 
-	wlr_scene_node_set_position(&drag_icon->scene_surface->node, drag_icon->lx, drag_icon->ly);
+	wlr_scene_node_set_position(drag_icon->scene_node, drag_icon->lx, drag_icon->ly);
 }
 
 static void
@@ -635,7 +635,7 @@ handle_drag_icon_destroy(struct wl_listener *listener, void *data)
 	drag_icon_damage(drag_icon);
 	wl_list_remove(&drag_icon->link);
 	wl_list_remove(&drag_icon->destroy.link);
-	wlr_scene_node_destroy(&drag_icon->scene_surface->node);
+	wlr_scene_node_destroy(drag_icon->scene_node);
 	free(drag_icon);
 }
 
@@ -678,8 +678,8 @@ handle_start_drag(struct wl_listener *listener, void *data)
 	}
 	drag_icon->seat = seat;
 	drag_icon->wlr_drag_icon = wlr_drag_icon;
-	drag_icon->scene_surface = wlr_scene_surface_create(&seat->server->scene->node, wlr_drag_icon->surface);
-	if (!drag_icon->scene_surface) {
+	drag_icon->scene_node = wlr_scene_subsurface_tree_create(&seat->server->scene->node, wlr_drag_icon->surface);
+	if (!drag_icon->scene_node) {
 		free(drag_icon);
 		return;
 	}
