@@ -61,7 +61,7 @@ static void
 handle_xdg_popup_map(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_popup *popup = wl_container_of(listener, popup, map);
-	struct wlr_scene_node *parent_node = &popup->view_child.view->scene_surface->node;
+	struct wlr_scene_node *parent_node = popup->view_child.view->scene_node;
 	popup->scene_surface = wlr_scene_surface_create(parent_node, popup->view_child.wlr_surface);
 	if (!popup->scene_surface) {
 		return;

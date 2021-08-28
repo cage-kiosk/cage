@@ -164,7 +164,7 @@ scan_out_primary_view(struct cg_output *output)
 	}
 
 	size_t n_surfaces = 0;
-	wlr_scene_node_for_each_surface(&view->scene_surface->node, count_surface_iterator, &n_surfaces);
+	wlr_scene_node_for_each_surface(view->scene_node, count_surface_iterator, &n_surfaces);
 	if (n_surfaces > 1) {
 		return false;
 	}
@@ -312,6 +312,8 @@ damage_finish:
 frame_done:
 	clock_gettime(CLOCK_MONOTONIC, &frame_data.when);
 	send_frame_done(output, &frame_data);
+
+	wlr_output_damage_add_whole(output->damage);
 }
 
 static void

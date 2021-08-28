@@ -26,15 +26,13 @@ struct cg_view {
 	struct wl_list link; // server::views
 	struct wl_list children; // cg_view_child::link
 	struct wlr_surface *wlr_surface;
-	struct wlr_scene_surface *scene_surface;
+	struct wlr_scene_node *scene_node;
 
 	/* The view has a position in layout coordinates. */
 	int lx, ly;
 
 	enum cg_view_type type;
 	const struct cg_view_impl *impl;
-
-	struct wl_listener new_subsurface;
 };
 
 struct cg_view_impl {
@@ -53,16 +51,8 @@ struct cg_view_child {
 	struct wl_list link;
 
 	struct wl_listener commit;
-	struct wl_listener new_subsurface;
 
 	void (*destroy)(struct cg_view_child *child);
-};
-
-struct cg_subsurface {
-	struct cg_view_child view_child;
-	struct wlr_subsurface *wlr_subsurface;
-
-	struct wl_listener destroy;
 };
 
 char *view_get_title(struct cg_view *view);
