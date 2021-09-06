@@ -563,10 +563,7 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time)
 	} else {
 		wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
 
-		bool focus_changed = wlr_seat->pointer_state.focused_surface != surface;
-		if (!focus_changed && time > 0 || wlr_seat->drag) {
-			wlr_seat_pointer_notify_motion(wlr_seat, time, sx, sy);
-		}
+		wlr_seat_pointer_notify_motion(wlr_seat, time, sx, sy);
 	}
 
 	struct cg_drag_icon *drag_icon;
