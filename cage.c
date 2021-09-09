@@ -338,6 +338,8 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
+	wlr_scene_attach_output_layout(server.scene, server.output_layout);
+
 	compositor = wlr_compositor_create(server.wl_display, server.renderer);
 	if (!compositor) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots compositor");
