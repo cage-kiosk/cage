@@ -11,6 +11,7 @@
 
 #include "config.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
@@ -206,6 +207,15 @@ output_enable(struct cg_output *output)
 	wlr_output_layout_add_auto(output->server->output_layout, wlr_output);
 	wlr_output_enable(wlr_output, true);
 	wlr_output_commit(wlr_output);
+
+	struct wlr_scene_output *scene_output;
+	wl_list_for_each (scene_output, &output->server->scene->outputs, link) {
+		if (scene_output->output == wlr_output) {
+			output->scene_output = scene_output;
+			break;
+		}
+	}
+	assert(output->scene_output != NULL);
 }
 
 static void
@@ -217,6 +227,8 @@ output_disable(struct cg_output *output)
 		wlr_log(WLR_DEBUG, "Not disabling already disabled output %s", wlr_output->name);
 		return;
 	}
+
+	output->scene_output = NULL;
 
 	wlr_log(WLR_DEBUG, "Disabling output %s", wlr_output->name);
 	wlr_output_enable(wlr_output, false);
@@ -343,7 +355,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	output->wlr_output = wlr_output;
 	output->server = server;
-	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
 
 	wl_list_insert(&server->outputs, &output->link);
 
