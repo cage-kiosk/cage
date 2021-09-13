@@ -145,7 +145,12 @@ cleanup_primary_client(pid_t pid)
 static bool
 drop_permissions(void)
 {
+	if (getuid() == 0 || getgid() == 0) {
+		wlr_log(WLR_INFO, "Running as root user, this is dangerous");
+		return true;
+	}
 	if (getuid() != geteuid() || getgid() != getegid()) {
+		wlr_log(WLR_INFO, "setuid/setgid bit detected, dropping permissions");
 		// Set the gid and uid in the correct order.
 		if (setgid(getgid()) != 0 || setuid(getuid()) != 0) {
 			wlr_log(WLR_ERROR, "Unable to drop root, refusing to start");
