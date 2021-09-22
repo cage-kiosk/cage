@@ -21,9 +21,6 @@ struct cg_output {
 	struct wl_list link; // cg_server::outputs
 };
 
-typedef void (*cg_surface_iterator_func_t)(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box,
-					   void *user_data);
-
 void handle_new_output(struct wl_listener *listener, void *data);
 void output_set_window_title(struct cg_output *output, const char *title);
 
