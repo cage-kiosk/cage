@@ -92,21 +92,6 @@ output_for_each_surface_iterator(struct wlr_surface *surface, int sx, int sy, vo
 	data->user_iterator(data->output, surface, &surface_box, data->user_data);
 }
 
-void
-output_surface_for_each_surface(struct cg_output *output, struct wlr_surface *surface, double ox, double oy,
-				cg_surface_iterator_func_t iterator, void *user_data)
-{
-	struct surface_iterator_data data = {
-		.user_iterator = iterator,
-		.user_data = user_data,
-		.output = output,
-		.ox = ox,
-		.oy = oy,
-	};
-
-	wlr_surface_for_each_surface(surface, output_for_each_surface_iterator, &data);
-}
-
 static void
 output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data)
 {
