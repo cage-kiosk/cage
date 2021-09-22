@@ -43,18 +43,6 @@
 #include "xwayland.h"
 #endif
 
-static void output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data);
-
-struct surface_iterator_data {
-	cg_surface_iterator_func_t user_iterator;
-	void *user_data;
-
-	struct cg_output *output;
-
-	/* Output-local coordinates. */
-	double ox, oy;
-};
-
 static bool
 intersects_with_output(struct cg_output *output, struct wlr_output_layout *output_layout, struct wlr_box *surface_box)
 {
@@ -68,10 +56,16 @@ intersects_with_output(struct cg_output *output, struct wlr_output_layout *outpu
 	return wlr_box_intersection(&intersection, &output_box, surface_box);
 }
 
+struct send_frame_done_data {
+	struct cg_output *output;
+	double ox, oy; /* Output-local coordinates. */
+	struct timespec when;
+};
+
 static void
-output_for_each_surface_iterator(struct wlr_surface *surface, int sx, int sy, void *user_data)
+send_frame_done_iterator(struct wlr_surface *surface, int sx, int sy, void *user_data)
 {
-	struct surface_iterator_data *data = user_data;
+	const struct send_frame_done_data *data = user_data;
 	struct cg_output *output = data->output;
 
 	if (!wlr_surface_has_buffer(surface)) {
@@ -89,39 +83,19 @@ output_for_each_surface_iterator(struct wlr_surface *surface, int sx, int sy, vo
 		return;
 	}
 
-	data->user_iterator(data->output, surface, &surface_box, data->user_data);
-}
-
-static void
-output_for_each_surface(struct cg_output *output, cg_surface_iterator_func_t iterator, void *user_data)
-{
-	struct surface_iterator_data data = {
-		.user_iterator = iterator,
-		.user_data = user_data,
-		.output = output,
-		.ox = 0,
-		.oy = 0,
-	};
-	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
-
-	wlr_scene_node_for_each_surface(&output->server->scene->node, output_for_each_surface_iterator, &data);
-}
-
-struct send_frame_done_data {
-	struct timespec when;
-};
-
-static void
-send_frame_done_iterator(struct cg_output *output, struct wlr_surface *surface, struct wlr_box *box, void *user_data)
-{
-	struct send_frame_done_data *data = user_data;
 	wlr_surface_send_frame_done(surface, &data->when);
 }
 
 static void
-send_frame_done(struct cg_output *output, struct send_frame_done_data *data)
+send_frame_done(struct cg_output *output, const struct timespec *when)
 {
-	output_for_each_surface(output, send_frame_done_iterator, data);
+	struct send_frame_done_data data = {
+		.output = output,
+		.when = *when,
+	};
+	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
+
+	wlr_scene_node_for_each_surface(&output->server->scene->node, send_frame_done_iterator, &data);
 }
 
 static void
@@ -225,7 +199,6 @@ static void
 handle_output_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, frame);
-	struct send_frame_done_data frame_data = {0};
 
 	if (!output->wlr_output->enabled) {
 		return;
@@ -247,8 +220,9 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		wlr_scene_output_commit(output->scene_output);
 	}
 
-	clock_gettime(CLOCK_MONOTONIC, &frame_data.when);
-	send_frame_done(output, &frame_data);
+	struct timespec now = {0};
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	send_frame_done(output, &now);
 }
 
 static void
