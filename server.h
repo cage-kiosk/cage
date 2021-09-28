@@ -45,6 +45,7 @@ struct cg_server {
 	struct wl_listener new_xwayland_surface;
 #endif
 
+	bool auto_map_output;
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	enum wl_output_transform output_transform;

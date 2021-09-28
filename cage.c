@@ -184,6 +184,7 @@ usage(FILE *file, const char *cage)
 	fprintf(file,
 		"Usage: %s [OPTIONS] [--] APPLICATION\n"
 		"\n"
+		" -a\t Auto-map input device to output (Useful when only one output present)\n"
 		" -d\t Don't draw client side decorations, when possible\n"
 #ifdef DEBUG
 		" -D\t Turn on damage tracking debugging\n"
@@ -204,11 +205,14 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
 #ifdef DEBUG
-	while ((c = getopt(argc, argv, "dDhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "adDhm:rsv")) != -1) {
 #else
-	while ((c = getopt(argc, argv, "dhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "adhm:rsv")) != -1) {
 #endif
 		switch (c) {
+		case 'a':
+			server->auto_map_output = true;
+			break;
 		case 'd':
 			server->xdg_decoration = true;
 			break;
