@@ -43,59 +43,16 @@
 #include "xwayland.h"
 #endif
 
-static bool
-intersects_with_output(struct cg_output *output, struct wlr_output_layout *output_layout, struct wlr_box *surface_box)
-{
-	/* Since the surface_box's x- and y-coordinates are already output local,
-	 * the x- and y-coordinates of this box need to be 0 for this function to
-	 * work correctly. */
-	struct wlr_box output_box = {0};
-	wlr_output_effective_resolution(output->wlr_output, &output_box.width, &output_box.height);
-
-	struct wlr_box intersection;
-	return wlr_box_intersection(&intersection, &output_box, surface_box);
-}
-
-struct send_frame_done_data {
-	struct cg_output *output;
-	double ox, oy; /* Output-local coordinates. */
-	struct timespec when;
-};
-
 static void
-send_frame_done_iterator(struct wlr_surface *surface, int sx, int sy, void *user_data)
+send_frame_done_iterator(struct wlr_surface *surface, int lx, int ly, void *user_data)
 {
-	const struct send_frame_done_data *data = user_data;
-	struct cg_output *output = data->output;
+	const struct timespec *t = user_data;
 
 	if (!wlr_surface_has_buffer(surface)) {
 		return;
 	}
 
-	struct wlr_box surface_box = {
-		.x = data->ox + sx + surface->sx,
-		.y = data->oy + sy + surface->sy,
-		.width = surface->current.width,
-		.height = surface->current.height,
-	};
-
-	if (!intersects_with_output(output, output->server->output_layout, &surface_box)) {
-		return;
-	}
-
-	wlr_surface_send_frame_done(surface, &data->when);
-}
-
-static void
-send_frame_done(struct cg_output *output, const struct timespec *when)
-{
-	struct send_frame_done_data data = {
-		.output = output,
-		.when = *when,
-	};
-	wlr_output_layout_output_coords(output->server->output_layout, output->wlr_output, &data.ox, &data.oy);
-
-	wlr_scene_node_for_each_surface(&output->server->scene->node, send_frame_done_iterator, &data);
+	wlr_surface_send_frame_done(surface, t);
 }
 
 static void
@@ -153,7 +110,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 
 	struct timespec now = {0};
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	send_frame_done(output, &now);
+	wlr_scene_output_for_each_surface(output->scene_output, send_frame_done_iterator, &now);
 }
 
 static void
