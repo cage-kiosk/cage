@@ -15,18 +15,6 @@ struct cg_xdg_shell_view {
 	struct wl_listener unmap;
 	struct wl_listener map;
 	struct wl_listener request_fullscreen;
-	struct wl_listener new_popup;
-};
-
-struct cg_xdg_popup {
-	struct cg_view_child view_child;
-	struct wlr_xdg_popup *wlr_popup;
-	struct wlr_scene_surface *scene_surface;
-
-	struct wl_listener destroy;
-	struct wl_listener map;
-	struct wl_listener unmap;
-	struct wl_listener new_popup;
 };
 
 struct cg_xdg_decoration {
