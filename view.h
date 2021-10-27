@@ -24,7 +24,6 @@ enum cg_view_type {
 struct cg_view {
 	struct cg_server *server;
 	struct wl_list link; // server::views
-	struct wl_list children; // cg_view_child::link
 	struct wlr_surface *wlr_surface;
 	struct wlr_scene_node *scene_node;
 
@@ -45,14 +44,6 @@ struct cg_view_impl {
 	void (*destroy)(struct cg_view *view);
 };
 
-struct cg_view_child {
-	struct cg_view *view;
-	struct wlr_surface *wlr_surface;
-	struct wl_list link;
-
-	void (*destroy)(struct cg_view_child *child);
-};
-
 char *view_get_title(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
 bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
@@ -64,8 +55,5 @@ void view_destroy(struct cg_view *view);
 void view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type, const struct cg_view_impl *impl);
 
 struct cg_view *view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface);
-
-void view_child_finish(struct cg_view_child *child);
-void view_child_init(struct cg_view_child *child, struct cg_view *view, struct wlr_surface *wlr_surface);
 
 #endif

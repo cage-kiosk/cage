@@ -24,25 +24,6 @@
 #include "xwayland.h"
 #endif
 
-void
-view_child_finish(struct cg_view_child *child)
-{
-	if (!child) {
-		return;
-	}
-
-	wl_list_remove(&child->link);
-}
-
-void
-view_child_init(struct cg_view_child *child, struct cg_view *view, struct wlr_surface *wlr_surface)
-{
-	child->view = view;
-	child->wlr_surface = wlr_surface;
-
-	wl_list_insert(&view->children, &child->link);
-}
-
 char *
 view_get_title(struct cg_view *view)
 {
@@ -120,11 +101,6 @@ view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
 
-	struct cg_view_child *child, *tmp;
-	wl_list_for_each_safe (child, tmp, &view->children, link) {
-		child->destroy(child);
-	}
-
 	wlr_scene_node_destroy(view->scene_node);
 
 	view->wlr_surface = NULL;
@@ -180,8 +156,6 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 	view->server = server;
 	view->type = type;
 	view->impl = impl;
-
-	wl_list_init(&view->children);
 }
 
 struct cg_view *
