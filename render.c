@@ -10,7 +10,6 @@
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/render/wlr_renderer.h>
-#include <wlr/types/wlr_box.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
