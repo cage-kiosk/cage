@@ -44,18 +44,6 @@
 #endif
 
 static void
-send_frame_done_iterator(struct wlr_surface *surface, int lx, int ly, void *user_data)
-{
-	const struct timespec *t = user_data;
-
-	if (!wlr_surface_has_buffer(surface)) {
-		return;
-	}
-
-	wlr_surface_send_frame_done(surface, t);
-}
-
-static void
 output_enable(struct cg_output *output)
 {
 	struct wlr_output *wlr_output = output->wlr_output;
@@ -110,7 +98,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 
 	struct timespec now = {0};
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	wlr_scene_output_for_each_surface(output->scene_output, send_frame_done_iterator, &now);
+	wlr_scene_output_send_frame_done(output->scene_output, &now);
 }
 
 static void
