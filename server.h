@@ -51,6 +51,8 @@ struct cg_server {
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	enum wl_output_transform output_transform;
+
+        float scale;
 };
 
 #endif

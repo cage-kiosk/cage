@@ -193,6 +193,7 @@ usage(FILE *file, const char *cage)
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
 		" -r\t Rotate the output 90 degrees clockwise, specify up to three times\n"
+                " -l scale Set the output scale (e.g. for HiDPI displays)\n"
 		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
 		"\n"
@@ -204,7 +205,7 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
-	while ((c = getopt(argc, argv, "dhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "dhm:rl:sv")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -225,6 +226,12 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 				server->output_transform = WL_OUTPUT_TRANSFORM_NORMAL;
 			}
 			break;
+                case 'l':
+                        server->scale = atof(optarg);
+                        if (server->scale < 0.1) {
+                          server->scale = 1.0;
+                        }
+                        break;
 		case 's':
 			server->allow_vt_switch = true;
 			break;
@@ -271,6 +278,7 @@ main(int argc, char *argv[])
 	pid_t pid = 0;
 	int ret = 0;
 
+        server.scale = 1.0;
 	if (!parse_args(&server, argc, argv)) {
 		return 1;
 	}

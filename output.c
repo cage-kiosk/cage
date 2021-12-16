@@ -187,6 +187,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 		return;
 	}
 
+        wlr_output_set_scale(wlr_output, server->scale);
+
 	output->wlr_output = wlr_output;
 	output->server = server;
 
