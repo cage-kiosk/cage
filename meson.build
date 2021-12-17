@@ -38,9 +38,7 @@ endif
 wlroots        = dependency('wlroots', version: '>= 0.15.0', fallback: ['wlroots', 'wlroots'])
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
-pixman         = dependency('pixman-1')
 xkbcommon      = dependency('xkbcommon')
-math           = cc.find_library('m')
 
 wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
 wayland_scanner = find_program('wayland-scanner')
@@ -135,7 +133,6 @@ cage_headers = [
                  configuration: conf_data),
   'idle_inhibit_v1.h',
   'output.h',
-  'render.h',
   'seat.h',
   'server.h',
   'util.h',
@@ -156,8 +153,6 @@ executable(
     wayland_server,
     wlroots,
     xkbcommon,
-    pixman,
-    math,
   ],
   install: true,
 )
