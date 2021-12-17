@@ -31,6 +31,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
+#include <wlr/types/wlr_viewporter.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
@@ -259,6 +260,7 @@ main(int argc, char *argv[])
 	struct wlr_screencopy_manager_v1 *screencopy_manager = NULL;
 	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
 	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
+	struct wlr_viewporter *viewporter = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xwayland *xwayland = NULL;
@@ -411,6 +413,13 @@ main(int argc, char *argv[])
 	wlr_server_decoration_manager_set_default_mode(
 		server_decoration_manager, server.xdg_decoration ? WLR_SERVER_DECORATION_MANAGER_MODE_SERVER
 								 : WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
+
+	viewporter = wlr_viewporter_create(server.wl_display);
+	if (!viewporter) {
+		wlr_log(WLR_ERROR, "Unable to create the viewporter interface");
+		ret = 1;
+		goto end;
+	}
 
 	export_dmabuf_manager = wlr_export_dmabuf_manager_v1_create(server.wl_display);
 	if (!export_dmabuf_manager) {
