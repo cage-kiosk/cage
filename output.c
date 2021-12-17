@@ -34,7 +34,6 @@
 #include <wlr/util/region.h>
 
 #include "output.h"
-#include "render.h"
 #include "seat.h"
 #include "server.h"
 #include "util.h"
