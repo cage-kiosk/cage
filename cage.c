@@ -28,6 +28,7 @@
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
@@ -261,6 +262,7 @@ main(int argc, char *argv[])
 	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
 	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
 	struct wlr_viewporter *viewporter = NULL;
+	struct wlr_presentation *presentation = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xwayland *xwayland = NULL;
@@ -420,6 +422,14 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+
+	presentation = wlr_presentation_create(server.wl_display, server.backend);
+	if (!presentation) {
+		wlr_log(WLR_ERROR, "Unable to create the presentation interface");
+		ret = 1;
+		goto end;
+	}
+	wlr_scene_set_presentation(server.scene, presentation);
 
 	export_dmabuf_manager = wlr_export_dmabuf_manager_v1_create(server.wl_display);
 	if (!export_dmabuf_manager) {
