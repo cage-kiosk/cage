@@ -1,16 +1,17 @@
 project('cage', 'c',
   version: '0.1.4',
   license: 'MIT',
+  meson_version: '>=0.58.1',
   default_options: [
     'c_std=c11',
-    'warning_level=3',
+    'warning_level=2',
+    'werror=true',
   ],
 )
 
 add_project_arguments(
   [
     '-DWLR_USE_UNSTABLE',
-    '-Wall',
     '-Wundef',
     '-Wno-unused-parameter',
   ],
