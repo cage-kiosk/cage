@@ -342,7 +342,7 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 {
 	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!context) {
-		wlr_log(WLR_ERROR, "Unable to create XBK context");
+		wlr_log(WLR_ERROR, "Unable to create XKB context");
 		return;
 	}
 
