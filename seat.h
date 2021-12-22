@@ -27,11 +27,13 @@ struct cg_seat {
 
 	struct wlr_cursor *cursor;
 	struct wlr_xcursor_manager *xcursor_manager;
+	struct wlr_pointer_constraint_v1 *current_constraint;
 	struct wl_listener cursor_motion;
 	struct wl_listener cursor_motion_absolute;
 	struct wl_listener cursor_button;
 	struct wl_listener cursor_axis;
 	struct wl_listener cursor_frame;
+	struct wl_listener constraint_commit;
 
 	int32_t touch_id;
 	double touch_lx;
@@ -85,9 +87,18 @@ struct cg_drag_icon {
 	struct wl_listener destroy;
 };
 
+struct cg_constraint {
+	struct cg_seat *seat;
+	struct wlr_pointer_constraint_v1 *constraint;
+	struct wl_listener destroy;
+};
+
 struct cg_seat *seat_create(struct cg_server *server, struct wlr_backend *backend);
 void seat_destroy(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);
+
+void seat_create_constraint(struct wl_listener *listener, void *data);
+void seat_constrain_cursor(struct cg_server *server, struct wlr_pointer_constraint_v1 *constraint);
 
 #endif

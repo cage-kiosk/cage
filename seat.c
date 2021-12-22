@@ -18,6 +18,7 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_keyboard_group.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
@@ -252,7 +253,8 @@ handle_key_event(struct wlr_input_device *device, struct cg_seat *seat, void *da
 
 	bool handled = false;
 	uint32_t modifiers = wlr_keyboard_get_modifiers(device->keyboard);
-	if ((modifiers & WLR_MODIFIER_ALT) && event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+	if ((modifiers & WLR_MODIFIER_ALT) && event->state == WL_KEYBOARD_KEY_STATE_PRESSED &&
+	    !seat->current_constraint) {
 		/* If Alt is held down and this button was pressed, we
 		 * attempt to process it as a compositor
 		 * keybinding. */
@@ -571,7 +573,18 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion_absolute);
 	struct wlr_event_pointer_motion_absolute *event = data;
 
-	wlr_cursor_warp_absolute(seat->cursor, event->device, event->x, event->y);
+	double lx, ly;
+	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device, event->x, event->y, &lx, &ly);
+
+	double dx = lx - seat->cursor->x;
+	double dy = ly - seat->cursor->y;
+
+	wlr_relative_pointer_manager_v1_send_relative_motion(seat->server->relative_pointer_manager, seat->seat,
+							     (uint64_t) event->time_msec * 1000, dx, dy, dx, dy);
+
+	if (!seat->current_constraint) {
+		wlr_cursor_move(seat->cursor, event->device, dx, dy);
+	}
 	process_cursor_motion(seat, event->time_msec);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
@@ -580,9 +593,15 @@ static void
 handle_cursor_motion(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion);
+	struct cg_server *server = seat->server;
 	struct wlr_event_pointer_motion *event = data;
 
-	wlr_cursor_move(seat->cursor, event->device, event->delta_x, event->delta_y);
+	wlr_relative_pointer_manager_v1_send_relative_motion(server->relative_pointer_manager, seat->seat,
+							     (uint64_t) event->time_msec * 1000, event->delta_x,
+							     event->delta_y, event->unaccel_dx, event->unaccel_dy);
+	if (!seat->current_constraint) {
+		wlr_cursor_move(seat->cursor, event->device, event->delta_x, event->delta_y);
+	}
 	process_cursor_motion(seat, event->time_msec);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
@@ -786,6 +805,8 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	wl_list_init(&seat->pointers);
 	wl_list_init(&seat->touch);
 
+	wl_list_init(&seat->constraint_commit.link);
+
 	seat->new_input.notify = handle_new_input;
 	wl_signal_add(&backend->events.new_input, &seat->new_input);
 
@@ -867,5 +888,76 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, NULL, 0, NULL);
 	}
 
+	struct wlr_pointer_constraint_v1 *constraint =
+		wlr_pointer_constraints_v1_constraint_for_surface(server->constraints, view->wlr_surface, wlr_seat);
+	seat_constrain_cursor(server, constraint);
+
 	process_cursor_motion(seat, -1);
+}
+
+static void
+handle_constraint_commit(struct wl_listener *listener, void *data)
+{
+}
+
+static void
+destroy_constraint(struct wl_listener *listener, void *data)
+{
+	struct cg_constraint *constraint = wl_container_of(listener, constraint, destroy);
+	struct wlr_pointer_constraint_v1 *wlr_constraint = data;
+	struct cg_seat *seat = constraint->seat;
+
+	wl_list_remove(&constraint->destroy.link);
+	if (seat->current_constraint == wlr_constraint) {
+		if (seat->constraint_commit.link.next != NULL) {
+			wl_list_remove(&seat->constraint_commit.link);
+		}
+		wl_list_init(&seat->constraint_commit.link);
+		seat->current_constraint = NULL;
+	}
+
+	free(constraint);
+}
+
+void
+seat_create_constraint(struct wl_listener *listener, void *data)
+{
+	struct wlr_pointer_constraint_v1 *wlr_constraint = data;
+	struct cg_server *server = wl_container_of(listener, server, new_constraint);
+	struct cg_view *view;
+	struct cg_constraint *constraint = calloc(1, sizeof(struct cg_constraint));
+
+	constraint->constraint = wlr_constraint;
+	constraint->seat = server->seat;
+	constraint->destroy.notify = destroy_constraint;
+	wl_signal_add(&wlr_constraint->events.destroy, &constraint->destroy);
+
+	view = seat_get_focus(server->seat);
+	if (view->wlr_surface == wlr_constraint->surface) {
+		seat_constrain_cursor(server, wlr_constraint);
+	}
+}
+
+void
+seat_constrain_cursor(struct cg_server *server, struct wlr_pointer_constraint_v1 *constraint)
+{
+	struct cg_seat *seat = server->seat;
+	if (seat->current_constraint == constraint) {
+		return;
+	}
+	wl_list_remove(&seat->constraint_commit.link);
+	if (seat->current_constraint) {
+		wlr_pointer_constraint_v1_send_deactivated(seat->current_constraint);
+	}
+
+	seat->current_constraint = constraint;
+
+	if (constraint == NULL) {
+		wl_list_init(&seat->constraint_commit.link);
+		return;
+	}
+
+	wlr_pointer_constraint_v1_send_activated(constraint);
+	seat->constraint_commit.notify = handle_constraint_commit;
+	wl_signal_add(&constraint->surface->events.commit, &seat->constraint_commit);
 }

@@ -7,6 +7,8 @@
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -41,6 +43,10 @@ struct cg_server {
 	 * some outputs may be disabled. */
 	struct wl_list outputs; // cg_output::link
 	struct wl_listener new_output;
+
+	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
+	struct wlr_pointer_constraints_v1 *constraints;
+	struct wl_listener new_constraint;
 
 	struct wl_listener xdg_toplevel_decoration;
 	struct wl_listener new_xdg_shell_surface;

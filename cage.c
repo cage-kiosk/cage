@@ -36,6 +36,8 @@
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
+#include <wlr/types/wlr_pointer_constraints_v1.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -458,6 +460,12 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+
+	server.relative_pointer_manager = wlr_relative_pointer_manager_v1_create(server.wl_display);
+	server.constraints = wlr_pointer_constraints_v1_create(server.wl_display);
+
+	server.new_constraint.notify = seat_create_constraint;
+	wl_signal_add(&server.constraints->events.new_constraint, &server.new_constraint);
 
 #if CAGE_HAS_XWAYLAND
 	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
