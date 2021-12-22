@@ -6,6 +6,8 @@
  * See the LICENSE file accompanying this file.
  */
 
+#include <math.h>
+
 #include "util.h"
 
 int
