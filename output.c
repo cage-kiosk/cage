@@ -27,6 +27,7 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_damage.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -40,6 +41,33 @@
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
+
+static void
+update_output_manager_config(struct cg_server *server)
+{
+	struct wlr_output_configuration_v1 *config = wlr_output_configuration_v1_create();
+
+	struct cg_output *output;
+	wl_list_for_each (output, &server->outputs, link) {
+		struct wlr_output *wlr_output = output->wlr_output;
+		struct wlr_output_configuration_head_v1 *config_head =
+			wlr_output_configuration_head_v1_create(config, wlr_output);
+
+		struct wlr_box *box = wlr_output_layout_get_box(server->output_layout, wlr_output);
+		if (box) {
+			config_head->state.x = box->x;
+			config_head->state.y = box->y;
+		}
+
+		// We mark the output enabled even if it is switched off by DPMS
+		config_head->state.enabled = wlr_output->current_mode != NULL && wlr_output->enabled;
+		config_head->state.mode = wlr_output->current_mode;
+		config_head->state.scale = wlr_output->scale;
+		config_head->state.transform = wlr_output->transform;
+	}
+
+	wlr_output_manager_v1_set_configuration(server->output_manager_v1, config);
+}
 
 static void
 output_enable(struct cg_output *output)
@@ -63,6 +91,8 @@ output_enable(struct cg_output *output)
 		}
 	}
 	assert(output->scene_output != NULL);
+
+	update_output_manager_config(output->server);
 }
 
 static void
@@ -81,6 +111,37 @@ output_disable(struct cg_output *output)
 	wlr_output_enable(wlr_output, false);
 	wlr_output_layout_remove(output->server->output_layout, wlr_output);
 	wlr_output_commit(wlr_output);
+
+	update_output_manager_config(output->server);
+}
+
+static void
+output_apply_config(struct cg_output *output, struct wlr_output_configuration_head_v1 *head)
+{
+	struct wlr_output *wlr_output = output->wlr_output;
+
+	wlr_log(WLR_DEBUG, "Applying configuration for output %s", wlr_output->name);
+
+	if (!head->state.enabled) {
+		output_disable(output);
+		return;
+	}
+
+	if (head->state.mode) {
+		wlr_output_set_mode(wlr_output, head->state.mode);
+	} else {
+		wlr_output_set_custom_mode(wlr_output, head->state.custom_mode.width, head->state.custom_mode.height,
+					   head->state.custom_mode.refresh);
+	}
+
+	wlr_output_layout_add(output->server->output_layout, head->state.output, head->state.x, head->state.y);
+	wlr_output_set_scale(wlr_output, head->state.scale);
+	wlr_output_set_transform(wlr_output, head->state.transform);
+
+	wlr_output_enable(wlr_output, true);
+	wlr_output_commit(wlr_output);
+
+	update_output_manager_config(output->server);
 }
 
 static void
@@ -109,11 +170,13 @@ handle_output_commit(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (event->committed & WLR_OUTPUT_STATE_TRANSFORM) {
+	if (event->committed & (WLR_OUTPUT_STATE_TRANSFORM | WLR_OUTPUT_STATE_SCALE)) {
 		struct cg_view *view;
 		wl_list_for_each (view, &output->server->views, link) {
 			view_position(view);
 		}
+
+		update_output_manager_config(output->server);
 	}
 }
 
@@ -130,6 +193,8 @@ handle_output_mode(struct wl_listener *listener, void *data)
 	wl_list_for_each (view, &output->server->views, link) {
 		view_position(view);
 	}
+
+	update_output_manager_config(output->server);
 }
 
 static void
@@ -260,4 +325,63 @@ output_set_window_title(struct cg_output *output, const char *title)
 		wlr_x11_output_set_title(wlr_output, title);
 #endif
 	}
+}
+
+static bool
+output_config_test(struct cg_server *server, struct wlr_output_configuration_v1 *config)
+{
+	/* TODO */
+	return true;
+}
+
+static bool
+output_config_apply(struct cg_server *server, struct wlr_output_configuration_v1 *config)
+{
+	if (!output_config_test(server, config)) {
+		return false;
+	}
+
+	struct wlr_output_configuration_head_v1 *head;
+	wl_list_for_each (head, &config->heads, link) {
+		struct cg_output *output;
+		wl_list_for_each (output, &server->outputs, link) {
+			if (strcmp(head->state.output->name, output->wlr_output->name) == 0) {
+				wlr_log(WLR_INFO, "Applying configuration for output %s", output->wlr_output->name);
+				output_apply_config(output, head);
+				break;
+			}
+		}
+	}
+
+	return true;
+}
+
+void
+handle_output_manager_apply(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, output_manager_apply);
+	struct wlr_output_configuration_v1 *config = data;
+
+	if (output_config_apply(server, config)) {
+		wlr_output_configuration_v1_send_succeeded(config);
+	} else {
+		wlr_output_configuration_v1_send_failed(config);
+	}
+
+	wlr_output_configuration_v1_destroy(config);
+}
+
+void
+handle_output_manager_test(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, output_manager_test);
+	struct wlr_output_configuration_v1 *config = data;
+
+	if (output_config_test(server, config)) {
+		wlr_output_configuration_v1_send_succeeded(config);
+	} else {
+		wlr_output_configuration_v1_send_failed(config);
+	}
+
+	wlr_output_configuration_v1_destroy(config);
 }

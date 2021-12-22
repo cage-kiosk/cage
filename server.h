@@ -47,6 +47,9 @@ struct cg_server {
 #if CAGE_HAS_XWAYLAND
 	struct wl_listener new_xwayland_surface;
 #endif
+	struct wlr_output_manager_v1 *output_manager_v1;
+	struct wl_listener output_manager_apply;
+	struct wl_listener output_manager_test;
 
 	bool xdg_decoration;
 	bool allow_vt_switch;
