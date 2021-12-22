@@ -39,7 +39,7 @@ wlroots        = dependency('wlroots', version: '>= 0.15.0', fallback: ['wlroots
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
-math           = dependency('m')
+math           = cc.find_library('m')
 
 wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
 wayland_scanner = find_program('wayland-scanner')
