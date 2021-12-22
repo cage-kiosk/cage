@@ -201,10 +201,26 @@ handle_new_output(struct wl_listener *listener, void *data)
 	output->frame.notify = handle_output_frame;
 	wl_signal_add(&wlr_output->events.frame, &output->frame);
 
-	struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
-	if (preferred_mode) {
-		wlr_output_set_mode(wlr_output, preferred_mode);
+	if (!wl_list_empty(&wlr_output->modes)) {
+		struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
+		if (preferred_mode) {
+			wlr_output_set_mode(wlr_output, preferred_mode);
+		}
+		if (!wlr_output_test(wlr_output)) {
+			struct wlr_output_mode *mode;
+			wl_list_for_each (mode, &wlr_output->modes, link) {
+				if (mode == preferred_mode) {
+					continue;
+				}
+
+				wlr_output_set_mode(wlr_output, mode);
+				if (wlr_output_test(wlr_output)) {
+					break;
+				}
+			}
+		}
 	}
+
 	wlr_output_set_transform(wlr_output, output->server->output_transform);
 
 	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
