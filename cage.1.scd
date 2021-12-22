@@ -27,6 +27,11 @@ activities outside the scope of the running application are prevented.
 	*last* Cage uses only the last connected monitor.
 	*extend* Cage extends the display across all connected monitors.
 
+*-e* <mode>
+	Set the monitor addition mode, if display is extended across all connected monitors.
+	*auto* Cage places monitors automatically.
+	*right* Cage places each newly-connected monitor on the right of the rightmost connected monitor.
+
 *-r*
 	Rotate the output 90 degrees clockwise. This can be specified up to three
 	times, each resulting in an additional 90 degrees clockwise rotation.

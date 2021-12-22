@@ -21,6 +21,11 @@ enum cg_multi_output_mode {
 	CAGE_MULTI_OUTPUT_MODE_LAST,
 };
 
+enum cg_output_extend_mode {
+	CAGE_OUTPUT_EXTEND_MODE_AUTO,
+	CAGE_OUTPUT_EXTEND_MODE_RIGHT,
+};
+
 struct cg_server {
 	struct wl_display *wl_display;
 	struct wl_list views;
@@ -35,6 +40,7 @@ struct cg_server {
 	struct wl_list inhibitors;
 
 	enum cg_multi_output_mode output_mode;
+	enum cg_output_extend_mode output_extend_mode;
 	struct wlr_output_layout *output_layout;
 	struct wlr_scene *scene;
 	/* Includes disabled outputs; depending on the output_mode
