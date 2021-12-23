@@ -115,7 +115,7 @@ handle_output_commit(struct wl_listener *listener, void *data)
 	if (event->committed & WLR_OUTPUT_STATE_TRANSFORM) {
 		struct cg_view *view;
 		wl_list_for_each (view, &output->server->views, link) {
-			view_position(view);
+			view_position(view, &output->usable_area);
 		}
 	}
 }
@@ -131,7 +131,7 @@ handle_output_mode(struct wl_listener *listener, void *data)
 
 	struct cg_view *view;
 	wl_list_for_each (view, &output->server->views, link) {
-		view_position(view);
+		view_position(view, &output->usable_area);
 	}
 }
 
@@ -159,7 +159,7 @@ output_destroy(struct cg_output *output)
 
 			struct cg_view *view;
 			wl_list_for_each (view, &server->views, link) {
-				view_position(view);
+				view_position(view, &output->usable_area);
 			}
 		}
 	}
@@ -245,7 +245,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	struct cg_view *view;
 	wl_list_for_each (view, &output->server->views, link) {
-		view_position(view);
+		view_position(view, &output->usable_area);
 	}
 }
 

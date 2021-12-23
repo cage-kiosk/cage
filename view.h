@@ -48,7 +48,7 @@ char *view_get_title(struct cg_view *view);
 bool view_is_primary(struct cg_view *view);
 bool view_is_transient_for(struct cg_view *child, struct cg_view *parent);
 void view_activate(struct cg_view *view, bool activate);
-void view_position(struct cg_view *view);
+void view_position(struct cg_view *view, struct wlr_box *geometry);
 void view_unmap(struct cg_view *view);
 void view_map(struct cg_view *view, struct wlr_surface *surface);
 void view_destroy(struct cg_view *view);
