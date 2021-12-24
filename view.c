@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2020 Jente Hidskes
+ * Copyright (C) 2018-2021 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
@@ -103,20 +103,22 @@ view_unmap(struct cg_view *view)
 
 	wlr_scene_node_destroy(view->scene_node);
 
+	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
 }
 
 void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
-	view->wlr_surface = surface;
-
 	view->scene_node = wlr_scene_subsurface_tree_create(&view->server->scene->node, surface);
 	if (!view->scene_node) {
 		wl_resource_post_no_memory(surface->resource);
 		return;
 	}
 	view->scene_node->data = view;
+
+	view->wlr_surface = surface;
+	surface->data = view;
 
 #if CAGE_HAS_XWAYLAND
 	/* We shouldn't position override-redirect windows. They set
@@ -159,13 +161,11 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 }
 
 struct cg_view *
-view_from_wlr_surface(struct cg_server *server, struct wlr_surface *surface)
+view_from_wlr_surface(struct wlr_surface *surface)
 {
-	struct cg_view *view;
-	wl_list_for_each (view, &server->views, link) {
-		if (view->wlr_surface == surface) {
-			return view;
-		}
+	if (!surface) {
+		return NULL;
 	}
-	return NULL;
+
+	return surface->data;
 }
