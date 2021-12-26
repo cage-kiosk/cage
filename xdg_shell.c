@@ -166,8 +166,14 @@ handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
 	struct wlr_xdg_toplevel_set_fullscreen_event *event = data;
+
+	/**
+	 * Certain clients do not like figuring out their own window geometry if they
+	 * display in fullscreen mode, so we set it here.
+	 */
 	struct wlr_box *layout_box = wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL);
 	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_surface, layout_box->width, layout_box->height);
+
 	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_surface, event->fullscreen);
 }
 
