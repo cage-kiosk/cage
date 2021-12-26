@@ -112,9 +112,12 @@ static bool
 is_primary(struct cg_view *view)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_xdg_surface *parent = xdg_shell_view->xdg_surface->toplevel->parent;
-	/* FIXME: role is 0? */
-	return parent == NULL; /*&& role == WLR_XDG_SURFACE_ROLE_TOPLEVEL */
+	struct wlr_xdg_surface *xdg_surface = xdg_shell_view->xdg_surface;
+
+	struct wlr_xdg_surface *parent = xdg_surface->toplevel->parent;
+	enum wlr_xdg_surface_role role = xdg_surface->role;
+
+	return parent == NULL && role == WLR_XDG_SURFACE_ROLE_TOPLEVEL;
 }
 
 static bool
