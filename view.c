@@ -8,6 +8,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -163,9 +164,6 @@ view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type
 struct cg_view *
 view_from_wlr_surface(struct wlr_surface *surface)
 {
-	if (!surface) {
-		return NULL;
-	}
-
+	assert(surface);
 	return surface->data;
 }
