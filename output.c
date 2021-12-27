@@ -36,7 +36,6 @@
 #include "output.h"
 #include "seat.h"
 #include "server.h"
-#include "util.h"
 #include "view.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
