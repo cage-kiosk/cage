@@ -9,10 +9,13 @@
 #include "config.h"
 
 #include <assert.h>
+#include <errno.h>
+#include <libinput.h>
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
+#include <wlr/backend/libinput.h>
 #include <wlr/backend/multi.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
@@ -186,6 +189,283 @@ handle_pointer_destroy(struct wl_listener *listener, void *data)
 	update_capabilities(seat);
 }
 
+static bool
+is_enabled(const char *val, bool def)
+{
+	return ((def && (!val || !val[0] || (val[0] != '0'))) || (!def && (val && val[0] && (val[0] != '0'))));
+}
+
+static void
+set_click_method(struct wlr_input_device *device)
+{
+	const char *val;
+	long l;
+	char *end = NULL;
+	enum libinput_config_click_method method = LIBINPUT_CONFIG_CLICK_METHOD_NONE;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_CLICK_METHOD");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	errno = 0;
+	l = strtol(val, &end, 10);
+	if (errno || (end && *end) ||
+	    ((method != LIBINPUT_CONFIG_CLICK_METHOD_NONE) && (method != LIBINPUT_CONFIG_CLICK_METHOD_BUTTON_AREAS) &&
+	     (method != LIBINPUT_CONFIG_CLICK_METHOD_CLICKFINGER))) {
+		return;
+	}
+	method = (enum libinput_config_click_method) l;
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	status = libinput_device_config_click_set_method(libinput_device, method);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set click method for '%s': %s", libinput_device_get_name(libinput_device),
+			libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_tap(struct wlr_input_device *device)
+{
+	const char *val;
+	enum libinput_config_tap_state state = LIBINPUT_CONFIG_TAP_ENABLED;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_TAP");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	if (!is_enabled(val, true)) {
+		state = LIBINPUT_CONFIG_TAP_DISABLED;
+	}
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	status = libinput_device_config_tap_set_enabled(libinput_device, state);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set tap-to-click state for '%s': %s",
+			libinput_device_get_name(libinput_device), libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_tap_and_drag(struct wlr_input_device *device)
+{
+	const char *val;
+	enum libinput_config_drag_state state = LIBINPUT_CONFIG_DRAG_DISABLED;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_DRAG");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	if (is_enabled(val, true)) {
+		state = LIBINPUT_CONFIG_DRAG_ENABLED;
+	}
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	status = libinput_device_config_tap_set_drag_enabled(libinput_device, state);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set tap-and-drag state for '%s': %s",
+			libinput_device_get_name(libinput_device), libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_natural_scroll(struct wlr_input_device *device)
+{
+	const char *val;
+	int enable = 0;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_NATURAL_SCROLL");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	if (is_enabled(val, false)) {
+		enable = 1;
+	}
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	if (!libinput_device_config_scroll_has_natural_scroll(libinput_device)) {
+		return;
+	}
+
+	status = libinput_device_config_scroll_set_natural_scroll_enabled(libinput_device, enable);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set natural scroll state for '%s': %s",
+			libinput_device_get_name(libinput_device), libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_acceleration(struct wlr_input_device *device)
+{
+	const char *val;
+	double accel = 0;
+	char *end = NULL;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_ACCELERATION");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	errno = 0;
+	accel = strtod(val, &end);
+	if (errno || (end && *end) || (accel < -1) || (accel > 1)) {
+		return;
+	}
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	if (!libinput_device_config_accel_is_available(libinput_device)) {
+		return;
+	}
+
+	status = libinput_device_config_accel_set_speed(libinput_device, accel);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set acceleration for '%s': %s", libinput_device_get_name(libinput_device),
+			libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_scroll_method(struct wlr_input_device *device)
+{
+	const char *val;
+	enum libinput_config_scroll_method method = LIBINPUT_CONFIG_SCROLL_2FG;
+	long l;
+	char *end = NULL;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_SCROLL_METHOD");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	errno = 0;
+	l = strtol(val, &end, 10);
+	if (errno || (end && *end) ||
+	    ((method != LIBINPUT_CONFIG_SCROLL_NO_SCROLL) && (method != LIBINPUT_CONFIG_SCROLL_2FG) &&
+	     (method != LIBINPUT_CONFIG_SCROLL_EDGE) && (method != LIBINPUT_CONFIG_SCROLL_ON_BUTTON_DOWN))) {
+		return;
+	}
+	method = (enum libinput_config_scroll_method) l;
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	status = libinput_device_config_scroll_set_method(libinput_device, method);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set scroll method for '%s': %s",
+			libinput_device_get_name(libinput_device), libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_disable_while_typing(struct wlr_input_device *device)
+{
+	const char *val;
+	enum libinput_config_dwt_state state = LIBINPUT_CONFIG_DWT_DISABLED;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_DISABLE_WHILE_TYPING");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	if (is_enabled(val, false)) {
+		state = LIBINPUT_CONFIG_DWT_ENABLED;
+	}
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	if (!libinput_device_config_dwt_is_available(libinput_device)) {
+		return;
+	}
+
+	status = libinput_device_config_dwt_set_enabled(libinput_device, state);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set disable-while-typing state for '%s': %s",
+			libinput_device_get_name(libinput_device), libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_middle_emulation(struct wlr_input_device *device)
+{
+	const char *val;
+	enum libinput_config_middle_emulation_state state = LIBINPUT_CONFIG_MIDDLE_EMULATION_DISABLED;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_MIDDLE_EMULATION");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	if (is_enabled(val, false)) {
+		state = LIBINPUT_CONFIG_MIDDLE_EMULATION_ENABLED;
+	}
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	if (!libinput_device_config_middle_emulation_is_available(libinput_device)) {
+		return;
+	}
+
+	status = libinput_device_config_middle_emulation_set_enabled(libinput_device, state);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set middle emulation state for '%s': %s",
+			libinput_device_get_name(libinput_device), libinput_config_status_to_str(status));
+	}
+}
+
+static void
+set_left_handed(struct wlr_input_device *device)
+{
+	const char *val;
+	int state = 0;
+	struct libinput_device *libinput_device;
+	enum libinput_config_status status;
+
+	val = getenv("LIBINPUT_DEFAULT_LEFT_HANDED");
+	if (!val || !val[0]) {
+		return;
+	}
+
+	if (is_enabled(val, false)) {
+		state = 1;
+	}
+
+	libinput_device = wlr_libinput_get_device_handle(device);
+
+	if (!libinput_device_config_left_handed_is_available(libinput_device)) {
+		return;
+	}
+
+	status = libinput_device_config_left_handed_set(libinput_device, state);
+	if (status != LIBINPUT_CONFIG_STATUS_SUCCESS) {
+		wlr_log(WLR_ERROR, "Failed to set left-handed mode state for '%s': %s",
+			libinput_device_get_name(libinput_device), libinput_config_status_to_str(status));
+	}
+}
+
 static void
 handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 {
@@ -194,6 +474,16 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 		wlr_log(WLR_ERROR, "Cannot allocate pointer");
 		return;
 	}
+
+	set_click_method(device);
+	set_tap(device);
+	set_tap_and_drag(device);
+	set_natural_scroll(device);
+	set_acceleration(device);
+	set_scroll_method(device);
+	set_disable_while_typing(device);
+	set_middle_emulation(device);
+	set_left_handed(device);
 
 	pointer->seat = seat;
 	pointer->device = device;
