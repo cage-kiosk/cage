@@ -223,8 +223,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 		}
 	}
 
-	wlr_output_set_transform(wlr_output, output->server->output_transform);
-
 	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
 		struct cg_output *next = wl_container_of(output->link.next, next, link);
 		if (next) {

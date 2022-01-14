@@ -192,7 +192,6 @@ usage(FILE *file, const char *cage)
 		" -h\t Display this help message\n"
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
-		" -r\t Rotate the output 90 degrees clockwise, specify up to three times\n"
 		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
 		"\n"
@@ -204,7 +203,7 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
-	while ((c = getopt(argc, argv, "dhm:rsv")) != -1) {
+	while ((c = getopt(argc, argv, "dhm:sv")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -217,12 +216,6 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 				server->output_mode = CAGE_MULTI_OUTPUT_MODE_LAST;
 			} else if (strcmp(optarg, "extend") == 0) {
 				server->output_mode = CAGE_MULTI_OUTPUT_MODE_EXTEND;
-			}
-			break;
-		case 'r':
-			server->output_transform++;
-			if (server->output_transform > WL_OUTPUT_TRANSFORM_270) {
-				server->output_transform = WL_OUTPUT_TRANSFORM_NORMAL;
 			}
 			break;
 		case 's':
