@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
+#include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_viewporter.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
@@ -259,6 +260,7 @@ main(int argc, char *argv[])
 	struct wl_event_source *sigterm_source = NULL;
 	struct wl_event_source *sigchld_source = NULL;
 	struct wlr_compositor *compositor = NULL;
+	struct wlr_subcompositor *subcompositor = NULL;
 	struct wlr_data_device_manager *data_device_manager = NULL;
 	struct wlr_server_decoration_manager *server_decoration_manager = NULL;
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
@@ -352,6 +354,13 @@ main(int argc, char *argv[])
 	compositor = wlr_compositor_create(server.wl_display, server.renderer);
 	if (!compositor) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots compositor");
+		ret = 1;
+		goto end;
+	}
+
+	subcompositor = wlr_subcompositor_create(server.wl_display);
+	if (!subcompositor) {
+		wlr_log(WLR_ERROR, "Unable to create the wlroots subcompositor");
 		ret = 1;
 		goto end;
 	}
