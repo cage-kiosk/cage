@@ -55,13 +55,7 @@ output_enable(struct cg_output *output)
 	wlr_output_enable(wlr_output, true);
 	wlr_output_commit(wlr_output);
 
-	struct wlr_scene_output *scene_output;
-	wl_list_for_each (scene_output, &output->server->scene->outputs, link) {
-		if (scene_output->output == wlr_output) {
-			output->scene_output = scene_output;
-			break;
-		}
-	}
+	output->scene_output = wlr_scene_get_scene_output(output->server->scene, wlr_output);
 	assert(output->scene_output != NULL);
 }
 
