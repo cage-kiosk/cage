@@ -41,7 +41,7 @@ wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
 
-wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
+wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
 wayland_scanner = find_program('wayland-scanner')
 wayland_scanner_server = generator(
   wayland_scanner,
@@ -77,8 +77,8 @@ endif
 version = '@0@'.format(meson.project_version())
 git = find_program('git', native: true, required: false)
 if git.found()
-  git_commit = run_command([git, 'rev-parse', '--short', 'HEAD'])
-  git_branch = run_command([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
+  git_commit = run_command([git, 'rev-parse', '--short', 'HEAD'], check: true)
+  git_branch = run_command([git, 'rev-parse', '--abbrev-ref', 'HEAD'], check: true)
   if git_commit.returncode() == 0 and git_branch.returncode() == 0
     version = '@0@-@1@ (branch \'@2@\')'.format(
       meson.project_version(),
@@ -94,7 +94,7 @@ conf_data.set_quoted('CAGE_VERSION', version)
 
 scdoc = dependency('scdoc', version: '>=1.9.2', native: true, required: get_option('man-pages'))
 if scdoc.found()
-  scdoc_prog = find_program(scdoc.get_pkgconfig_variable('scdoc'), native: true)
+  scdoc_prog = find_program(scdoc.get_variable('scdoc'), native: true)
   sh = find_program('sh', native: true)
   mandir = get_option('mandir')
   man_files = [
@@ -110,7 +110,7 @@ if scdoc.found()
       input: filename,
       output: output,
       command: [
-        sh, '-c', '@0@ < @INPUT@ > @1@'.format(scdoc_prog.path(), output)
+        sh, '-c', '@0@ < @INPUT@ > @1@'.format(scdoc_prog.full_path(), output)
       ],
       install: true,
       install_dir: '@0@/man@1@'.format(mandir, section)
