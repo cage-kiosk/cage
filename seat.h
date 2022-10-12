@@ -60,7 +60,7 @@ struct cg_keyboard_group {
 struct cg_pointer {
 	struct wl_list link; // seat::pointers
 	struct cg_seat *seat;
-	struct wlr_input_device *device;
+	struct wlr_pointer *pointer;
 
 	struct wl_listener destroy;
 };
@@ -68,7 +68,7 @@ struct cg_pointer {
 struct cg_touch {
 	struct wl_list link; // seat::touch
 	struct cg_seat *seat;
-	struct wlr_input_device *device;
+	struct wlr_touch *touch;
 
 	struct wl_listener destroy;
 };
