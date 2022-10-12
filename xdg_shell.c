@@ -94,7 +94,7 @@ static char *
 get_title(struct cg_view *view)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	return xdg_shell_view->xdg_surface->toplevel->title;
+	return xdg_shell_view->xdg_toplevel->title;
 }
 
 static void
@@ -103,7 +103,7 @@ get_geometry(struct cg_view *view, int *width_out, int *height_out)
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
 	struct wlr_box geom;
 
-	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_surface, &geom);
+	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, &geom);
 	*width_out = geom.width;
 	*height_out = geom.height;
 }
@@ -112,12 +112,9 @@ static bool
 is_primary(struct cg_view *view)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_xdg_surface *xdg_surface = xdg_shell_view->xdg_surface;
+	struct wlr_xdg_toplevel *parent = xdg_shell_view->xdg_toplevel->parent;
 
-	struct wlr_xdg_surface *parent = xdg_surface->toplevel->parent;
-	enum wlr_xdg_surface_role role = xdg_surface->role;
-
-	return parent == NULL && role == WLR_XDG_SURFACE_ROLE_TOPLEVEL;
+	return parent == NULL;
 }
 
 static bool
@@ -127,14 +124,13 @@ is_transient_for(struct cg_view *child, struct cg_view *parent)
 		return false;
 	}
 	struct cg_xdg_shell_view *_child = xdg_shell_view_from_view(child);
-	struct wlr_xdg_surface *xdg_surface = _child->xdg_surface;
+	struct wlr_xdg_toplevel *xdg_toplevel = _child->xdg_toplevel;
 	struct cg_xdg_shell_view *_parent = xdg_shell_view_from_view(parent);
-	struct wlr_xdg_surface *parent_xdg_surface = _parent->xdg_surface;
-	while (xdg_surface) {
-		if (xdg_surface->toplevel->parent == parent_xdg_surface) {
+	while (xdg_toplevel) {
+		if (xdg_toplevel->parent == _parent->xdg_toplevel) {
 			return true;
 		}
-		xdg_surface = xdg_surface->toplevel->parent;
+		xdg_toplevel = xdg_toplevel->parent;
 	}
 	return false;
 }
@@ -143,15 +139,15 @@ static void
 activate(struct cg_view *view, bool activate)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	wlr_xdg_toplevel_set_activated(xdg_shell_view->xdg_surface, activate);
+	wlr_xdg_toplevel_set_activated(xdg_shell_view->xdg_toplevel, activate);
 }
 
 static void
 maximize(struct cg_view *view, int output_width, int output_height)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_surface, output_width, output_height);
-	wlr_xdg_toplevel_set_maximized(xdg_shell_view->xdg_surface, true);
+	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, output_width, output_height);
+	wlr_xdg_toplevel_set_maximized(xdg_shell_view->xdg_toplevel, true);
 }
 
 static void
@@ -172,9 +168,9 @@ handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *
 	 * display in fullscreen mode, so we set it here.
 	 */
 	struct wlr_box *layout_box = wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL);
-	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_surface, layout_box->width, layout_box->height);
+	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box->width, layout_box->height);
 
-	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_surface, event->fullscreen);
+	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, event->fullscreen);
 }
 
 static void
@@ -192,7 +188,7 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
 	struct cg_view *view = &xdg_shell_view->view;
 
-	view_map(view, xdg_shell_view->xdg_surface->surface);
+	view_map(view, xdg_shell_view->xdg_toplevel->base->surface);
 }
 
 static void
@@ -205,7 +201,7 @@ handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&xdg_shell_view->unmap.link);
 	wl_list_remove(&xdg_shell_view->destroy.link);
 	wl_list_remove(&xdg_shell_view->request_fullscreen.link);
-	xdg_shell_view->xdg_surface = NULL;
+	xdg_shell_view->xdg_toplevel = NULL;
 
 	view_destroy(view);
 }
@@ -235,7 +231,7 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 		}
 
 		view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
-		xdg_shell_view->xdg_surface = xdg_surface;
+		xdg_shell_view->xdg_toplevel = xdg_surface->toplevel;
 
 		xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
 		wl_signal_add(&xdg_surface->events.map, &xdg_shell_view->map);

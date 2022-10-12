@@ -9,7 +9,7 @@
 
 struct cg_xdg_shell_view {
 	struct cg_view view;
-	struct wlr_xdg_surface *xdg_surface;
+	struct wlr_xdg_toplevel *xdg_toplevel;
 
 	struct wl_listener destroy;
 	struct wl_listener unmap;
