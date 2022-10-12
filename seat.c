@@ -118,16 +118,16 @@ update_capabilities(struct cg_seat *seat)
 }
 
 static void
-map_input_device_to_output(struct cg_seat *seat, struct wlr_input_device *device)
+map_input_device_to_output(struct cg_seat *seat, struct wlr_input_device *device, const char *output_name)
 {
-	if (!device->output_name) {
+	if (!output_name) {
 		wlr_log(WLR_INFO, "Input device %s cannot be mapped to an output device\n", device->name);
 		return;
 	}
 
 	struct cg_output *output;
 	wl_list_for_each (output, &seat->server->outputs, link) {
-		if (strcmp(device->output_name, output->wlr_output->name) == 0) {
+		if (strcmp(output_name, output->wlr_output->name) == 0) {
 			wlr_log(WLR_INFO, "Mapping input device %s to output device %s\n", device->name,
 				output->wlr_output->name);
 			wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
@@ -145,7 +145,7 @@ handle_touch_destroy(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = touch->seat;
 
 	wl_list_remove(&touch->link);
-	wlr_cursor_detach_input_device(seat->cursor, touch->device);
+	wlr_cursor_detach_input_device(seat->cursor, &touch->touch->base);
 	wl_list_remove(&touch->destroy.link);
 	free(touch);
 
@@ -153,7 +153,7 @@ handle_touch_destroy(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_new_touch(struct cg_seat *seat, struct wlr_input_device *device)
+handle_new_touch(struct cg_seat *seat, struct wlr_touch *wlr_touch)
 {
 	struct cg_touch *touch = calloc(1, sizeof(struct cg_touch));
 	if (!touch) {
@@ -162,14 +162,14 @@ handle_new_touch(struct cg_seat *seat, struct wlr_input_device *device)
 	}
 
 	touch->seat = seat;
-	touch->device = device;
-	wlr_cursor_attach_input_device(seat->cursor, device);
+	touch->touch = wlr_touch;
+	wlr_cursor_attach_input_device(seat->cursor, &wlr_touch->base);
 
 	wl_list_insert(&seat->touch, &touch->link);
 	touch->destroy.notify = handle_touch_destroy;
-	wl_signal_add(&touch->device->events.destroy, &touch->destroy);
+	wl_signal_add(&wlr_touch->base.events.destroy, &touch->destroy);
 
-	map_input_device_to_output(seat, device);
+	map_input_device_to_output(seat, &wlr_touch->base, wlr_touch->output_name);
 }
 
 static void
@@ -179,7 +179,7 @@ handle_pointer_destroy(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = pointer->seat;
 
 	wl_list_remove(&pointer->link);
-	wlr_cursor_detach_input_device(seat->cursor, pointer->device);
+	wlr_cursor_detach_input_device(seat->cursor, &pointer->pointer->base);
 	wl_list_remove(&pointer->destroy.link);
 	free(pointer);
 
@@ -187,7 +187,7 @@ handle_pointer_destroy(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
+handle_new_pointer(struct cg_seat *seat, struct wlr_pointer *wlr_pointer)
 {
 	struct cg_pointer *pointer = calloc(1, sizeof(struct cg_pointer));
 	if (!pointer) {
@@ -196,21 +196,21 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_input_device *device)
 	}
 
 	pointer->seat = seat;
-	pointer->device = device;
-	wlr_cursor_attach_input_device(seat->cursor, device);
+	pointer->pointer = wlr_pointer;
+	wlr_cursor_attach_input_device(seat->cursor, &wlr_pointer->base);
 
 	wl_list_insert(&seat->pointers, &pointer->link);
 	pointer->destroy.notify = handle_pointer_destroy;
-	wl_signal_add(&device->events.destroy, &pointer->destroy);
+	wl_signal_add(&wlr_pointer->base.events.destroy, &pointer->destroy);
 
-	map_input_device_to_output(seat, device);
+	map_input_device_to_output(seat, &wlr_pointer->base, wlr_pointer->output_name);
 }
 
 static void
-handle_modifier_event(struct wlr_input_device *device, struct cg_seat *seat)
+handle_modifier_event(struct wlr_keyboard *keyboard, struct cg_seat *seat)
 {
-	wlr_seat_set_keyboard(seat->seat, device);
-	wlr_seat_keyboard_notify_modifiers(seat->seat, &device->keyboard->modifiers);
+	wlr_seat_set_keyboard(seat->seat, keyboard);
+	wlr_seat_keyboard_notify_modifiers(seat->seat, &keyboard->modifiers);
 
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
@@ -240,18 +240,18 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 }
 
 static void
-handle_key_event(struct wlr_input_device *device, struct cg_seat *seat, void *data)
+handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data)
 {
-	struct wlr_event_keyboard_key *event = data;
+	struct wlr_keyboard_key_event *event = data;
 
 	/* Translate from libinput keycode to an xkbcommon keycode. */
 	xkb_keycode_t keycode = event->keycode + 8;
 
 	const xkb_keysym_t *syms;
-	int nsyms = xkb_state_key_get_syms(device->keyboard->xkb_state, keycode, &syms);
+	int nsyms = xkb_state_key_get_syms(keyboard->xkb_state, keycode, &syms);
 
 	bool handled = false;
-	uint32_t modifiers = wlr_keyboard_get_modifiers(device->keyboard);
+	uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard);
 	if ((modifiers & WLR_MODIFIER_ALT) && event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 		/* If Alt is held down and this button was pressed, we
 		 * attempt to process it as a compositor
@@ -263,7 +263,7 @@ handle_key_event(struct wlr_input_device *device, struct cg_seat *seat, void *da
 
 	if (!handled) {
 		/* Otherwise, we pass it along to the client. */
-		wlr_seat_set_keyboard(seat->seat, device);
+		wlr_seat_set_keyboard(seat->seat, keyboard);
 		wlr_seat_keyboard_notify_key(seat->seat, event->time_msec, event->keycode, event->state);
 	}
 
@@ -274,25 +274,23 @@ static void
 handle_keyboard_group_key(struct wl_listener *listener, void *data)
 {
 	struct cg_keyboard_group *cg_group = wl_container_of(listener, cg_group, key);
-	handle_key_event(cg_group->wlr_group->input_device, cg_group->seat, data);
+	handle_key_event(&cg_group->wlr_group->keyboard, cg_group->seat, data);
 }
 
 static void
 handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
 {
 	struct cg_keyboard_group *group = wl_container_of(listener, group, modifiers);
-	handle_modifier_event(group->wlr_group->input_device, group->seat);
+	handle_modifier_event(&group->wlr_group->keyboard, group->seat);
 }
 
 static void
-cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
+cg_keyboard_group_add(struct wlr_keyboard *keyboard, struct cg_seat *seat)
 {
-	struct wlr_keyboard *wlr_keyboard = device->keyboard;
-
 	struct cg_keyboard_group *group;
 	wl_list_for_each (group, &seat->keyboard_groups, link) {
 		struct wlr_keyboard_group *wlr_group = group->wlr_group;
-		if (wlr_keyboard_group_add_keyboard(wlr_group, wlr_keyboard)) {
+		if (wlr_keyboard_group_add_keyboard(wlr_group, keyboard)) {
 			wlr_log(WLR_DEBUG, "Added new keyboard to existing group");
 			return;
 		}
@@ -313,14 +311,14 @@ cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat)
 	}
 
 	cg_group->wlr_group->data = cg_group;
-	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard, device->keyboard->keymap);
+	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard, keyboard->keymap);
 
-	wlr_keyboard_set_repeat_info(&cg_group->wlr_group->keyboard, wlr_keyboard->repeat_info.rate,
-				     wlr_keyboard->repeat_info.delay);
+	wlr_keyboard_set_repeat_info(&cg_group->wlr_group->keyboard, keyboard->repeat_info.rate,
+				     keyboard->repeat_info.delay);
 
 	wlr_log(WLR_DEBUG, "Created keyboard group");
 
-	wlr_keyboard_group_add_keyboard(cg_group->wlr_group, wlr_keyboard);
+	wlr_keyboard_group_add_keyboard(cg_group->wlr_group, keyboard);
 	wl_list_insert(&seat->keyboard_groups, &cg_group->link);
 
 	wl_signal_add(&cg_group->wlr_group->keyboard.events.key, &cg_group->key);
@@ -338,7 +336,7 @@ cleanup:
 }
 
 static void
-handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
+handle_new_keyboard(struct cg_seat *seat, struct wlr_keyboard *keyboard)
 {
 	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!context) {
@@ -353,15 +351,15 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_input_device *device)
 		return;
 	}
 
-	wlr_keyboard_set_keymap(device->keyboard, keymap);
+	wlr_keyboard_set_keymap(keyboard, keymap);
 
 	xkb_keymap_unref(keymap);
 	xkb_context_unref(context);
-	wlr_keyboard_set_repeat_info(device->keyboard, 25, 600);
+	wlr_keyboard_set_repeat_info(keyboard, 25, 600);
 
-	cg_keyboard_group_add(device, seat);
+	cg_keyboard_group_add(keyboard, seat);
 
-	wlr_seat_set_keyboard(seat->seat, device);
+	wlr_seat_set_keyboard(seat->seat, keyboard);
 }
 
 static void
@@ -372,13 +370,13 @@ handle_new_input(struct wl_listener *listener, void *data)
 
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
-		handle_new_keyboard(seat, device);
+		handle_new_keyboard(seat, wlr_keyboard_from_input_device(device));
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
-		handle_new_pointer(seat, device);
+		handle_new_pointer(seat, wlr_pointer_from_input_device(device));
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
-		handle_new_touch(seat, device);
+		handle_new_touch(seat, wlr_touch_from_input_device(device));
 		break;
 	case WLR_INPUT_DEVICE_SWITCH:
 		wlr_log(WLR_DEBUG, "Switch input is not implemented");
@@ -433,10 +431,10 @@ static void
 handle_touch_down(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, touch_down);
-	struct wlr_event_touch_down *event = data;
+	struct wlr_touch_down_event *event = data;
 
 	double lx, ly;
-	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device, event->x, event->y, &lx, &ly);
+	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->touch->base, event->x, event->y, &lx, &ly);
 
 	double sx, sy;
 	struct wlr_surface *surface;
@@ -451,7 +449,7 @@ handle_touch_down(struct wl_listener *listener, void *data)
 		seat->touch_id = event->touch_id;
 		seat->touch_lx = lx;
 		seat->touch_ly = ly;
-		press_cursor_button(seat, event->device, event->time_msec, BTN_LEFT, WLR_BUTTON_PRESSED, lx, ly);
+		press_cursor_button(seat, &event->touch->base, event->time_msec, BTN_LEFT, WLR_BUTTON_PRESSED, lx, ly);
 	}
 
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
@@ -461,14 +459,14 @@ static void
 handle_touch_up(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, touch_up);
-	struct wlr_event_touch_up *event = data;
+	struct wlr_touch_up_event *event = data;
 
 	if (!wlr_seat_touch_get_point(seat->seat, event->touch_id)) {
 		return;
 	}
 
 	if (wlr_seat_touch_num_points(seat->seat) == 1) {
-		press_cursor_button(seat, event->device, event->time_msec, BTN_LEFT, WLR_BUTTON_RELEASED,
+		press_cursor_button(seat, &event->touch->base, event->time_msec, BTN_LEFT, WLR_BUTTON_RELEASED,
 				    seat->touch_lx, seat->touch_ly);
 	}
 
@@ -480,14 +478,14 @@ static void
 handle_touch_motion(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, touch_motion);
-	struct wlr_event_touch_motion *event = data;
+	struct wlr_touch_motion_event *event = data;
 
 	if (!wlr_seat_touch_get_point(seat->seat, event->touch_id)) {
 		return;
 	}
 
 	double lx, ly;
-	wlr_cursor_absolute_to_layout_coords(seat->cursor, event->device, event->x, event->y, &lx, &ly);
+	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->touch->base, event->x, event->y, &lx, &ly);
 
 	double sx, sy;
 	struct wlr_surface *surface;
@@ -521,7 +519,7 @@ static void
 handle_cursor_axis(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_axis);
-	struct wlr_event_pointer_axis *event = data;
+	struct wlr_pointer_axis_event *event = data;
 
 	wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
 				     event->delta_discrete, event->source);
@@ -532,10 +530,10 @@ static void
 handle_cursor_button(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_button);
-	struct wlr_event_pointer_button *event = data;
+	struct wlr_pointer_button_event *event = data;
 
 	wlr_seat_pointer_notify_button(seat->seat, event->time_msec, event->button, event->state);
-	press_cursor_button(seat, event->device, event->time_msec, event->button, event->state, seat->cursor->x,
+	press_cursor_button(seat, &event->pointer->base, event->time_msec, event->button, event->state, seat->cursor->x,
 			    seat->cursor->y);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
@@ -569,9 +567,9 @@ static void
 handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion_absolute);
-	struct wlr_event_pointer_motion_absolute *event = data;
+	struct wlr_pointer_motion_absolute_event *event = data;
 
-	wlr_cursor_warp_absolute(seat->cursor, event->device, event->x, event->y);
+	wlr_cursor_warp_absolute(seat->cursor, &event->pointer->base, event->x, event->y);
 	process_cursor_motion(seat, event->time_msec);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
@@ -580,9 +578,9 @@ static void
 handle_cursor_motion(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion);
-	struct wlr_event_pointer_motion *event = data;
+	struct wlr_pointer_motion_event *event = data;
 
-	wlr_cursor_move(seat->cursor, event->device, event->delta_x, event->delta_y);
+	wlr_cursor_move(seat->cursor, &event->pointer->base, event->delta_x, event->delta_y);
 	process_cursor_motion(seat, event->time_msec);
 	wlr_idle_notify_activity(seat->server->idle, seat->seat);
 }
