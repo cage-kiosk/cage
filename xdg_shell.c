@@ -72,13 +72,14 @@ popup_unconstrain(struct cg_view *view, struct wlr_xdg_popup *popup)
 	struct wlr_output_layout *output_layout = server->output_layout;
 	struct wlr_output *wlr_output =
 		wlr_output_layout_output_at(output_layout, view->lx + popup_box->x, view->ly + popup_box->y);
-	struct wlr_box *output_box = wlr_output_layout_get_box(output_layout, wlr_output);
+	struct wlr_box output_box;
+	wlr_output_layout_get_box(output_layout, wlr_output, &output_box);
 
 	struct wlr_box output_toplevel_box = {
-		.x = output_box->x - view->lx,
-		.y = output_box->y - view->ly,
-		.width = output_box->width,
-		.height = output_box->height,
+		.x = output_box.x - view->lx,
+		.y = output_box.y - view->ly,
+		.width = output_box.width,
+		.height = output_box.height,
 	};
 
 	wlr_xdg_popup_unconstrain_from_box(popup, &output_toplevel_box);
@@ -166,8 +167,9 @@ handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *
 	 * Certain clients do not like figuring out their own window geometry if they
 	 * display in fullscreen mode, so we set it here.
 	 */
-	struct wlr_box *layout_box = wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL);
-	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box->width, layout_box->height);
+	struct wlr_box layout_box;
+	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
+	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
 
 	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel,
 					xdg_shell_view->xdg_toplevel->requested.fullscreen);
