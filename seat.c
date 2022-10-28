@@ -320,6 +320,8 @@ cg_keyboard_group_add(struct wlr_input_device *device, struct cg_seat *seat, boo
 
 	struct cg_keyboard_group *group;
 	wl_list_for_each (group, &seat->keyboard_groups, link) {
+		if (group->is_virtual)
+			continue;
 		struct wlr_keyboard_group *wlr_group = group->wlr_group;
 		if (wlr_keyboard_group_add_keyboard(wlr_group, wlr_keyboard)) {
 			wlr_log(WLR_DEBUG, "Added new keyboard to existing group");
@@ -337,6 +339,7 @@ create_new:
 		return;
 	}
 	cg_group->seat = seat;
+	cg_group->is_virtual = virtual;
 	cg_group->wlr_group = wlr_keyboard_group_create();
 	if (cg_group->wlr_group == NULL) {
 		wlr_log(WLR_ERROR, "Failed to create wlr keyboard group.");
@@ -352,10 +355,7 @@ create_new:
 	wlr_log(WLR_DEBUG, "Created keyboard group");
 
 	wlr_keyboard_group_add_keyboard(cg_group->wlr_group, wlr_keyboard);
-	if (!virtual)
-		wl_list_insert(&seat->keyboard_groups, &cg_group->link);
-	else
-		wl_list_init(&cg_group->link);
+	wl_list_insert(&seat->keyboard_groups, &cg_group->link);
 
 	wl_signal_add(&cg_group->wlr_group->keyboard.events.key, &cg_group->key);
 	cg_group->key.notify = handle_keyboard_group_key;
