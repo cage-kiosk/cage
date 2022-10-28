@@ -226,6 +226,7 @@ handle_virtual_pointer(struct wl_listener *listener, void *data)
 	device->output_name = strdup(event->suggested_output->name);
 	/* event->suggested_seat should be checked if we handle multiple seats */
 	handle_new_pointer(seat, device);
+	update_capabilities(seat);
 }
 
 static void
@@ -408,6 +409,7 @@ handle_virtual_keyboard(struct wl_listener *listener, void *data)
 	 * to select the appropriate one */
 
 	handle_new_keyboard(seat, device, true);
+	update_capabilities(seat);
 }
 
 static void
