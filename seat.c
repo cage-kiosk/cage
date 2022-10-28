@@ -6,11 +6,14 @@
  * See the LICENSE file accompanying this file.
  */
 
+#define _XOPEN_SOURCE 500
+
 #include "config.h"
 
 #include <assert.h>
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/multi.h>
@@ -216,6 +219,11 @@ handle_virtual_pointer(struct wl_listener *listener, void *data)
 	struct wlr_virtual_pointer_v1 *pointer = event->new_pointer;
 	struct wlr_input_device *device = &pointer->input_device;
 
+	/* We'll want to map the device back to an output later, this is a bit
+	 * sub-optimal (we could just keep the suggested_output), but just copy
+	 * its name so we do like other devices
+	 */
+	device->output_name = strdup(event->suggested_output->name);
 	/* event->suggested_seat should be checked if we handle multiple seats */
 	handle_new_pointer(seat, device);
 }
