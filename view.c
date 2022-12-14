@@ -68,7 +68,7 @@ view_maximize(struct cg_view *view, struct wlr_box *layout_box)
 	view->lx = layout_box->x;
 	view->ly = layout_box->y;
 
-	wlr_scene_node_set_position(view->scene_node, view->lx, view->ly);
+	wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
 
 	view->impl->maximize(view, layout_box->width, layout_box->height);
 }
@@ -82,7 +82,7 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 	view->lx = (layout_box->width - width) / 2;
 	view->ly = (layout_box->height - height) / 2;
 
-	wlr_scene_node_set_position(view->scene_node, view->lx, view->ly);
+	wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
 }
 
 void
@@ -103,7 +103,7 @@ view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
 
-	wlr_scene_node_destroy(view->scene_node);
+	wlr_scene_node_destroy(&view->scene_tree->node);
 
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
@@ -112,12 +112,12 @@ view_unmap(struct cg_view *view)
 void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
-	view->scene_node = wlr_scene_subsurface_tree_create(&view->server->scene->node, surface);
-	if (!view->scene_node) {
+	view->scene_tree = wlr_scene_subsurface_tree_create(&view->server->scene->tree, surface);
+	if (!view->scene_tree) {
 		wl_resource_post_no_memory(surface->resource);
 		return;
 	}
-	view->scene_node->data = view;
+	view->scene_tree->node.data = view;
 
 	view->wlr_surface = surface;
 	surface->data = view;
