@@ -53,20 +53,31 @@ static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 static struct cg_view *
 desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surface **surface, double *sx, double *sy)
 {
-	struct wlr_scene_node *node = wlr_scene_node_at(&server->scene->node, lx, ly, sx, sy);
-	if (node == NULL || node->type != WLR_SCENE_NODE_SURFACE) {
+	struct wlr_scene_node *node = wlr_scene_node_at(&server->scene->tree.node, lx, ly, sx, sy);
+	if (node == NULL || node->type != WLR_SCENE_NODE_BUFFER) {
 		return NULL;
 	}
 
-	*surface = wlr_scene_surface_from_node(node)->surface;
+	struct wlr_scene_buffer *scene_buffer = wlr_scene_buffer_from_node(node);
+	struct wlr_scene_surface *scene_surface = wlr_scene_surface_from_buffer(scene_buffer);
+	if (!scene_surface) {
+		return NULL;
+	}
+
+	*surface = scene_surface->surface;
 
 	/* Walk up the tree until we find a node with a data pointer. When done,
 	 * we've found the node representing the view. */
-	while (node != NULL && node->data == NULL) {
-		node = node->parent;
-	}
-	assert(node != NULL);
+	while (!node->data) {
+		if (!node->parent) {
+			node = NULL;
+			break;
+		}
 
+		node = &node->parent->node;
+	}
+
+	assert(node != NULL);
 	return node->data;
 }
 
@@ -609,7 +620,7 @@ drag_icon_update_position(struct cg_drag_icon *drag_icon)
 		break;
 	}
 
-	wlr_scene_node_set_position(drag_icon->scene_node, drag_icon->lx, drag_icon->ly);
+	wlr_scene_node_set_position(&drag_icon->scene_tree->node, drag_icon->lx, drag_icon->ly);
 }
 
 static void
@@ -619,7 +630,7 @@ handle_drag_icon_destroy(struct wl_listener *listener, void *data)
 
 	wl_list_remove(&drag_icon->link);
 	wl_list_remove(&drag_icon->destroy.link);
-	wlr_scene_node_destroy(drag_icon->scene_node);
+	wlr_scene_node_destroy(&drag_icon->scene_tree->node);
 	free(drag_icon);
 }
 
@@ -662,8 +673,8 @@ handle_start_drag(struct wl_listener *listener, void *data)
 	}
 	drag_icon->seat = seat;
 	drag_icon->wlr_drag_icon = wlr_drag_icon;
-	drag_icon->scene_node = wlr_scene_subsurface_tree_create(&seat->server->scene->node, wlr_drag_icon->surface);
-	if (!drag_icon->scene_node) {
+	drag_icon->scene_tree = wlr_scene_subsurface_tree_create(&seat->server->scene->tree, wlr_drag_icon->surface);
+	if (!drag_icon->scene_tree) {
 		free(drag_icon);
 		return;
 	}

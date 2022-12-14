@@ -253,31 +253,31 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 			return;
 		}
 
-		struct wlr_scene_node *parent_scene_node = NULL;
+		struct wlr_scene_tree *parent_scene_tree = NULL;
 		struct wlr_xdg_surface *parent = wlr_xdg_surface_from_wlr_surface(popup->parent);
 		switch (parent->role) {
 		case WLR_XDG_SURFACE_ROLE_TOPLEVEL:;
-			parent_scene_node = view->scene_node;
+			parent_scene_tree = view->scene_tree;
 			break;
 		case WLR_XDG_SURFACE_ROLE_POPUP:
-			parent_scene_node = parent->data;
+			parent_scene_tree = parent->data;
 			break;
 		case WLR_XDG_SURFACE_ROLE_NONE:
 			break;
 		}
-		if (parent_scene_node == NULL) {
+		if (parent_scene_tree == NULL) {
 			return;
 		}
 
-		struct wlr_scene_node *popup_scene_node = wlr_scene_xdg_surface_create(parent_scene_node, xdg_surface);
-		if (popup_scene_node == NULL) {
+		struct wlr_scene_tree *popup_scene_tree = wlr_scene_xdg_surface_create(parent_scene_tree, xdg_surface);
+		if (popup_scene_tree == NULL) {
 			wlr_log(WLR_ERROR, "Failed to allocate scene-graph node for XDG popup");
 			return;
 		}
 
 		popup_unconstrain(view, popup);
 
-		xdg_surface->data = popup_scene_node;
+		xdg_surface->data = popup_scene_tree;
 		break;
 	case WLR_XDG_SURFACE_ROLE_NONE:
 		assert(false); // unreachable
