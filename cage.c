@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
+#include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_viewporter.h>
 #if CAGE_HAS_XWAYLAND
@@ -266,6 +267,7 @@ main(int argc, char *argv[])
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
 	struct wlr_export_dmabuf_manager_v1 *export_dmabuf_manager = NULL;
 	struct wlr_screencopy_manager_v1 *screencopy_manager = NULL;
+	struct wlr_single_pixel_buffer_manager_v1 *single_pixel_buffer = NULL;
 	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
 	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
 	struct wlr_viewporter *viewporter = NULL;
@@ -455,6 +457,13 @@ main(int argc, char *argv[])
 	screencopy_manager = wlr_screencopy_manager_v1_create(server.wl_display);
 	if (!screencopy_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the screencopy manager");
+		ret = 1;
+		goto end;
+	}
+
+	single_pixel_buffer = wlr_single_pixel_buffer_manager_v1_create(server.wl_display);
+	if (!single_pixel_buffer) {
+		wlr_log(WLR_ERROR, "Unable to create the single pixel buffer manager");
 		ret = 1;
 		goto end;
 	}
