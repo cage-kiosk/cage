@@ -15,7 +15,6 @@
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
-#include <wlr/types/wlr_surface.h>
 
 #include "output.h"
 #include "seat.h"
