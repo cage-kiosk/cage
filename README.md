@@ -1,4 +1,4 @@
-# Cage: a Wayland kiosk [![builds.sr.ht status](https://builds.sr.ht/~hjdskes.svg)](https://builds.sr.ht/~hjdskes?)
+# Cage: a Wayland kiosk
 
 <img src="https://www.hjdskes.nl/img/projects/cage/cage.svg" alt="Cage's logo" width="150px" align="right">
 
