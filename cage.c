@@ -35,6 +35,8 @@
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_viewporter.h>
+#include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <wlr/types/wlr_virtual_pointer_v1.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
 #endif
@@ -270,6 +272,8 @@ main(int argc, char *argv[])
 	struct wlr_single_pixel_buffer_manager_v1 *single_pixel_buffer = NULL;
 	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
 	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
+	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard = NULL;
+	struct wlr_virtual_pointer_manager_v1 *virtual_pointer = NULL;
 	struct wlr_viewporter *viewporter = NULL;
 	struct wlr_presentation *presentation = NULL;
 	struct wlr_xdg_shell *xdg_shell = NULL;
@@ -481,6 +485,22 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+
+	virtual_keyboard = wlr_virtual_keyboard_manager_v1_create(server.wl_display);
+	if (!virtual_keyboard) {
+		wlr_log(WLR_ERROR, "Unable to create the virtual keyboard manager");
+		ret = 1;
+		goto end;
+	}
+	wl_signal_add(&virtual_keyboard->events.new_virtual_keyboard, &server.new_virtual_keyboard);
+
+	virtual_pointer = wlr_virtual_pointer_manager_v1_create(server.wl_display);
+	if (!virtual_pointer) {
+		wlr_log(WLR_ERROR, "Unable to create the virtual pointer manager");
+		ret = 1;
+		goto end;
+	}
+	wl_signal_add(&virtual_pointer->events.new_virtual_pointer, &server.new_virtual_pointer);
 
 #if CAGE_HAS_XWAYLAND
 	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
