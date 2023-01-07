@@ -12,10 +12,6 @@
 #include <wlr/xwayland.h>
 #endif
 
-#include "output.h"
-#include "seat.h"
-#include "view.h"
-
 enum cg_multi_output_mode {
 	CAGE_MULTI_OUTPUT_MODE_EXTEND,
 	CAGE_MULTI_OUTPUT_MODE_LAST,
@@ -44,6 +40,9 @@ struct cg_server {
 
 	struct wl_listener xdg_toplevel_decoration;
 	struct wl_listener new_xdg_shell_surface;
+
+	struct wl_listener new_virtual_keyboard;
+	struct wl_listener new_virtual_pointer;
 #if CAGE_HAS_XWAYLAND
 	struct wl_listener new_xwayland_surface;
 #endif

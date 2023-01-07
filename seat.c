@@ -6,11 +6,14 @@
  * See the LICENSE file accompanying this file.
  */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include "config.h"
 
 #include <assert.h>
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/multi.h>
@@ -22,6 +25,8 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_touch.h>
+#include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
@@ -217,6 +222,27 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_pointer *wlr_pointer)
 }
 
 static void
+handle_virtual_pointer(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, new_virtual_pointer);
+	struct cg_seat *seat = server->seat;
+	struct wlr_virtual_pointer_v1_new_pointer_event *event = data;
+	struct wlr_virtual_pointer_v1 *pointer = event->new_pointer;
+	struct wlr_pointer *wlr_pointer = &pointer->pointer;
+
+	/* We'll want to map the device back to an output later, this is a bit
+	 * sub-optimal (we could just keep the suggested_output), but just copy
+	 * its name so we do like other devices
+	 */
+	if (event->suggested_output != NULL) {
+		wlr_pointer->output_name = strdup(event->suggested_output->name);
+	}
+	/* TODO: event->suggested_seat should be checked if we handle multiple seats */
+	handle_new_pointer(seat, wlr_pointer);
+	update_capabilities(seat);
+}
+
+static void
 handle_modifier_event(struct wlr_keyboard *keyboard, struct cg_seat *seat)
 {
 	wlr_seat_set_keyboard(seat->seat, keyboard);
@@ -295,14 +321,21 @@ handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
 }
 
 static void
-cg_keyboard_group_add(struct wlr_keyboard *keyboard, struct cg_seat *seat)
+cg_keyboard_group_add(struct wlr_keyboard *keyboard, struct cg_seat *seat, bool virtual)
 {
-	struct cg_keyboard_group *group;
-	wl_list_for_each (group, &seat->keyboard_groups, link) {
-		struct wlr_keyboard_group *wlr_group = group->wlr_group;
-		if (wlr_keyboard_group_add_keyboard(wlr_group, keyboard)) {
-			wlr_log(WLR_DEBUG, "Added new keyboard to existing group");
-			return;
+	/* We apparently should not group virtual keyboards,
+	 * so create a new group with it
+	 */
+	if (!virtual) {
+		struct cg_keyboard_group *group;
+		wl_list_for_each (group, &seat->keyboard_groups, link) {
+			if (group->is_virtual)
+				continue;
+			struct wlr_keyboard_group *wlr_group = group->wlr_group;
+			if (wlr_keyboard_group_add_keyboard(wlr_group, keyboard)) {
+				wlr_log(WLR_DEBUG, "Added new keyboard to existing group");
+				return;
+			}
 		}
 	}
 
@@ -314,6 +347,7 @@ cg_keyboard_group_add(struct wlr_keyboard *keyboard, struct cg_seat *seat)
 		return;
 	}
 	cg_group->seat = seat;
+	cg_group->is_virtual = virtual;
 	cg_group->wlr_group = wlr_keyboard_group_create();
 	if (cg_group->wlr_group == NULL) {
 		wlr_log(WLR_ERROR, "Failed to create wlr keyboard group.");
@@ -346,7 +380,7 @@ cleanup:
 }
 
 static void
-handle_new_keyboard(struct cg_seat *seat, struct wlr_keyboard *keyboard)
+handle_new_keyboard(struct cg_seat *seat, struct wlr_keyboard *keyboard, bool virtual)
 {
 	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (!context) {
@@ -367,9 +401,24 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_keyboard *keyboard)
 	xkb_context_unref(context);
 	wlr_keyboard_set_repeat_info(keyboard, 25, 600);
 
-	cg_keyboard_group_add(keyboard, seat);
+	cg_keyboard_group_add(keyboard, seat, virtual);
 
 	wlr_seat_set_keyboard(seat->seat, keyboard);
+}
+
+static void
+handle_virtual_keyboard(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, new_virtual_keyboard);
+	struct cg_seat *seat = server->seat;
+	struct wlr_virtual_keyboard_v1 *keyboard = data;
+	struct wlr_keyboard *wlr_keyboard = &keyboard->keyboard;
+
+	/* TODO: If multiple seats are supported, check keyboard->seat
+	 * to select the appropriate one */
+
+	handle_new_keyboard(seat, wlr_keyboard, true);
+	update_capabilities(seat);
 }
 
 static void
@@ -380,7 +429,7 @@ handle_new_input(struct wl_listener *listener, void *data)
 
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
-		handle_new_keyboard(seat, wlr_keyboard_from_input_device(device));
+		handle_new_keyboard(seat, wlr_keyboard_from_input_device(device), false);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
 		handle_new_pointer(seat, wlr_pointer_from_input_device(device));
@@ -796,6 +845,9 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 
 	seat->new_input.notify = handle_new_input;
 	wl_signal_add(&backend->events.new_input, &seat->new_input);
+
+	server->new_virtual_keyboard.notify = handle_virtual_keyboard;
+	server->new_virtual_pointer.notify = handle_virtual_pointer;
 
 	wl_list_init(&seat->drag_icons);
 	seat->request_start_drag.notify = handle_request_start_drag;

@@ -55,6 +55,7 @@ struct cg_keyboard_group {
 	struct wl_listener key;
 	struct wl_listener modifiers;
 	struct wl_list link; // cg_seat::keyboard_groups
+	bool is_virtual;
 };
 
 struct cg_pointer {
