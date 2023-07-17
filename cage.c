@@ -113,6 +113,8 @@ spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, s
 		/* Close read, we only need write in the primary client process. */
 		close(fd[0]);
 		execvp(argv[0], argv);
+		/* execvp() returns only on failure */
+		wlr_log_errno(WLR_ERROR, "Failed to spawn client");
 		_exit(1);
 	} else if (pid == -1) {
 		wlr_log_errno(WLR_ERROR, "Unable to fork");
