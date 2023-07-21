@@ -98,6 +98,15 @@ view_position(struct cg_view *view)
 }
 
 void
+view_position_all(struct cg_server *server)
+{
+	struct cg_view *view;
+	wl_list_for_each (view, &server->views, link) {
+		view_position(view);
+	}
+}
+
+void
 view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);

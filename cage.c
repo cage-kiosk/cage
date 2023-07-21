@@ -28,6 +28,7 @@
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
@@ -340,6 +341,8 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+	server.output_layout_change.notify = handle_output_layout_change;
+	wl_signal_add(&server.output_layout->events.change, &server.output_layout_change);
 
 	server.scene = wlr_scene_create();
 	if (!server.scene) {
@@ -471,6 +474,17 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+
+	server.output_manager_v1 = wlr_output_manager_v1_create(server.wl_display);
+	if (!server.output_manager_v1) {
+		wlr_log(WLR_ERROR, "Unable to create the output manager");
+		ret = 1;
+		goto end;
+	}
+	server.output_manager_apply.notify = handle_output_manager_apply;
+	wl_signal_add(&server.output_manager_v1->events.apply, &server.output_manager_apply);
+	server.output_manager_test.notify = handle_output_manager_test;
+	wl_signal_add(&server.output_manager_v1->events.test, &server.output_manager_test);
 
 	gamma_control_manager = wlr_gamma_control_manager_v1_create(server.wl_display);
 	if (!gamma_control_manager) {
