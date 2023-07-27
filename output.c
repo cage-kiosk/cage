@@ -225,12 +225,10 @@ output_destroy(struct cg_output *output)
 
 	if (wl_list_empty(&server->outputs)) {
 		wl_display_terminate(server->wl_display);
-	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && !wl_list_empty(&server->outputs)) {
 		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
-		if (prev) {
-			output_enable(prev);
-			view_position_all(server);
-		}
+		output_enable(prev);
+		view_position_all(server);
 	}
 }
 
@@ -293,11 +291,9 @@ handle_new_output(struct wl_listener *listener, void *data)
 		}
 	}
 
-	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && wl_list_length(&server->outputs) > 1) {
 		struct cg_output *next = wl_container_of(output->link.next, next, link);
-		if (next) {
-			output_disable(next);
-		}
+		output_disable(next);
 	}
 
 	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
