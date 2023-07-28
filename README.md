@@ -13,7 +13,7 @@ Wiki](https://github.com/Hjdskes/cage/wiki/).
 ## Release signatures
 
 Releases are signed with
-[6EBC43B1](http://keys.gnupg.net/pks/lookup?op=vindex&fingerprint=on&search=0x37C445296EBC43B1)
+[E88F5E48](https://keys.openpgp.org/search?q=34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48)
 and published on [GitHub](https://github.com/Hjdskes/cage/releases).
 
 ## Building and running Cage
