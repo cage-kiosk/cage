@@ -61,7 +61,7 @@ _XKB_DEFAULT_VARIANT_, _XKB_DEFAULT_OPTIONS_
 
 # BUGS
 
-Report bugs at https://github.com/Hjdskes/cage
+Report bugs at https://github.com/cage-kiosk/cage
 
 # AUTHORS
 
