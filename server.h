@@ -53,6 +53,7 @@ struct cg_server {
 
 	bool xdg_decoration;
 	bool allow_vt_switch;
+	bool return_app_code;
 };
 
 #endif
