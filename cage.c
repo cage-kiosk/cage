@@ -62,7 +62,7 @@
 static int
 sigchld_handler(int fd, uint32_t mask, void *data)
 {
-	struct wl_display *display = data;
+	struct cg_server *server = data;
 
 	/* Close Cage's read pipe. */
 	close(fd);
@@ -73,7 +73,8 @@ sigchld_handler(int fd, uint32_t mask, void *data)
 		wlr_log(WLR_DEBUG, "Connection closed by server");
 	}
 
-	wl_display_terminate(display);
+	server->return_app_code = true;
+	wl_display_terminate(server->wl_display);
 	return 0;
 }
 
@@ -97,7 +98,7 @@ set_cloexec(int fd)
 }
 
 static bool
-spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, struct wl_event_source **sigchld_source)
+spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, struct wl_event_source **sigchld_source)
 {
 	int fd[2];
 	if (pipe(fd) != 0) {
@@ -131,15 +132,15 @@ spawn_primary_client(struct wl_display *display, char *argv[], pid_t *pid_out, s
 	/* Close write, we only need read in Cage. */
 	close(fd[1]);
 
-	struct wl_event_loop *event_loop = wl_display_get_event_loop(display);
+	struct wl_event_loop *event_loop = wl_display_get_event_loop(server->wl_display);
 	uint32_t mask = WL_EVENT_HANGUP | WL_EVENT_ERROR;
-	*sigchld_source = wl_event_loop_add_fd(event_loop, fd[0], mask, sigchld_handler, display);
+	*sigchld_source = wl_event_loop_add_fd(event_loop, fd[0], mask, sigchld_handler, server);
 
 	wlr_log(WLR_DEBUG, "Child process created with pid %d", pid);
 	return true;
 }
 
-static void
+static int
 cleanup_primary_client(pid_t pid)
 {
 	int status;
@@ -148,9 +149,14 @@ cleanup_primary_client(pid_t pid)
 
 	if (WIFEXITED(status)) {
 		wlr_log(WLR_DEBUG, "Child exited normally with exit status %d", WEXITSTATUS(status));
+		return WEXITSTATUS(status);
 	} else if (WIFSIGNALED(status)) {
+		/* Mimic Bash and other shells for the exit status */
 		wlr_log(WLR_DEBUG, "Child was terminated by a signal (%d)", WTERMSIG(status));
+		return 128 + WTERMSIG(status);
 	}
+
+	return 0;
 }
 
 static bool
@@ -278,7 +284,7 @@ main(int argc, char *argv[])
 	struct wlr_xcursor_manager *xcursor_manager = NULL;
 #endif
 	pid_t pid = 0;
-	int ret = 0;
+	int ret = 0, app_ret = 0;
 
 	if (!parse_args(&server, argc, argv)) {
 		return 1;
@@ -568,7 +574,7 @@ main(int argc, char *argv[])
 	wlr_xwayland_set_seat(xwayland, server.seat->seat);
 #endif
 
-	if (!spawn_primary_client(server.wl_display, argv + optind, &pid, &sigchld_source)) {
+	if (!spawn_primary_client(&server, argv + optind, &pid, &sigchld_source)) {
 		ret = 1;
 		goto end;
 	}
@@ -587,7 +593,9 @@ main(int argc, char *argv[])
 	wl_display_destroy_clients(server.wl_display);
 
 end:
-	cleanup_primary_client(pid);
+	app_ret = cleanup_primary_client(pid);
+	if (!ret && server.return_app_code)
+		ret = app_ret;
 
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
