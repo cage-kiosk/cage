@@ -39,6 +39,7 @@ struct cg_seat {
 	struct wl_listener touch_down;
 	struct wl_listener touch_up;
 	struct wl_listener touch_motion;
+	struct wl_listener touch_frame;
 
 	struct wl_list drag_icons;
 	struct wl_listener request_start_drag;
