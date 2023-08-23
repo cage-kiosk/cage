@@ -566,6 +566,15 @@ handle_touch_motion(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_touch_frame(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, touch_frame);
+
+	wlr_seat_touch_notify_frame(seat->seat);
+	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+}
+
+static void
 handle_cursor_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_frame);
@@ -748,6 +757,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&seat->touch_down.link);
 	wl_list_remove(&seat->touch_up.link);
 	wl_list_remove(&seat->touch_motion.link);
+	wl_list_remove(&seat->touch_frame.link);
 	wl_list_remove(&seat->request_set_cursor.link);
 	wl_list_remove(&seat->request_set_selection.link);
 	wl_list_remove(&seat->request_set_primary_selection.link);
@@ -830,6 +840,8 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	wl_signal_add(&seat->cursor->events.touch_up, &seat->touch_up);
 	seat->touch_motion.notify = handle_touch_motion;
 	wl_signal_add(&seat->cursor->events.touch_motion, &seat->touch_motion);
+	seat->touch_frame.notify = handle_touch_frame;
+	wl_signal_add(&seat->cursor->events.touch_frame, &seat->touch_frame);
 
 	seat->request_set_cursor.notify = handle_request_set_cursor;
 	wl_signal_add(&seat->seat->events.request_set_cursor, &seat->request_set_cursor);
