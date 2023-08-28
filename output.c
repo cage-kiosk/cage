@@ -206,10 +206,25 @@ handle_output_layout_change(struct wl_listener *listener, void *data)
 	update_output_manager_config(server);
 }
 
+static bool
+is_nested_output(struct cg_output *output)
+{
+	if (wlr_output_is_wl(output->wlr_output)) {
+		return true;
+	}
+#if WLR_HAS_X11_BACKEND
+	if (wlr_output_is_x11(output->wlr_output)) {
+		return true;
+	}
+#endif
+	return false;
+}
+
 static void
 output_destroy(struct cg_output *output)
 {
 	struct cg_server *server = output->server;
+	bool was_nested_output = is_nested_output(output);
 
 	output->wlr_output->data = NULL;
 
@@ -223,7 +238,7 @@ output_destroy(struct cg_output *output)
 
 	free(output);
 
-	if (wl_list_empty(&server->outputs)) {
+	if (wl_list_empty(&server->outputs) && was_nested_output) {
 		wl_display_terminate(server->wl_display);
 	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && !wl_list_empty(&server->outputs)) {
 		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
