@@ -287,6 +287,9 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wl_signal_add(&wlr_output->events.frame, &output->frame);
 
 	if (!wl_list_empty(&wlr_output->modes)) {
+		/* Ensure the output is marked as enabled before trying to set mode */
+		wlr_output_enable(wlr_output, true);
+
 		struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
 		if (preferred_mode) {
 			wlr_output_set_mode(wlr_output, preferred_mode);
