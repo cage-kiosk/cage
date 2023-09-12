@@ -68,6 +68,29 @@ update_output_manager_config(struct cg_server *server)
 	wlr_output_manager_v1_set_configuration(server->output_manager_v1, config);
 }
 
+static inline void
+output_layout_add_auto(struct cg_output *output)
+{
+	wlr_output_layout_add_auto(output->server->output_layout, output->wlr_output);
+	output->scene_output = wlr_scene_get_scene_output(output->server->scene, output->wlr_output);
+	assert(output->scene_output != NULL);
+}
+
+static inline void
+output_layout_add(struct cg_output *output, int32_t x, int32_t y)
+{
+	wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
+	output->scene_output = wlr_scene_get_scene_output(output->server->scene, output->wlr_output);
+	assert(output->scene_output != NULL);
+}
+
+static inline void
+output_layout_remove(struct cg_output *output)
+{
+	wlr_output_layout_remove(output->server->output_layout, output->wlr_output);
+	output->scene_output = NULL;
+}
+
 static void
 output_enable(struct cg_output *output)
 {
@@ -78,12 +101,11 @@ output_enable(struct cg_output *output)
 	 * duplicate the enabled property in cg_output. */
 	wlr_log(WLR_DEBUG, "Enabling output %s", wlr_output->name);
 
-	wlr_output_layout_add_auto(output->server->output_layout, wlr_output);
 	wlr_output_enable(wlr_output, true);
-	wlr_output_commit(wlr_output);
 
-	output->scene_output = wlr_scene_get_scene_output(output->server->scene, wlr_output);
-	assert(output->scene_output != NULL);
+	if (wlr_output_commit(wlr_output)) {
+		output_layout_add_auto(output);
+	}
 
 	update_output_manager_config(output->server);
 }
@@ -98,12 +120,10 @@ output_disable(struct cg_output *output)
 		return;
 	}
 
-	output->scene_output = NULL;
-
 	wlr_log(WLR_DEBUG, "Disabling output %s", wlr_output->name);
 	wlr_output_enable(wlr_output, false);
-	wlr_output_layout_remove(output->server->output_layout, wlr_output);
 	wlr_output_commit(wlr_output);
+	output_layout_remove(output);
 }
 
 static bool
@@ -136,9 +156,9 @@ output_apply_config(struct cg_output *output, struct wlr_output_configuration_he
 	}
 
 	if (head->state.enabled) {
-		wlr_output_layout_add(output->server->output_layout, head->state.output, head->state.x, head->state.y);
+		output_layout_add(output, head->state.x, head->state.y);
 	} else {
-		wlr_output_layout_remove(output->server->output_layout, output->wlr_output);
+		output_layout_remove(output);
 	}
 
 	return true;
@@ -149,7 +169,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, frame);
 
-	if (!output->wlr_output->enabled) {
+	if (!output->wlr_output->enabled || !output->scene_output) {
 		return;
 	}
 
@@ -169,15 +189,6 @@ handle_output_commit(struct wl_listener *listener, void *data)
 	/* Notes:
 	 * - output layout change will also be called if needed to position the views
 	 * - always update output manager configuration even if the output is now disabled */
-
-	if (event->committed & WLR_OUTPUT_STATE_ENABLED) {
-		if (output->wlr_output->enabled) {
-			output->scene_output = wlr_scene_get_scene_output(output->server->scene, output->wlr_output);
-			assert(output->scene_output != NULL);
-		} else {
-			output->scene_output = NULL;
-		}
-	}
 
 	if (event->committed & OUTPUT_CONFIG_UPDATED) {
 		update_output_manager_config(output->server);
@@ -234,7 +245,7 @@ output_destroy(struct cg_output *output)
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
 
-	wlr_output_layout_remove(server->output_layout, output->wlr_output);
+	output_layout_remove(output);
 
 	free(output);
 
