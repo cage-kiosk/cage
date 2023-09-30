@@ -46,11 +46,13 @@ static struct cg_view *
 popup_get_view(struct wlr_xdg_popup *popup)
 {
 	while (true) {
-		if (popup->parent == NULL || !wlr_surface_is_xdg_surface(popup->parent)) {
+		if (popup->parent == NULL) {
 			return NULL;
 		}
-
-		struct wlr_xdg_surface *xdg_surface = wlr_xdg_surface_from_wlr_surface(popup->parent);
+		struct wlr_xdg_surface *xdg_surface = wlr_xdg_surface_try_from_wlr_surface(popup->parent);
+		if (xdg_surface == NULL) {
+			return NULL;
+		}
 		switch (xdg_surface->role) {
 		case WLR_XDG_SURFACE_ROLE_TOPLEVEL:
 			return xdg_surface->data;
@@ -254,7 +256,10 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 		}
 
 		struct wlr_scene_tree *parent_scene_tree = NULL;
-		struct wlr_xdg_surface *parent = wlr_xdg_surface_from_wlr_surface(popup->parent);
+		struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(popup->parent);
+		if (parent == NULL) {
+			return;
+		}
 		switch (parent->role) {
 		case WLR_XDG_SURFACE_ROLE_TOPLEVEL:;
 			parent_scene_tree = view->scene_tree;
