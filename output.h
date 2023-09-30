@@ -13,7 +13,6 @@ struct cg_output {
 	struct wlr_scene_output *scene_output;
 
 	struct wl_listener commit;
-	struct wl_listener mode;
 	struct wl_listener destroy;
 	struct wl_listener frame;
 
