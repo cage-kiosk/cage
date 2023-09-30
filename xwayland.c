@@ -41,8 +41,15 @@ static void
 get_geometry(struct cg_view *view, int *width_out, int *height_out)
 {
 	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	*width_out = xwayland_view->xwayland_surface->surface->current.width;
-	*height_out = xwayland_view->xwayland_surface->surface->current.height;
+	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
+	if (xsurface->surface == NULL) {
+		*width_out = 0;
+		*height_out = 0;
+		return;
+	}
+
+	*width_out = xsurface->surface->current.width;
+	*height_out = xsurface->surface->current.height;
 }
 
 static bool
@@ -152,6 +159,26 @@ static const struct cg_view_impl xwayland_view_impl = {
 };
 
 void
+handle_xwayland_associate(struct wl_listener *listener, void *data)
+{
+	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, associate);
+	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
+
+	xwayland_view->map.notify = handle_xwayland_surface_map;
+	wl_signal_add(&xsurface->surface->events.map, &xwayland_view->map);
+	xwayland_view->unmap.notify = handle_xwayland_surface_unmap;
+	wl_signal_add(&xsurface->surface->events.unmap, &xwayland_view->unmap);
+}
+
+void
+handle_xwayland_dissociate(struct wl_listener *listener, void *data)
+{
+	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, dissociate);
+	wl_list_remove(&xwayland_view->map.link);
+	wl_list_remove(&xwayland_view->unmap.link);
+}
+
+void
 handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 {
 	struct cg_server *server = wl_container_of(listener, server, new_xwayland_surface);
@@ -166,10 +193,10 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 	view_init(&xwayland_view->view, server, CAGE_XWAYLAND_VIEW, &xwayland_view_impl);
 	xwayland_view->xwayland_surface = xwayland_surface;
 
-	xwayland_view->map.notify = handle_xwayland_surface_map;
-	wl_signal_add(&xwayland_surface->events.map, &xwayland_view->map);
-	xwayland_view->unmap.notify = handle_xwayland_surface_unmap;
-	wl_signal_add(&xwayland_surface->events.unmap, &xwayland_view->unmap);
+	xwayland_view->associate.notify = handle_xwayland_associate;
+	wl_signal_add(&xwayland_surface->events.associate, &xwayland_view->associate);
+	xwayland_view->dissociate.notify = handle_xwayland_dissociate;
+	wl_signal_add(&xwayland_surface->events.dissociate, &xwayland_view->dissociate);
 	xwayland_view->destroy.notify = handle_xwayland_surface_destroy;
 	wl_signal_add(&xwayland_surface->events.destroy, &xwayland_view->destroy);
 	xwayland_view->request_fullscreen.notify = handle_xwayland_surface_request_fullscreen;

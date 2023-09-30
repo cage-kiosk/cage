@@ -10,6 +10,8 @@ struct cg_xwayland_view {
 	struct cg_view view;
 	struct wlr_xwayland_surface *xwayland_surface;
 	struct wl_listener destroy;
+	struct wl_listener associate;
+	struct wl_listener dissociate;
 	struct wl_listener unmap;
 	struct wl_listener map;
 	struct wl_listener request_fullscreen;

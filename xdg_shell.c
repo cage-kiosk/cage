@@ -238,9 +238,9 @@ handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
 		xdg_shell_view->xdg_toplevel = xdg_surface->toplevel;
 
 		xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
-		wl_signal_add(&xdg_surface->events.map, &xdg_shell_view->map);
+		wl_signal_add(&xdg_surface->surface->events.map, &xdg_shell_view->map);
 		xdg_shell_view->unmap.notify = handle_xdg_shell_surface_unmap;
-		wl_signal_add(&xdg_surface->events.unmap, &xdg_shell_view->unmap);
+		wl_signal_add(&xdg_surface->surface->events.unmap, &xdg_shell_view->unmap);
 		xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
 		wl_signal_add(&xdg_surface->events.destroy, &xdg_shell_view->destroy);
 		xdg_shell_view->request_fullscreen.notify = handle_xdg_shell_surface_request_fullscreen;
