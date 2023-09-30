@@ -191,19 +191,6 @@ handle_output_commit(struct wl_listener *listener, void *data)
 	}
 }
 
-static void
-handle_output_mode(struct wl_listener *listener, void *data)
-{
-	struct cg_output *output = wl_container_of(listener, output, mode);
-
-	if (!output->wlr_output->enabled) {
-		return;
-	}
-
-	view_position_all(output->server);
-	update_output_manager_config(output->server);
-}
-
 void
 handle_output_layout_change(struct wl_listener *listener, void *data)
 {
@@ -237,7 +224,6 @@ output_destroy(struct cg_output *output)
 
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->commit.link);
-	wl_list_remove(&output->mode.link);
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
 
@@ -286,8 +272,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	output->commit.notify = handle_output_commit;
 	wl_signal_add(&wlr_output->events.commit, &output->commit);
-	output->mode.notify = handle_output_mode;
-	wl_signal_add(&wlr_output->events.mode, &output->mode);
 	output->destroy.notify = handle_output_destroy;
 	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 	output->frame.notify = handle_output_frame;
