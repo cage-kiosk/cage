@@ -17,6 +17,7 @@
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/multi.h>
+#include <wlr/backend/session.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle.h>
@@ -263,10 +264,9 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 #endif
 	if (server->allow_vt_switch && sym >= XKB_KEY_XF86Switch_VT_1 && sym <= XKB_KEY_XF86Switch_VT_12) {
 		if (wlr_backend_is_multi(server->backend)) {
-			struct wlr_session *session = wlr_backend_get_session(server->backend);
-			if (session) {
+			if (server->session) {
 				unsigned vt = sym - XKB_KEY_XF86Switch_VT_1 + 1;
-				wlr_session_change_vt(session, vt);
+				wlr_session_change_vt(server->session, vt);
 			}
 		}
 	} else {
