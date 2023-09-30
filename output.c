@@ -169,7 +169,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	wlr_scene_output_commit(output->scene_output);
+	wlr_scene_output_commit(output->scene_output, NULL);
 
 	struct timespec now = {0};
 	clock_gettime(CLOCK_MONOTONIC, &now);
