@@ -70,24 +70,21 @@ update_output_manager_config(struct cg_server *server)
 static inline void
 output_layout_add_auto(struct cg_output *output)
 {
-	wlr_output_layout_add_auto(output->server->output_layout, output->wlr_output);
-	output->scene_output = wlr_scene_get_scene_output(output->server->scene, output->wlr_output);
 	assert(output->scene_output != NULL);
+	wlr_output_layout_add_auto(output->server->output_layout, output->wlr_output);
 }
 
 static inline void
 output_layout_add(struct cg_output *output, int32_t x, int32_t y)
 {
-	wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
-	output->scene_output = wlr_scene_get_scene_output(output->server->scene, output->wlr_output);
 	assert(output->scene_output != NULL);
+	wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
 }
 
 static inline void
 output_layout_remove(struct cg_output *output)
 {
 	wlr_output_layout_remove(output->server->output_layout, output->wlr_output);
-	output->scene_output = NULL;
 }
 
 static void
@@ -295,6 +292,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 	output->frame.notify = handle_output_frame;
 	wl_signal_add(&wlr_output->events.frame, &output->frame);
+
+	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
 
 	if (!wl_list_empty(&wlr_output->modes)) {
 		/* Ensure the output is marked as enabled before trying to set mode */
