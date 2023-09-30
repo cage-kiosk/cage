@@ -24,6 +24,7 @@ struct cg_server {
 	struct wlr_backend *backend;
 	struct wlr_renderer *renderer;
 	struct wlr_allocator *allocator;
+	struct wlr_session *session;
 
 	struct cg_seat *seat;
 	struct wlr_idle *idle;
