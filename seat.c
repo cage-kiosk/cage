@@ -128,9 +128,9 @@ update_capabilities(struct cg_seat *seat)
 
 	/* Hide cursor if the seat doesn't have pointer capability. */
 	if ((caps & WL_SEAT_CAPABILITY_POINTER) == 0) {
-		wlr_cursor_set_image(seat->cursor, NULL, 0, 0, 0, 0, 0, 0);
+		wlr_cursor_unset_image(seat->cursor);
 	} else {
-		wlr_xcursor_manager_set_cursor_image(seat->xcursor_manager, DEFAULT_XCURSOR, seat->cursor);
+		wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, DEFAULT_XCURSOR);
 	}
 }
 
