@@ -174,6 +174,8 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 
 	view_init(&xwayland_view->view, server, CAGE_XWAYLAND_VIEW, &xwayland_view_impl);
 	xwayland_view->xwayland_surface = xwayland_surface;
+	xwayland_view->view.lx = xwayland_surface->x;
+	xwayland_view->view.ly = xwayland_surface->y;
 
 	xwayland_view->map.notify = handle_xwayland_surface_map;
 	wl_signal_add(&xwayland_surface->events.map, &xwayland_view->map);
