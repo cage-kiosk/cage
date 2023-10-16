@@ -112,6 +112,7 @@ handle_xwayland_surface_set_geometry(struct wl_listener *listener, void *data)
 	if (!xwayland_view_should_manage(view)) {
 		view->lx = xwayland_view->xwayland_surface->x;
 		view->ly = xwayland_view->xwayland_surface->y;
+		view_position(view);
 	}
 }
 

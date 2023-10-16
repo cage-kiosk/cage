@@ -94,7 +94,11 @@ view_position(struct cg_view *view)
 	/* We shouldn't position override-redirect windows. They set
 	   their own (x,y) coordinates in handle_xwayland_surface_set_geometry. */
 	if (view->type == CAGE_XWAYLAND_VIEW && !xwayland_view_should_manage(view)) {
-		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
+		/* The scene is created in .map, but .set_geometry can come
+		 * before that. */
+		if (view->scene_tree != NULL) {
+			wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
+		}
 	} else
 #endif
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
@@ -119,6 +123,7 @@ view_unmap(struct cg_view *view)
 	wl_list_remove(&view->link);
 
 	wlr_scene_node_destroy(&view->scene_tree->node);
+	view->scene_tree = NULL;
 
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
