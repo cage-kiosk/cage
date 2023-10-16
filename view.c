@@ -90,6 +90,13 @@ view_position(struct cg_view *view)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
 
+#if CAGE_HAS_XWAYLAND
+	/* We shouldn't position override-redirect windows. They set
+	   their own (x,y) coordinates in handle_xwayland_surface_set_geometry. */
+	if (view->type == CAGE_XWAYLAND_VIEW && !xwayland_view_should_manage(view)) {
+		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
+	} else
+#endif
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
 		view_maximize(view, &layout_box);
 	} else {
@@ -130,14 +137,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 	view->wlr_surface = surface;
 	surface->data = view;
 
-#if CAGE_HAS_XWAYLAND
-	/* We shouldn't position override-redirect windows. They set
-	   their own (x,y) coordinates in handle_wayland_surface_map. */
-	if (view->type != CAGE_XWAYLAND_VIEW || xwayland_view_should_manage(view))
-#endif
-	{
-		view_position(view);
-	}
+	view_position(view);
 
 	wl_list_insert(&view->server->views, &view->link);
 	seat_set_focus(view->server->seat, view);
