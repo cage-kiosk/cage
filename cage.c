@@ -579,11 +579,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	/* Place the cursor in the center of the output layout. */
-	struct wlr_box layout_box;
-	wlr_output_layout_get_box(server.output_layout, NULL, &layout_box);
-	wlr_cursor_warp(server.seat->cursor, NULL, layout_box.width / 2, layout_box.height / 2);
-
+	seat_center_cursor(server.seat);
 	wl_display_run(server.wl_display);
 
 #if CAGE_HAS_XWAYLAND
