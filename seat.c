@@ -944,3 +944,12 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 
 	process_cursor_motion(seat, -1);
 }
+
+void
+seat_center_cursor(struct cg_seat *seat)
+{
+	/* Place the cursor in the center of the output layout. */
+	struct wlr_box layout_box;
+	wlr_output_layout_get_box(seat->server->output_layout, NULL, &layout_box);
+	wlr_cursor_warp(seat->cursor, NULL, layout_box.width / 2, layout_box.height / 2);
+}
