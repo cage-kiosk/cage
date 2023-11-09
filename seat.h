@@ -27,7 +27,7 @@ struct cg_seat {
 
 	struct wlr_cursor *cursor;
 	struct wlr_xcursor_manager *xcursor_manager;
-	struct wl_listener cursor_motion;
+	struct wl_listener cursor_motion_relative;
 	struct wl_listener cursor_motion_absolute;
 	struct wl_listener cursor_button;
 	struct wl_listener cursor_axis;
