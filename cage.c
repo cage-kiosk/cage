@@ -261,29 +261,7 @@ int
 main(int argc, char *argv[])
 {
 	struct cg_server server = {0};
-	struct wl_event_loop *event_loop = NULL;
-	struct wl_event_source *sigint_source = NULL;
-	struct wl_event_source *sigterm_source = NULL;
 	struct wl_event_source *sigchld_source = NULL;
-	struct wlr_compositor *compositor = NULL;
-	struct wlr_subcompositor *subcompositor = NULL;
-	struct wlr_data_device_manager *data_device_manager = NULL;
-	struct wlr_server_decoration_manager *server_decoration_manager = NULL;
-	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager = NULL;
-	struct wlr_export_dmabuf_manager_v1 *export_dmabuf_manager = NULL;
-	struct wlr_screencopy_manager_v1 *screencopy_manager = NULL;
-	struct wlr_single_pixel_buffer_manager_v1 *single_pixel_buffer = NULL;
-	struct wlr_xdg_output_manager_v1 *output_manager = NULL;
-	struct wlr_gamma_control_manager_v1 *gamma_control_manager = NULL;
-	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard = NULL;
-	struct wlr_virtual_pointer_manager_v1 *virtual_pointer = NULL;
-	struct wlr_viewporter *viewporter = NULL;
-	struct wlr_presentation *presentation = NULL;
-	struct wlr_xdg_shell *xdg_shell = NULL;
-#if CAGE_HAS_XWAYLAND
-	struct wlr_xwayland *xwayland = NULL;
-	struct wlr_xcursor_manager *xcursor_manager = NULL;
-#endif
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
 
@@ -309,9 +287,11 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-	event_loop = wl_display_get_event_loop(server.wl_display);
-	sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
-	sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
+	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
+	struct wl_event_source *sigint_source =
+		wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
+	struct wl_event_source *sigterm_source =
+		wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
 	server.backend = wlr_backend_autocreate(server.wl_display);
 	if (!server.backend) {
@@ -362,22 +342,20 @@ main(int argc, char *argv[])
 
 	wlr_scene_attach_output_layout(server.scene, server.output_layout);
 
-	compositor = wlr_compositor_create(server.wl_display, server.renderer);
+	struct wlr_compositor *compositor = wlr_compositor_create(server.wl_display, server.renderer);
 	if (!compositor) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots compositor");
 		ret = 1;
 		goto end;
 	}
 
-	subcompositor = wlr_subcompositor_create(server.wl_display);
-	if (!subcompositor) {
+	if (!wlr_subcompositor_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots subcompositor");
 		ret = 1;
 		goto end;
 	}
 
-	data_device_manager = wlr_data_device_manager_create(server.wl_display);
-	if (!data_device_manager) {
+	if (!wlr_data_device_manager_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the data device manager");
 		ret = 1;
 		goto end;
@@ -413,7 +391,7 @@ main(int argc, char *argv[])
 	wl_signal_add(&server.idle_inhibit_v1->events.new_inhibitor, &server.new_idle_inhibitor_v1);
 	wl_list_init(&server.inhibitors);
 
-	xdg_shell = wlr_xdg_shell_create(server.wl_display, 4);
+	struct wlr_xdg_shell *xdg_shell = wlr_xdg_shell_create(server.wl_display, 4);
 	if (!xdg_shell) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
 		ret = 1;
@@ -422,7 +400,8 @@ main(int argc, char *argv[])
 	server.new_xdg_shell_surface.notify = handle_xdg_shell_surface_new;
 	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
 
-	xdg_decoration_manager = wlr_xdg_decoration_manager_v1_create(server.wl_display);
+	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager =
+		wlr_xdg_decoration_manager_v1_create(server.wl_display);
 	if (!xdg_decoration_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG decoration manager");
 		ret = 1;
@@ -431,7 +410,8 @@ main(int argc, char *argv[])
 	wl_signal_add(&xdg_decoration_manager->events.new_toplevel_decoration, &server.xdg_toplevel_decoration);
 	server.xdg_toplevel_decoration.notify = handle_xdg_toplevel_decoration;
 
-	server_decoration_manager = wlr_server_decoration_manager_create(server.wl_display);
+	struct wlr_server_decoration_manager *server_decoration_manager =
+		wlr_server_decoration_manager_create(server.wl_display);
 	if (!server_decoration_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the server decoration manager");
 		ret = 1;
@@ -441,14 +421,13 @@ main(int argc, char *argv[])
 		server_decoration_manager, server.xdg_decoration ? WLR_SERVER_DECORATION_MANAGER_MODE_SERVER
 								 : WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
 
-	viewporter = wlr_viewporter_create(server.wl_display);
-	if (!viewporter) {
+	if (!wlr_viewporter_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the viewporter interface");
 		ret = 1;
 		goto end;
 	}
 
-	presentation = wlr_presentation_create(server.wl_display, server.backend);
+	struct wlr_presentation *presentation = wlr_presentation_create(server.wl_display, server.backend);
 	if (!presentation) {
 		wlr_log(WLR_ERROR, "Unable to create the presentation interface");
 		ret = 1;
@@ -456,29 +435,25 @@ main(int argc, char *argv[])
 	}
 	wlr_scene_set_presentation(server.scene, presentation);
 
-	export_dmabuf_manager = wlr_export_dmabuf_manager_v1_create(server.wl_display);
-	if (!export_dmabuf_manager) {
+	if (!wlr_export_dmabuf_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the export DMABUF manager");
 		ret = 1;
 		goto end;
 	}
 
-	screencopy_manager = wlr_screencopy_manager_v1_create(server.wl_display);
-	if (!screencopy_manager) {
+	if (!wlr_screencopy_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the screencopy manager");
 		ret = 1;
 		goto end;
 	}
 
-	single_pixel_buffer = wlr_single_pixel_buffer_manager_v1_create(server.wl_display);
-	if (!single_pixel_buffer) {
+	if (!wlr_single_pixel_buffer_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the single pixel buffer manager");
 		ret = 1;
 		goto end;
 	}
 
-	output_manager = wlr_xdg_output_manager_v1_create(server.wl_display, server.output_layout);
-	if (!output_manager) {
+	if (!wlr_xdg_output_manager_v1_create(server.wl_display, server.output_layout)) {
 		wlr_log(WLR_ERROR, "Unable to create the output manager");
 		ret = 1;
 		goto end;
@@ -495,14 +470,14 @@ main(int argc, char *argv[])
 	server.output_manager_test.notify = handle_output_manager_test;
 	wl_signal_add(&server.output_manager_v1->events.test, &server.output_manager_test);
 
-	gamma_control_manager = wlr_gamma_control_manager_v1_create(server.wl_display);
-	if (!gamma_control_manager) {
+	if (!wlr_gamma_control_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the gamma control manager");
 		ret = 1;
 		goto end;
 	}
 
-	virtual_keyboard = wlr_virtual_keyboard_manager_v1_create(server.wl_display);
+	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard =
+		wlr_virtual_keyboard_manager_v1_create(server.wl_display);
 	if (!virtual_keyboard) {
 		wlr_log(WLR_ERROR, "Unable to create the virtual keyboard manager");
 		ret = 1;
@@ -510,7 +485,8 @@ main(int argc, char *argv[])
 	}
 	wl_signal_add(&virtual_keyboard->events.new_virtual_keyboard, &server.new_virtual_keyboard);
 
-	virtual_pointer = wlr_virtual_pointer_manager_v1_create(server.wl_display);
+	struct wlr_virtual_pointer_manager_v1 *virtual_pointer =
+		wlr_virtual_pointer_manager_v1_create(server.wl_display);
 	if (!virtual_pointer) {
 		wlr_log(WLR_ERROR, "Unable to create the virtual pointer manager");
 		ret = 1;
@@ -526,7 +502,7 @@ main(int argc, char *argv[])
 	}
 
 #if CAGE_HAS_XWAYLAND
-	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
+	struct wlr_xwayland *xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
 	if (!xwayland) {
 		wlr_log(WLR_ERROR, "Cannot create XWayland server");
 		ret = 1;
@@ -535,7 +511,7 @@ main(int argc, char *argv[])
 	server.new_xwayland_surface.notify = handle_xwayland_surface_new;
 	wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
 
-	xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
+	struct wlr_xcursor_manager *xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
 	if (!xcursor_manager) {
 		wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
 		ret = 1;
