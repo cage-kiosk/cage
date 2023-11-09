@@ -30,6 +30,7 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
@@ -516,6 +517,13 @@ main(int argc, char *argv[])
 		goto end;
 	}
 	wl_signal_add(&virtual_pointer->events.new_virtual_pointer, &server.new_virtual_pointer);
+
+	server.relative_pointer_manager = wlr_relative_pointer_manager_v1_create(server.wl_display);
+	if (!server.relative_pointer_manager) {
+		wlr_log(WLR_ERROR, "Unable to create the relative pointer manager");
+		ret = 1;
+		goto end;
+	}
 
 #if CAGE_HAS_XWAYLAND
 	xwayland = wlr_xwayland_create(server.wl_display, compositor, true);

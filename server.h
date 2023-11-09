@@ -7,6 +7,7 @@
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -50,6 +51,8 @@ struct cg_server {
 	struct wlr_output_manager_v1 *output_manager_v1;
 	struct wl_listener output_manager_apply;
 	struct wl_listener output_manager_test;
+
+	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
 
 	bool xdg_decoration;
 	bool allow_vt_switch;
