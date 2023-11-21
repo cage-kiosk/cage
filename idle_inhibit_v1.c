@@ -8,8 +8,8 @@
 
 #include <stdlib.h>
 #include <wayland-server-core.h>
-#include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
+#include <wlr/types/wlr_idle_notify_v1.h>
 
 #include "idle_inhibit_v1.h"
 #include "server.h"
@@ -32,7 +32,7 @@ idle_inhibit_v1_check_active(struct cg_server *server)
 	   Hence, we simply check for any inhibitors and inhibit
 	   accordingly. */
 	bool inhibited = !wl_list_empty(&server->inhibitors);
-	wlr_idle_set_enabled(server->idle, NULL, !inhibited);
+	wlr_idle_notifier_v1_set_inhibited(server->idle, inhibited);
 }
 
 static void

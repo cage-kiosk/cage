@@ -25,8 +25,8 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
-#include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
+#include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -374,7 +374,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	server.idle = wlr_idle_create(server.wl_display);
+	server.idle = wlr_idle_notifier_v1_create(server.wl_display);
 	if (!server.idle) {
 		wlr_log(WLR_ERROR, "Unable to create the idle tracker");
 		ret = 1;
