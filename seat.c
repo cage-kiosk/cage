@@ -20,7 +20,7 @@
 #include <wlr/backend/session.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
-#include <wlr/types/wlr_idle.h>
+#include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
@@ -250,7 +250,7 @@ handle_modifier_event(struct wlr_keyboard *keyboard, struct cg_seat *seat)
 	wlr_seat_set_keyboard(seat->seat, keyboard);
 	wlr_seat_keyboard_notify_modifiers(seat->seat, &keyboard->modifiers);
 
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static bool
@@ -272,7 +272,7 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 	} else {
 		return false;
 	}
-	wlr_idle_notify_activity(server->idle, server->seat->seat);
+	wlr_idle_notifier_v1_notify_activity(server->idle, server->seat->seat);
 	return true;
 }
 
@@ -304,7 +304,7 @@ handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data
 		wlr_seat_keyboard_notify_key(seat->seat, event->time_msec, event->keycode, event->state);
 	}
 
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -512,7 +512,7 @@ handle_touch_down(struct wl_listener *listener, void *data)
 		press_cursor_button(seat, &event->touch->base, event->time_msec, BTN_LEFT, WLR_BUTTON_PRESSED, lx, ly);
 	}
 
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -531,7 +531,7 @@ handle_touch_up(struct wl_listener *listener, void *data)
 	}
 
 	wlr_seat_touch_notify_up(seat->seat, event->time_msec, event->touch_id);
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -563,7 +563,7 @@ handle_touch_motion(struct wl_listener *listener, void *data)
 		seat->touch_ly = ly;
 	}
 
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -572,7 +572,7 @@ handle_touch_frame(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, touch_frame);
 
 	wlr_seat_touch_notify_frame(seat->seat);
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -581,7 +581,7 @@ handle_cursor_frame(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_frame);
 
 	wlr_seat_pointer_notify_frame(seat->seat);
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -592,7 +592,7 @@ handle_cursor_axis(struct wl_listener *listener, void *data)
 
 	wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
 				     event->delta_discrete, event->source);
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -604,7 +604,7 @@ handle_cursor_button(struct wl_listener *listener, void *data)
 	wlr_seat_pointer_notify_button(seat->seat, event->time_msec, event->button, event->state);
 	press_cursor_button(seat, &event->pointer->base, event->time_msec, event->button, event->state, seat->cursor->x,
 			    seat->cursor->y);
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -634,7 +634,7 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, doubl
 		drag_icon_update_position(drag_icon);
 	}
 
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -651,7 +651,7 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 
 	wlr_cursor_warp_absolute(seat->cursor, &event->pointer->base, event->x, event->y);
 	process_cursor_motion(seat, event->time_msec, dx, dy, dx, dy);
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
@@ -663,7 +663,7 @@ handle_cursor_motion_relative(struct wl_listener *listener, void *data)
 	wlr_cursor_move(seat->cursor, &event->pointer->base, event->delta_x, event->delta_y);
 	process_cursor_motion(seat, event->time_msec, event->delta_x, event->delta_y, event->unaccel_dx,
 			      event->unaccel_dy);
-	wlr_idle_notify_activity(seat->server->idle, seat->seat);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
