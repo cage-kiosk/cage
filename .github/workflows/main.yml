@@ -11,12 +11,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        CC: [ gcc, clang ]
         OS: [ "alpine:edge", "archlinux:base-devel" ]
         xwayland: [ enabled, disabled ]
     container: ${{ matrix.OS }}
-    env:
-      CC: ${{ matrix.CC }}
     steps:
       - name: Checkout Cage
         uses: actions/checkout@v2
