@@ -9,6 +9,7 @@ jobs:
   compile:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         CC: [ gcc, clang ]
         OS: [ "alpine:edge", "archlinux:base-devel" ]
