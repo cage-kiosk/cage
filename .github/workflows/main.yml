@@ -13,7 +13,7 @@ jobs:
       matrix:
         CC: [ gcc, clang ]
         OS: [ "alpine:edge", "archlinux:base-devel" ]
-        xwayland: [ true, false ]
+        xwayland: [ enabled, disabled ]
     container: ${{ matrix.OS }}
     env:
       CC: ${{ matrix.CC }}
@@ -54,7 +54,7 @@ jobs:
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
       - name: Check for formatting changes
         run: |
-          meson build-clang-format -Dxwayland=true
+          meson build-clang-format -Dxwayland=enabled
           ninja -C build-clang-format clang-format-check
 
   scan-build:
@@ -73,5 +73,5 @@ jobs:
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
       - name: Run scan-build
         run: |
-          meson build-scan-build -Dxwayland=true
+          meson build-scan-build -Dxwayland=enabled
           ninja -C build-scan-build scan-build
