@@ -32,7 +32,7 @@ jobs:
           pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc
 
       - name: Fetch wlroots as a subproject
-        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
+        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17
 
       # TODO: use --fatal-meson-warnings when on wlroots 0.15.0
       - name: Compile Cage (XWayland=${{ matrix.xwayland }})
@@ -51,7 +51,7 @@ jobs:
           pacman-key --init
           pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata
       - name: Fetch wlroots as a subproject
-        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
+        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17
       - name: Check for formatting changes
         run: |
           meson build-clang-format -Dxwayland=enabled
@@ -70,7 +70,7 @@ jobs:
           pacman-key --init
           pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata
       - name: Fetch wlroots as a subproject
-        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
+        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17
       - name: Run scan-build
         run: |
           meson build-scan-build -Dxwayland=enabled
