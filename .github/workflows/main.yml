@@ -12,7 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         OS: [ "alpine:edge", "archlinux:base-devel" ]
-        xwayland: [ enabled, disabled ]
     container: ${{ matrix.OS }}
     steps:
       - name: Checkout Cage
@@ -31,11 +30,15 @@ jobs:
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17.0
 
-      # TODO: use --fatal-meson-warnings when on wlroots 0.15.0
-      - name: Compile Cage (XWayland=${{ matrix.xwayland }})
+      - name: Compile Cage
         run: |
-          meson build-${{ matrix.CC }}-${{matrix.xwayland }} -Dxwayland=${{ matrix.xwayland }}
-          ninja -C build-${{ matrix.CC }}-${{matrix.xwayland }}
+          meson setup build -Dxwayland=enabled
+          ninja -C build
+
+      - name: Compile cage (no xwayland)
+        run: |
+          meson configure build -Dxwayland=disabled
+          ninja -C build
 
   format:
     runs-on: ubuntu-latest
