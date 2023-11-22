@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies (Alpine)
         if: "matrix.OS == 'alpine:edge'"
-        run: apk add build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland scdoc-doc hwdata
+        run: apk add build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland-dev scdoc-doc hwdata
 
       - name: Install dependencies (Arch)
         if: "matrix.OS == 'archlinux:base-devel'"
