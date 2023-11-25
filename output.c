@@ -71,14 +71,18 @@ static inline void
 output_layout_add_auto(struct cg_output *output)
 {
 	assert(output->scene_output != NULL);
-	wlr_output_layout_add_auto(output->server->output_layout, output->wlr_output);
+	struct wlr_output_layout_output *layout_output =
+		wlr_output_layout_add_auto(output->server->output_layout, output->wlr_output);
+	wlr_scene_output_layout_add_output(output->server->scene_output_layout, layout_output, output->scene_output);
 }
 
 static inline void
 output_layout_add(struct cg_output *output, int32_t x, int32_t y)
 {
 	assert(output->scene_output != NULL);
-	wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
+	struct wlr_output_layout_output *layout_output =
+		wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
+	wlr_scene_output_layout_add_output(output->server->scene_output_layout, layout_output, output->scene_output);
 }
 
 static inline void
