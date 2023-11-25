@@ -340,7 +340,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	wlr_scene_attach_output_layout(server.scene, server.output_layout);
+	server.scene_output_layout = wlr_scene_attach_output_layout(server.scene, server.output_layout);
 
 	struct wlr_compositor *compositor = wlr_compositor_create(server.wl_display, 6, server.renderer);
 	if (!compositor) {

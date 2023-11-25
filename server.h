@@ -34,6 +34,8 @@ struct cg_server {
 
 	enum cg_multi_output_mode output_mode;
 	struct wlr_output_layout *output_layout;
+	struct wlr_scene_output_layout *scene_output_layout;
+
 	struct wlr_scene *scene;
 	/* Includes disabled outputs; depending on the output_mode
 	 * some outputs may be disabled. */
