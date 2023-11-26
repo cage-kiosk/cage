@@ -502,36 +502,37 @@ main(int argc, char *argv[])
 	}
 
 #if CAGE_HAS_XWAYLAND
+	struct wlr_xcursor_manager *xcursor_manager = NULL;
 	struct wlr_xwayland *xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
 	if (!xwayland) {
 		wlr_log(WLR_ERROR, "Cannot create XWayland server");
-		ret = 1;
-		goto end;
-	}
-	server.new_xwayland_surface.notify = handle_xwayland_surface_new;
-	wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
-
-	struct wlr_xcursor_manager *xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
-	if (!xcursor_manager) {
-		wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
-		ret = 1;
-		goto end;
-	}
-
-	if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
-		wlr_log_errno(WLR_ERROR, "Unable to set DISPLAY for XWayland. Clients may not be able to connect");
 	} else {
-		wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
-	}
+		server.new_xwayland_surface.notify = handle_xwayland_surface_new;
+		wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
 
-	if (!wlr_xcursor_manager_load(xcursor_manager, 1)) {
-		wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
-	}
-	struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
-	if (xcursor) {
-		struct wlr_xcursor_image *image = xcursor->images[0];
-		wlr_xwayland_set_cursor(xwayland, image->buffer, image->width * 4, image->width, image->height,
-					image->hotspot_x, image->hotspot_y);
+		xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
+		if (!xcursor_manager) {
+			wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
+			ret = 1;
+			goto end;
+		}
+
+		if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
+			wlr_log_errno(WLR_ERROR,
+				      "Unable to set DISPLAY for XWayland. Clients may not be able to connect");
+		} else {
+			wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
+		}
+
+		if (!wlr_xcursor_manager_load(xcursor_manager, 1)) {
+			wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
+		}
+		struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
+		if (xcursor) {
+			struct wlr_xcursor_image *image = xcursor->images[0];
+			wlr_xwayland_set_cursor(xwayland, image->buffer, image->width * 4, image->width, image->height,
+						image->hotspot_x, image->hotspot_y);
+		}
 	}
 #endif
 
@@ -555,7 +556,9 @@ main(int argc, char *argv[])
 	}
 
 #if CAGE_HAS_XWAYLAND
-	wlr_xwayland_set_seat(xwayland, server.seat->seat);
+	if (xwayland) {
+		wlr_xwayland_set_seat(xwayland, server.seat->seat);
+	}
 #endif
 
 	if (!spawn_primary_client(&server, argv + optind, &pid, &sigchld_source)) {
