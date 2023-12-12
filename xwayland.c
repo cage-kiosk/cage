@@ -167,9 +167,9 @@ handle_xwayland_surface_new(struct wl_listener *listener, void *data)
 	xwayland_view->xwayland_surface = xwayland_surface;
 
 	xwayland_view->map.notify = handle_xwayland_surface_map;
-	wl_signal_add(&xwayland_surface->events.map, &xwayland_view->map);
+	wl_signal_add(&xwayland_surface->surface->events.map, &xwayland_view->map);
 	xwayland_view->unmap.notify = handle_xwayland_surface_unmap;
-	wl_signal_add(&xwayland_surface->events.unmap, &xwayland_view->unmap);
+	wl_signal_add(&xwayland_surface->surface->events.unmap, &xwayland_view->unmap);
 	xwayland_view->destroy.notify = handle_xwayland_surface_destroy;
 	wl_signal_add(&xwayland_surface->events.destroy, &xwayland_view->destroy);
 	xwayland_view->request_fullscreen.notify = handle_xwayland_surface_request_fullscreen;

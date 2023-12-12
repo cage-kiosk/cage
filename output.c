@@ -26,7 +26,6 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output.h>
-#include <wlr/types/wlr_output_damage.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_scene.h>
@@ -71,24 +70,21 @@ update_output_manager_config(struct cg_server *server)
 static inline void
 output_layout_add_auto(struct cg_output *output)
 {
-	wlr_output_layout_add_auto(output->server->output_layout, output->wlr_output);
-	output->scene_output = wlr_scene_get_scene_output(output->server->scene, output->wlr_output);
 	assert(output->scene_output != NULL);
+	wlr_output_layout_add_auto(output->server->output_layout, output->wlr_output);
 }
 
 static inline void
 output_layout_add(struct cg_output *output, int32_t x, int32_t y)
 {
-	wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
-	output->scene_output = wlr_scene_get_scene_output(output->server->scene, output->wlr_output);
 	assert(output->scene_output != NULL);
+	wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
 }
 
 static inline void
 output_layout_remove(struct cg_output *output)
 {
 	wlr_output_layout_remove(output->server->output_layout, output->wlr_output);
-	output->scene_output = NULL;
 }
 
 static void
@@ -173,7 +169,7 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	wlr_scene_output_commit(output->scene_output);
+	wlr_scene_output_commit(output->scene_output, NULL);
 
 	struct timespec now = {0};
 	clock_gettime(CLOCK_MONOTONIC, &now);
@@ -190,22 +186,9 @@ handle_output_commit(struct wl_listener *listener, void *data)
 	 * - output layout change will also be called if needed to position the views
 	 * - always update output manager configuration even if the output is now disabled */
 
-	if (event->committed & OUTPUT_CONFIG_UPDATED) {
+	if (event->state->committed & OUTPUT_CONFIG_UPDATED) {
 		update_output_manager_config(output->server);
 	}
-}
-
-static void
-handle_output_mode(struct wl_listener *listener, void *data)
-{
-	struct cg_output *output = wl_container_of(listener, output, mode);
-
-	if (!output->wlr_output->enabled) {
-		return;
-	}
-
-	view_position_all(output->server);
-	update_output_manager_config(output->server);
 }
 
 void
@@ -241,7 +224,6 @@ output_destroy(struct cg_output *output)
 
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->commit.link);
-	wl_list_remove(&output->mode.link);
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
 
@@ -290,12 +272,12 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	output->commit.notify = handle_output_commit;
 	wl_signal_add(&wlr_output->events.commit, &output->commit);
-	output->mode.notify = handle_output_mode;
-	wl_signal_add(&wlr_output->events.mode, &output->mode);
 	output->destroy.notify = handle_output_destroy;
 	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 	output->frame.notify = handle_output_frame;
 	wl_signal_add(&wlr_output->events.frame, &output->frame);
+
+	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
 
 	if (!wl_list_empty(&wlr_output->modes)) {
 		/* Ensure the output is marked as enabled before trying to set mode */

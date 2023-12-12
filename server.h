@@ -4,8 +4,8 @@
 #include "config.h"
 
 #include <wayland-server-core.h>
-#include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
+#include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
@@ -24,9 +24,10 @@ struct cg_server {
 	struct wlr_backend *backend;
 	struct wlr_renderer *renderer;
 	struct wlr_allocator *allocator;
+	struct wlr_session *session;
 
 	struct cg_seat *seat;
-	struct wlr_idle *idle;
+	struct wlr_idle_notifier_v1 *idle;
 	struct wlr_idle_inhibit_manager_v1 *idle_inhibit_v1;
 	struct wl_listener new_idle_inhibitor_v1;
 	struct wl_list inhibitors;

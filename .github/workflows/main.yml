@@ -11,19 +11,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        CC: [ gcc, clang ]
         OS: [ "alpine:edge", "archlinux:base-devel" ]
-        xwayland: [ true, false ]
     container: ${{ matrix.OS }}
-    env:
-      CC: ${{ matrix.CC }}
     steps:
       - name: Checkout Cage
         uses: actions/checkout@v2
 
       - name: Install dependencies (Alpine)
         if: "matrix.OS == 'alpine:edge'"
-        run: apk add build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland scdoc-doc hwdata
+        run: apk add build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland-dev scdoc-doc hwdata
 
       - name: Install dependencies (Arch)
         if: "matrix.OS == 'archlinux:base-devel'"
@@ -32,13 +28,17 @@ jobs:
           pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc
 
       - name: Fetch wlroots as a subproject
-        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
+        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17.0
 
-      # TODO: use --fatal-meson-warnings when on wlroots 0.15.0
-      - name: Compile Cage (XWayland=${{ matrix.xwayland }})
+      - name: Compile Cage
         run: |
-          meson build-${{ matrix.CC }}-${{matrix.xwayland }} -Dxwayland=${{ matrix.xwayland }}
-          ninja -C build-${{ matrix.CC }}-${{matrix.xwayland }}
+          meson setup build -Dxwayland=enabled
+          ninja -C build
+
+      - name: Compile cage (no xwayland)
+        run: |
+          meson configure build -Dxwayland=disabled
+          ninja -C build
 
   format:
     runs-on: ubuntu-latest
@@ -51,10 +51,10 @@ jobs:
           pacman-key --init
           pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata
       - name: Fetch wlroots as a subproject
-        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
+        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17.0
       - name: Check for formatting changes
         run: |
-          meson build-clang-format -Dxwayland=true
+          meson build-clang-format -Dxwayland=enabled
           ninja -C build-clang-format clang-format-check
 
   scan-build:
@@ -70,8 +70,8 @@ jobs:
           pacman-key --init
           pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata
       - name: Fetch wlroots as a subproject
-        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.16.0
+        run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17.0
       - name: Run scan-build
         run: |
-          meson build-scan-build -Dxwayland=true
+          meson build-scan-build -Dxwayland=enabled
           ninja -C build-scan-build scan-build
