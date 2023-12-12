@@ -42,9 +42,9 @@
 #include "xwayland.h"
 #endif
 
-#define OUTPUT_CONFIG_UPDATED                                                                                          \
-	(WLR_OUTPUT_STATE_ENABLED | WLR_OUTPUT_STATE_SCALE | WLR_OUTPUT_STATE_TRANSFORM |                              \
-	 WLR_OUTPUT_STATE_ADAPTIVE_SYNC_ENABLED)
+#define OUTPUT_CONFIG_UPDATED (WLR_OUTPUT_STATE_ENABLED | \
+	WLR_OUTPUT_STATE_MODE | WLR_OUTPUT_STATE_SCALE | \
+	WLR_OUTPUT_STATE_TRANSFORM | WLR_OUTPUT_STATE_ADAPTIVE_SYNC_ENABLED)
 
 static void
 update_output_manager_config(struct cg_server *server)
