@@ -101,9 +101,10 @@ output_enable(struct cg_output *output)
 	 * duplicate the enabled property in cg_output. */
 	wlr_log(WLR_DEBUG, "Enabling output %s", wlr_output->name);
 
-	wlr_output_enable(wlr_output, true);
+	struct wlr_output_state state = {0};
+	wlr_output_state_set_enabled(&state, true);
 
-	if (wlr_output_commit(wlr_output)) {
+	if (wlr_output_commit_state(wlr_output, &state)) {
 		output_layout_add_auto(output);
 	}
 
@@ -114,44 +115,45 @@ static void
 output_disable(struct cg_output *output)
 {
 	struct wlr_output *wlr_output = output->wlr_output;
-
 	if (!wlr_output->enabled) {
 		wlr_log(WLR_DEBUG, "Not disabling already disabled output %s", wlr_output->name);
 		return;
 	}
 
 	wlr_log(WLR_DEBUG, "Disabling output %s", wlr_output->name);
-	wlr_output_enable(wlr_output, false);
-	wlr_output_commit(wlr_output);
+	struct wlr_output_state state = {0};
+	wlr_output_state_set_enabled(&state, false);
+	wlr_output_commit_state(wlr_output, &state);
 	output_layout_remove(output);
 }
 
 static bool
 output_apply_config(struct cg_output *output, struct wlr_output_configuration_head_v1 *head, bool test_only)
 {
-	wlr_output_enable(output->wlr_output, head->state.enabled);
+	struct wlr_output_state state = {0};
+	wlr_output_state_set_enabled(&state, head->state.enabled);
 
 	if (head->state.enabled) {
 		/* Do not mess with these parameters for output to be disabled */
-		wlr_output_set_scale(output->wlr_output, head->state.scale);
-		wlr_output_set_transform(output->wlr_output, head->state.transform);
+		wlr_output_state_set_scale(&state, head->state.scale);
+		wlr_output_state_set_transform(&state, head->state.transform);
 
 		if (head->state.mode) {
-			wlr_output_set_mode(output->wlr_output, head->state.mode);
+			wlr_output_state_set_mode(&state, head->state.mode);
 		} else {
-			wlr_output_set_custom_mode(output->wlr_output, head->state.custom_mode.width,
-						   head->state.custom_mode.height, head->state.custom_mode.refresh);
+			wlr_output_state_set_custom_mode(&state, head->state.custom_mode.width,
+							 head->state.custom_mode.height,
+							 head->state.custom_mode.refresh);
 		}
 	}
 
 	if (test_only) {
-		bool ret = wlr_output_test(output->wlr_output);
-		wlr_output_rollback(output->wlr_output);
+		bool ret = wlr_output_test_state(output->wlr_output, &state);
 		return ret;
 	}
 
 	/* Apply output configuration */
-	if (!wlr_output_commit(output->wlr_output)) {
+	if (!wlr_output_commit_state(output->wlr_output, &state)) {
 		return false;
 	}
 
@@ -301,23 +303,22 @@ handle_new_output(struct wl_listener *listener, void *data)
 		return;
 	}
 
+	struct wlr_output_state state = {0};
+	wlr_output_state_set_enabled(&state, true);
 	if (!wl_list_empty(&wlr_output->modes)) {
-		/* Ensure the output is marked as enabled before trying to set mode */
-		wlr_output_enable(wlr_output, true);
-
 		struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
 		if (preferred_mode) {
-			wlr_output_set_mode(wlr_output, preferred_mode);
+			wlr_output_state_set_mode(&state, preferred_mode);
 		}
-		if (!wlr_output_test(wlr_output)) {
+		if (!wlr_output_test_state(wlr_output, &state)) {
 			struct wlr_output_mode *mode;
 			wl_list_for_each (mode, &wlr_output->modes, link) {
 				if (mode == preferred_mode) {
 					continue;
 				}
 
-				wlr_output_set_mode(wlr_output, mode);
-				if (wlr_output_test(wlr_output)) {
+				wlr_output_state_set_mode(&state, mode);
+				if (wlr_output_test_state(wlr_output, &state)) {
 					break;
 				}
 			}
@@ -334,8 +335,13 @@ handle_new_output(struct wl_listener *listener, void *data)
 			wlr_output->scale);
 	}
 
-	output_enable(output);
+	wlr_log(WLR_DEBUG, "Enabling new output %s", wlr_output->name);
+	if (wlr_output_commit_state(wlr_output, &state)) {
+		output_layout_add_auto(output);
+	}
+
 	view_position_all(output->server);
+	update_output_manager_config(output->server);
 }
 
 void
