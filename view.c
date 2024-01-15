@@ -55,17 +55,21 @@ view_activate(struct cg_view *view, bool activate)
 static bool
 view_extends_output_layout(struct cg_view *view, struct wlr_box *layout_box)
 {
-	int width, height;
-	view->impl->get_geometry(view, &width, &height);
+	struct wlr_box view_box;
+	view->impl->get_geometry(view, &view_box);
 
-	return (layout_box->height < height || layout_box->width < width);
+	return (layout_box->height < view_box.height || layout_box->width < view_box.width);
 }
 
 static void
 view_maximize(struct cg_view *view, struct wlr_box *layout_box)
 {
-	view->lx = layout_box->x;
-	view->ly = layout_box->y;
+	struct wlr_box view_box;
+	view->impl->get_geometry(view, &view_box);
+
+	// Do not forget to adjust position according to top left corner declared in view geometry
+	view->lx = layout_box->x - view_box.x;
+	view->ly = layout_box->y - view_box.y;
 
 	if (view->scene_tree) {
 		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
@@ -77,11 +81,12 @@ view_maximize(struct cg_view *view, struct wlr_box *layout_box)
 static void
 view_center(struct cg_view *view, struct wlr_box *layout_box)
 {
-	int width, height;
-	view->impl->get_geometry(view, &width, &height);
+	struct wlr_box view_box;
+	view->impl->get_geometry(view, &view_box);
 
-	view->lx = (layout_box->width - width) / 2;
-	view->ly = (layout_box->height - height) / 2;
+	// Do not forget to adjust position according to top left corner declared in view geometry
+	view->lx = (layout_box->width - view_box.width) / 2 - view_box.x;
+	view->ly = (layout_box->height - view_box.height) / 2 - view_box.y;
 
 	if (view->scene_tree) {
 		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
