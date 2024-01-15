@@ -65,11 +65,15 @@ view_position(struct cg_view *view)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
 
-	view->impl->get_geometry(view, &view->width, &view->height);
+	struct wlr_box view_box;
+	view->impl->get_geometry(view, &view_box);
 
 	// If view dimensions are not the same as output layout ones, it will be centered first
-	view->lx = layout_box.x + (layout_box.width - view->width) / 2;
-	view->ly = layout_box.y + (layout_box.height - view->height) / 2;
+	// Do not forget to adjust position according to top left corner declared in view geometry
+	view->lx = layout_box.x + (layout_box.width - view_box.width) / 2 - view_box.x;
+	view->ly = layout_box.y + (layout_box.height - view_box.height) / 2 - view_box.y;
+	view->width = view_box.width;
+	view->height = view_box.height;
 
 	wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
 

@@ -101,14 +101,10 @@ get_title(struct cg_view *view)
 }
 
 static void
-get_geometry(struct cg_view *view, int *width_out, int *height_out)
+get_geometry(struct cg_view *view, struct wlr_box *view_box)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_box geom;
-
-	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, &geom);
-	*width_out = geom.width;
-	*height_out = geom.height;
+	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, view_box);
 }
 
 static bool
@@ -195,9 +191,9 @@ handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
 	struct cg_view *view = &xdg_shell_view->view;
 
 	// Check if view dimensions have changed
-	int width, height;
-	get_geometry(view, &width, &height);
-	if (width != view->width || height != view->height) {
+	struct wlr_box view_box;
+	get_geometry(view, &view_box);
+	if (view_box.width != view->width || view_box.height != view->height) {
 		view_position(view);
 	}
 }
