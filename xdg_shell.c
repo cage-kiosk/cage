@@ -183,7 +183,23 @@ handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
 
+	wl_list_remove(&xdg_shell_view->commit.link);
+
 	view_unmap(view);
+}
+
+static void
+handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
+	struct cg_view *view = &xdg_shell_view->view;
+
+	// Check if view dimensions have changed
+	int width, height;
+	get_geometry(view, &width, &height);
+	if (width != view->width || height != view->height) {
+		view_position(view);
+	}
 }
 
 static void
@@ -191,6 +207,9 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
 	struct cg_view *view = &xdg_shell_view->view;
+
+	xdg_shell_view->commit.notify = handle_xdg_shell_surface_commit;
+	wl_signal_add(&xdg_shell_view->xdg_toplevel->base->surface->events.commit, &xdg_shell_view->commit);
 
 	view_map(view, xdg_shell_view->xdg_toplevel->base->surface);
 }

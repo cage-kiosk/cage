@@ -29,6 +29,7 @@ struct cg_view {
 
 	/* The view has a position in layout coordinates. */
 	int lx, ly;
+	int width, height;
 
 	enum cg_view_type type;
 	const struct cg_view_impl *impl;

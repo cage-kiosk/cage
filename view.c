@@ -52,36 +52,11 @@ view_activate(struct cg_view *view, bool activate)
 	view->impl->activate(view, activate);
 }
 
-static bool
+static inline bool
 view_extends_output_layout(struct cg_view *view, struct wlr_box *layout_box)
 {
-	int width, height;
-	view->impl->get_geometry(view, &width, &height);
-
-	return (layout_box->height < height || layout_box->width < width);
-}
-
-static void
-view_maximize(struct cg_view *view, struct wlr_box *layout_box)
-{
-	view->lx = layout_box->x;
-	view->ly = layout_box->y;
-
-	wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
-
-	view->impl->maximize(view, layout_box->width, layout_box->height);
-}
-
-static void
-view_center(struct cg_view *view, struct wlr_box *layout_box)
-{
-	int width, height;
-	view->impl->get_geometry(view, &width, &height);
-
-	view->lx = (layout_box->width - width) / 2;
-	view->ly = (layout_box->height - height) / 2;
-
-	wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
+	// View width and height are expected to be set before calling this function
+	return (layout_box->height < view->height || layout_box->width < view->width);
 }
 
 void
@@ -90,10 +65,16 @@ view_position(struct cg_view *view)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
 
+	view->impl->get_geometry(view, &view->width, &view->height);
+
+	// If view dimensions are not the same as output layout ones, it will be centered first
+	view->lx = layout_box.x + (layout_box.width - view->width) / 2;
+	view->ly = layout_box.y + (layout_box.height - view->height) / 2;
+
+	wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
+
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
-		view_maximize(view, &layout_box);
-	} else {
-		view_center(view, &layout_box);
+		view->impl->maximize(view, layout_box.width, layout_box.height);
 	}
 }
 
