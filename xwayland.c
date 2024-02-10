@@ -139,8 +139,6 @@ handle_xwayland_surface_destroy(struct wl_listener *listener, void *data)
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, destroy);
 	struct cg_view *view = &xwayland_view->view;
 
-	wl_list_remove(&xwayland_view->map.link);
-	wl_list_remove(&xwayland_view->unmap.link);
 	wl_list_remove(&xwayland_view->destroy.link);
 	wl_list_remove(&xwayland_view->request_fullscreen.link);
 	xwayland_view->xwayland_surface = NULL;
