@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 
@@ -48,6 +49,20 @@ struct cg_seat {
 	struct wl_listener request_set_cursor;
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
+
+	struct wl_listener constraint_commit;
+	struct wlr_pointer_constraint_v1 *active_constraint;
+	pixman_region32_t confine; // invalid if active_constraint == NULL
+	bool active_confine_requires_warp;
+};
+
+struct cg_pointer_constraint {
+	struct cg_seat *seat;
+
+	struct wlr_pointer_constraint_v1 *constraint;
+
+	struct wl_listener set_region;
+	struct wl_listener destroy;
 };
 
 struct cg_keyboard_group {
@@ -92,5 +107,7 @@ void seat_destroy(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);
 void seat_center_cursor(struct cg_seat *seat);
+
+void handle_pointer_constraint(struct wl_listener *listener, void *data);
 
 #endif
