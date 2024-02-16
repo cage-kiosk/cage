@@ -591,7 +591,7 @@ handle_cursor_axis(struct wl_listener *listener, void *data)
 	struct wlr_pointer_axis_event *event = data;
 
 	wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
-				     event->delta_discrete, event->source);
+				     event->delta_discrete, event->source, event->relative_direction);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
