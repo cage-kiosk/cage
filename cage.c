@@ -440,7 +440,6 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
-	wlr_scene_set_presentation(server.scene, presentation);
 
 	if (!wlr_export_dmabuf_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the export DMABUF manager");
