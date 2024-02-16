@@ -80,8 +80,12 @@ static inline void
 output_layout_add(struct cg_output *output, int32_t x, int32_t y)
 {
 	assert(output->scene_output != NULL);
+	bool exists = wlr_output_layout_get(output->server->output_layout, output->wlr_output);
 	struct wlr_output_layout_output *layout_output =
 		wlr_output_layout_add(output->server->output_layout, output->wlr_output, x, y);
+	if (exists) {
+		return;
+	}
 	wlr_scene_output_layout_add_output(output->server->scene_output_layout, layout_output, output->scene_output);
 }
 
