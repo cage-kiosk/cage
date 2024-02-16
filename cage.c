@@ -404,8 +404,10 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
-	server.new_xdg_shell_surface.notify = handle_xdg_shell_surface_new;
-	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
+	server.new_xdg_toplevel.notify = handle_new_xdg_toplevel;
+	wl_signal_add(&xdg_shell->events.new_toplevel, &server.new_xdg_toplevel);
+	server.new_xdg_popup.notify = handle_new_xdg_popup;
+	wl_signal_add(&xdg_shell->events.new_popup, &server.new_xdg_popup);
 
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager =
 		wlr_xdg_decoration_manager_v1_create(server.wl_display);
