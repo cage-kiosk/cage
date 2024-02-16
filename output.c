@@ -131,21 +131,7 @@ static bool
 output_apply_config(struct cg_output *output, struct wlr_output_configuration_head_v1 *head, bool test_only)
 {
 	struct wlr_output_state state = {0};
-	wlr_output_state_set_enabled(&state, head->state.enabled);
-
-	if (head->state.enabled) {
-		/* Do not mess with these parameters for output to be disabled */
-		wlr_output_state_set_scale(&state, head->state.scale);
-		wlr_output_state_set_transform(&state, head->state.transform);
-
-		if (head->state.mode) {
-			wlr_output_state_set_mode(&state, head->state.mode);
-		} else {
-			wlr_output_state_set_custom_mode(&state, head->state.custom_mode.width,
-							 head->state.custom_mode.height,
-							 head->state.custom_mode.refresh);
-		}
-	}
+	wlr_output_head_v1_state_apply(&head->state, &state);
 
 	if (test_only) {
 		bool ret = wlr_output_test_state(output->wlr_output, &state);
