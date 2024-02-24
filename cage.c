@@ -30,6 +30,7 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
+#include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
@@ -357,6 +358,12 @@ main(int argc, char *argv[])
 
 	if (!wlr_data_device_manager_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the data device manager");
+		ret = 1;
+		goto end;
+	}
+
+	if (!wlr_primary_selection_v1_device_manager_create(server.wl_display)) {
+		wlr_log(WLR_ERROR, "Unable to create primary selection device manager");
 		ret = 1;
 		goto end;
 	}
