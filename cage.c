@@ -294,7 +294,7 @@ main(int argc, char *argv[])
 	struct wl_event_source *sigterm_source =
 		wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
 
-	server.backend = wlr_backend_autocreate(server.wl_display, &server.session);
+	server.backend = wlr_backend_autocreate(event_loop, &server.session);
 	if (!server.backend) {
 		wlr_log(WLR_ERROR, "Unable to create the wlroots backend");
 		ret = 1;
@@ -325,7 +325,7 @@ main(int argc, char *argv[])
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
 
-	server.output_layout = wlr_output_layout_create();
+	server.output_layout = wlr_output_layout_create(server.wl_display);
 	if (!server.output_layout) {
 		wlr_log(WLR_ERROR, "Unable to create output layout");
 		ret = 1;
@@ -404,8 +404,10 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
-	server.new_xdg_shell_surface.notify = handle_xdg_shell_surface_new;
-	wl_signal_add(&xdg_shell->events.new_surface, &server.new_xdg_shell_surface);
+	server.new_xdg_toplevel.notify = handle_new_xdg_toplevel;
+	wl_signal_add(&xdg_shell->events.new_toplevel, &server.new_xdg_toplevel);
+	server.new_xdg_popup.notify = handle_new_xdg_popup;
+	wl_signal_add(&xdg_shell->events.new_popup, &server.new_xdg_popup);
 
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager =
 		wlr_xdg_decoration_manager_v1_create(server.wl_display);
@@ -440,7 +442,6 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
-	wlr_scene_set_presentation(server.scene, presentation);
 
 	if (!wlr_export_dmabuf_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the export DMABUF manager");
