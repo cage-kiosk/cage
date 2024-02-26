@@ -44,7 +44,8 @@ struct cg_server {
 	struct wl_listener output_layout_change;
 
 	struct wl_listener xdg_toplevel_decoration;
-	struct wl_listener new_xdg_shell_surface;
+	struct wl_listener new_xdg_toplevel;
+	struct wl_listener new_xdg_popup;
 
 	struct wl_listener new_virtual_keyboard;
 	struct wl_listener new_virtual_pointer;
