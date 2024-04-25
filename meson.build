@@ -35,7 +35,12 @@ if is_freebsd
   )
 endif
 
-wlroots        = dependency('wlroots', version: '>= 0.17.0', fallback: ['wlroots', 'wlroots'])
+wlroots_proj = subproject(
+  'wlroots',
+  default_options: ['examples=false', 'xwayland=disabled'],
+)
+
+wlroots        = wlroots_proj.get_variable('wlroots')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
