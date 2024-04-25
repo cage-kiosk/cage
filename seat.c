@@ -42,6 +42,7 @@
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
+#include <ctype.h>
 
 static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 
@@ -287,6 +288,7 @@ handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data
 	const xkb_keysym_t *syms;
 	int nsyms = xkb_state_key_get_syms(keyboard->xkb_state, keycode, &syms);
 
+
 	bool handled = false;
 	uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard);
 	if ((modifiers & WLR_MODIFIER_ALT) && event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
@@ -305,6 +307,26 @@ handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data
 	}
 
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+
+	xkb_keysym_t sym = xkb_state_key_get_one_sym(
+                    keyboard->xkb_state, keycode);
+	char buf[128];
+    xkb_keysym_get_name(sym, buf, sizeof(buf));
+	const char *action = event->state == WL_KEYBOARD_KEY_STATE_PRESSED ? "DOWN" : "UP";
+
+    if (strcmp(buf, "Control_L") == 0) {
+        printf("/dev/input/wl_keyboard: EV_KEY KEY_LEFTCTRL %s\n", action);
+
+    } else if (strcmp(buf, "Control_R") == 0) {
+        printf("/dev/input/wl_keyboard: EV_KEY KEY_RIGHTCTRL %s\n", action);
+    } else if (strcmp(buf, "quotedbl") == 0) {
+        printf("/dev/input/wl_keyboard: EV_KEY KEY_GRAVE %s\n", action);
+    } else {
+		int buf_n = strlen(buf);
+        for (int i=0;i<buf_n;i++) buf[i] = toupper(buf[i]);
+        printf("/dev/input/wl_keyboard: EV_KEY KEY_%s %s\n", buf, action);
+    }
+
 }
 
 static void
@@ -593,6 +615,9 @@ handle_cursor_axis(struct wl_listener *listener, void *data)
 	wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
 				     event->delta_discrete, event->source);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+
+	printf("/dev/input/wl_pointer_axis: EV_REL %s %d\n",
+      (event->orientation == WLR_AXIS_ORIENTATION_VERTICAL) ? "REL_WHEEL" : "REL_HWHEEL", -event->delta_discrete / abs(event->delta_discrete));
 }
 
 static void
@@ -605,6 +630,10 @@ handle_cursor_button(struct wl_listener *listener, void *data)
 	press_cursor_button(seat, &event->pointer->base, event->time_msec, event->button, event->state, seat->cursor->x,
 			    seat->cursor->y);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+
+	int action = event->state == WLR_BUTTON_PRESSED ? 1 : 0;
+    const char *code = event->button == BTN_LEFT ? "BTN_LEFT" : "BTN_RIGHT";
+    printf("/dev/input/wl_pointer_button: EV_KEY %s %d\n", code, action);
 }
 
 static void
@@ -652,6 +681,9 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 	wlr_cursor_warp_absolute(seat->cursor, &event->pointer->base, event->x, event->y);
 	process_cursor_motion(seat, event->time_msec, dx, dy, dx, dy);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+
+	printf("/dev/input/wl_pointer_motion: EV_ABS ABS_X %f\n", lx);
+    printf("/dev/input/wl_pointer_motion: EV_ABS ABS_Y %f\n", ly);
 }
 
 static void
@@ -664,6 +696,10 @@ handle_cursor_motion_relative(struct wl_listener *listener, void *data)
 	process_cursor_motion(seat, event->time_msec, event->delta_x, event->delta_y, event->unaccel_dx,
 			      event->unaccel_dy);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+
+	printf("/dev/input/wl_pointer_relative: EV_REL REL_X %f\n", event->delta_x);
+    printf("/dev/input/wl_pointer_relative: EV_REL REL_Y %f\n", event->delta_y);
+
 }
 
 static void
