@@ -113,11 +113,8 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device, uint3
 static void
 update_capabilities(struct cg_seat *seat)
 {
-	uint32_t caps = 0;
+	uint32_t caps = WL_SEAT_CAPABILITY_KEYBOARD;
 
-	if (!wl_list_empty(&seat->keyboard_groups)) {
-		caps |= WL_SEAT_CAPABILITY_KEYBOARD;
-	}
 	if (!wl_list_empty(&seat->pointers)) {
 		caps |= WL_SEAT_CAPABILITY_POINTER;
 	}
@@ -879,6 +876,8 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	wl_signal_add(&seat->seat->events.request_start_drag, &seat->request_start_drag);
 	seat->start_drag.notify = handle_start_drag;
 	wl_signal_add(&seat->seat->events.start_drag, &seat->start_drag);
+
+	update_capabilities(seat);
 
 	return seat;
 }
