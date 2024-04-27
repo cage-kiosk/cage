@@ -609,13 +609,7 @@ handle_cursor_frame(struct wl_listener *listener, void *data)
 static void
 handle_cursor_axis(struct wl_listener *listener, void *data)
 {
-	struct cg_seat *seat = wl_container_of(listener, seat, cursor_axis);
 	struct wlr_pointer_axis_event *event = data;
-
-	wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
-				     event->delta_discrete, event->source);
-	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
-
 	printf("/dev/input/wl_pointer_axis: EV_REL %s %d\n",
       (event->orientation == WLR_AXIS_ORIENTATION_VERTICAL) ? "REL_WHEEL" : "REL_HWHEEL", -event->delta_discrete / abs(event->delta_discrete));
 }
@@ -623,13 +617,7 @@ handle_cursor_axis(struct wl_listener *listener, void *data)
 static void
 handle_cursor_button(struct wl_listener *listener, void *data)
 {
-	struct cg_seat *seat = wl_container_of(listener, seat, cursor_button);
 	struct wlr_pointer_button_event *event = data;
-
-	wlr_seat_pointer_notify_button(seat->seat, event->time_msec, event->button, event->state);
-	press_cursor_button(seat, &event->pointer->base, event->time_msec, event->button, event->state, seat->cursor->x,
-			    seat->cursor->y);
-	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 
 	int action = event->state == WLR_BUTTON_PRESSED ? 1 : 0;
     const char *code = event->button == BTN_LEFT ? "BTN_LEFT" : "BTN_RIGHT";
@@ -675,13 +663,6 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->pointer->base, event->x, event->y, &lx, &ly);
 
-	double dx = lx - seat->cursor->x;
-	double dy = ly - seat->cursor->y;
-
-	wlr_cursor_warp_absolute(seat->cursor, &event->pointer->base, event->x, event->y);
-	process_cursor_motion(seat, event->time_msec, dx, dy, dx, dy);
-	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
-
 	printf("/dev/input/wl_pointer_motion: EV_ABS ABS_X %f\n", lx);
     printf("/dev/input/wl_pointer_motion: EV_ABS ABS_Y %f\n", ly);
 }
@@ -689,14 +670,7 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 static void
 handle_cursor_motion_relative(struct wl_listener *listener, void *data)
 {
-	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion_relative);
 	struct wlr_pointer_motion_event *event = data;
-
-	wlr_cursor_move(seat->cursor, &event->pointer->base, event->delta_x, event->delta_y);
-	process_cursor_motion(seat, event->time_msec, event->delta_x, event->delta_y, event->unaccel_dx,
-			      event->unaccel_dy);
-	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
-
 	printf("/dev/input/wl_pointer_relative: EV_REL REL_X %f\n", event->delta_x);
     printf("/dev/input/wl_pointer_relative: EV_REL REL_Y %f\n", event->delta_y);
 
