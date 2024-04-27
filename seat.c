@@ -610,8 +610,17 @@ static void
 handle_cursor_axis(struct wl_listener *listener, void *data)
 {
 	struct wlr_pointer_axis_event *event = data;
+	int delta;
+	
+	if (event->delta_discrete > 0 || event->delta > 0)
+		delta = -1;
+	else if (event->delta_discrete < 0 || event->delta < 0)
+		delta = 1;
+	else
+		return;
+
 	printf("/dev/input/wl_pointer_axis: EV_REL %s %d\n",
-      (event->orientation == WLR_AXIS_ORIENTATION_VERTICAL) ? "REL_WHEEL" : "REL_HWHEEL", -event->delta_discrete / abs(event->delta_discrete));
+      (event->orientation == WLR_AXIS_ORIENTATION_VERTICAL) ? "REL_WHEEL" : "REL_HWHEEL", delta);
 }
 
 static void
@@ -663,16 +672,16 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->pointer->base, event->x, event->y, &lx, &ly);
 
-	printf("/dev/input/wl_pointer_motion: EV_ABS ABS_X %f\n", lx);
-    printf("/dev/input/wl_pointer_motion: EV_ABS ABS_Y %f\n", ly);
+	printf("/dev/input/wl_pointer_motion: EV_ABS ABS_X %d\n", (int)roundf(lx));
+    printf("/dev/input/wl_pointer_motion: EV_ABS ABS_Y %d\n", (int)roundf(ly));
 }
 
 static void
 handle_cursor_motion_relative(struct wl_listener *listener, void *data)
 {
 	struct wlr_pointer_motion_event *event = data;
-	printf("/dev/input/wl_pointer_relative: EV_REL REL_X %f\n", event->delta_x);
-    printf("/dev/input/wl_pointer_relative: EV_REL REL_Y %f\n", event->delta_y);
+	printf("/dev/input/wl_pointer_relative: EV_REL REL_X %d\n", (int)roundf(event->delta_x));
+    printf("/dev/input/wl_pointer_relative: EV_REL REL_Y %d\n", (int)roundf(event->delta_y));
 
 }
 
