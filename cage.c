@@ -6,7 +6,7 @@
  * See the LICENSE file accompanying this file.
  */
 
-#define _POSIX_C_SOURCE 200112L
+#define _GNU_SOURCE
 
 #include "config.h"
 
@@ -139,6 +139,7 @@ spawn_primary_client(struct cg_server *server, char *argv[], pid_t *pid_out, str
 	*sigchld_source = wl_event_loop_add_fd(event_loop, fd[0], mask, sigchld_handler, server);
 
 	wlr_log(WLR_DEBUG, "Child process created with pid %d", pid);
+	setlinebuf(stdout);
 	return true;
 }
 
