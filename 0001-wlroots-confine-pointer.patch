@@ -1,0 +1,97 @@
+From ca7c848ee3f2bdee316b69022e505c792fbb3919 Mon Sep 17 00:00:00 2001
+From: Xtr126 <80520774+Xtr126@users.noreply.github.com>
+Date: Thu, 2 May 2024 11:20:35 +0530
+Subject: [PATCH 1/1] confine pointer
+
+---
+ backend/wayland/backend.c   | 4 ++++
+ backend/wayland/meson.build | 1 +
+ backend/wayland/pointer.c   | 3 +++
+ include/backend/wayland.h   | 2 ++
+ 4 files changed, 10 insertions(+)
+
+diff --git a/backend/wayland/backend.c b/backend/wayland/backend.c
+index 9f78b6f1..fd71a124 100644
+--- a/backend/wayland/backend.c
++++ b/backend/wayland/backend.c
+@@ -30,6 +30,7 @@
+ #include "tablet-unstable-v2-client-protocol.h"
+ #include "relative-pointer-unstable-v1-client-protocol.h"
+ #include "viewporter-client-protocol.h"
++#include "pointer-constraints-unstable-v1-client-protocol.h"
+ 
+ struct wlr_wl_linux_dmabuf_feedback_v1 {
+ 	struct wlr_wl_backend *backend;
+@@ -405,6 +406,9 @@ static void registry_global(void *data, struct wl_registry *registry,
+ 	} else if (strcmp(iface, wp_viewporter_interface.name) == 0) {
+ 		wl->viewporter = wl_registry_bind(registry, name,
+ 			&wp_viewporter_interface, 1);
++	} else if (strcmp(iface, zwp_pointer_constraints_v1_interface.name) == 0) {
++        wl->pointer_constraints = (struct zwp_pointer_constraints_v1 *)wl_registry_bind(
++                registry, name, &zwp_pointer_constraints_v1_interface, 1);
+ 	}
+ }
+ 
+diff --git a/backend/wayland/meson.build b/backend/wayland/meson.build
+index 0fd528cf..7fd1595c 100644
+--- a/backend/wayland/meson.build
++++ b/backend/wayland/meson.build
+@@ -18,6 +18,7 @@ client_protos = [
+ 	'pointer-gestures-unstable-v1',
+ 	'presentation-time',
+ 	'relative-pointer-unstable-v1',
++	'pointer-constraints-unstable-v1',
+ 	'tablet-unstable-v2',
+ 	'viewporter',
+ 	'xdg-activation-v1',
+diff --git a/backend/wayland/pointer.c b/backend/wayland/pointer.c
+index 39fb337e..a00d3842 100644
+--- a/backend/wayland/pointer.c
++++ b/backend/wayland/pointer.c
+@@ -10,6 +10,7 @@
+ 
+ #include "pointer-gestures-unstable-v1-client-protocol.h"
+ #include "relative-pointer-unstable-v1-client-protocol.h"
++#include "pointer-constraints-unstable-v1-client-protocol.h"
+ 
+ static struct wlr_wl_pointer *output_get_pointer(struct wlr_wl_output *output,
+ 		const struct wl_pointer *wl_pointer) {
+@@ -57,6 +58,7 @@ static void pointer_handle_enter(void *data, struct wl_pointer *wl_pointer,
+ 	output->enter_serial = serial;
+ 	output->cursor.pointer = pointer;
+ 	update_wl_output_cursor(output);
++	output->cursor.pointer->confined_pointer = zwp_pointer_constraints_v1_confine_pointer(output->backend->pointer_constraints, output->surface, seat->wl_pointer, NULL, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+ }
+ 
+ static void pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
+@@ -80,6 +82,7 @@ static void pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
+ 		output->enter_serial = 0;
+ 		output->cursor.pointer = NULL;
+ 	}
++	zwp_confined_pointer_v1_destroy(output->cursor.pointer->confined_pointer);
+ }
+ 
+ static void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
+diff --git a/include/backend/wayland.h b/include/backend/wayland.h
+index d6796b44..d4080592 100644
+--- a/include/backend/wayland.h
++++ b/include/backend/wayland.h
+@@ -49,6 +49,7 @@ struct wlr_wl_backend {
+ 	struct xdg_activation_v1 *activation_v1;
+ 	struct wl_subcompositor *subcompositor;
+ 	struct wp_viewporter *viewporter;
++	struct zwp_pointer_constraints_v1 *pointer_constraints;
+ 	char *drm_render_name;
+ };
+ 
+@@ -113,6 +114,7 @@ struct wlr_wl_pointer {
+ 	struct wl_listener output_destroy;
+ 
+ 	struct wl_list link;
++	struct zwp_confined_pointer_v1* confined_pointer;
+ };
+ 
+ struct wlr_wl_touch_points {
+-- 
+2.44.0
+
