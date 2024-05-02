@@ -37,7 +37,7 @@ endif
 
 wlroots_proj = subproject(
   'wlroots',
-  default_options: ['examples=false', 'xwayland=disabled', 'backends=x11'],
+  default_options: ['examples=false', 'xwayland=disabled', 'backends='],
 )
 
 wlroots        = wlroots_proj.get_variable('wlroots')
