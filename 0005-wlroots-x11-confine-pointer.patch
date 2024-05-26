@@ -1,0 +1,35 @@
+From a59d7c8b5d164723471d2e2163ebe1c6068ea0de Mon Sep 17 00:00:00 2001
+From: Xtr126 <80520774+Xtr126@users.noreply.github.com>
+Date: Sun, 26 May 2024 22:39:11 +0530
+Subject: [PATCH] x11 backend: confine pointer
+
+---
+ backend/x11/output.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/backend/x11/output.c b/backend/x11/output.c
+index f4d87624..b348c868 100644
+--- a/backend/x11/output.c
++++ b/backend/x11/output.c
+@@ -678,6 +678,18 @@ struct wlr_output *wlr_x11_output_create(struct wlr_backend *backend) {
+ 	wl_signal_emit_mutable(&x11->backend.events.new_input, &output->pointer.base);
+ 	wl_signal_emit_mutable(&x11->backend.events.new_input, &output->touch.base);
+ 
++	xcb_grab_pointer(
++        x11->xcb,
++        false,               /* get all pointer events specified by the following mask */
++        x11->screen->root,        /* grab the root window */
++        XCB_NONE,            /* which events to let through */
++        XCB_GRAB_MODE_ASYNC, /* pointer events should continue as normal */
++        XCB_GRAB_MODE_ASYNC, /* keyboard mode */
++        XCB_NONE,            /* confine_to = in which window should the cursor stay */
++        x11->transparent_cursor,              /* we change the cursor to whatever the user wanted */
++        XCB_CURRENT_TIME
++    );
++
+ 	return wlr_output;
+ }
+ 
+-- 
+2.45.1
+
