@@ -1,0 +1,53 @@
+From ade0f4f5cd44cab5e2cb271b8285248c56a1ef95 Mon Sep 17 00:00:00 2001
+From: Xtr126 <80520774+Xtr126@users.noreply.github.com>
+Date: Sun, 26 May 2024 20:59:07 +0530
+Subject: [PATCH 1/1] wlroots x11 backend custom size
+
+---
+ backend/x11/output.c | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/backend/x11/output.c b/backend/x11/output.c
+index 2521795d..f4d87624 100644
+--- a/backend/x11/output.c
++++ b/backend/x11/output.c
+@@ -553,6 +553,22 @@ static const struct wlr_output_impl output_impl = {
+ 	.get_primary_formats = output_get_primary_formats,
+ };
+ 
++static size_t parse_size_env(const char *name) {
++	const char *size_str = getenv(name);
++	if (size_str == NULL) {
++		return 1;
++	}
++
++	char *end;
++	int size = (int)strtol(size_str, &end, 10);
++	if (*end || size < 0) {
++		wlr_log(WLR_ERROR, "%s specified with invalid integer, ignoring", name);
++		return 1;
++	}
++
++	return size;
++}
++
+ struct wlr_output *wlr_x11_output_create(struct wlr_backend *backend) {
+ 	struct wlr_x11_backend *x11 = get_x11_backend_from_backend(backend);
+ 
+@@ -573,7 +589,12 @@ struct wlr_output *wlr_x11_output_create(struct wlr_backend *backend) {
+ 
+ 	struct wlr_output_state state;
+ 	wlr_output_state_init(&state);
+-	wlr_output_state_set_custom_mode(&state, 1024, 768, 0);
++
++	size_t width = parse_size_env("XTMAPPER_WIDTH");
++	size_t height = parse_size_env("XTMAPPER_HEIGHT");
++
++	if (width > 1 && height > 1) wlr_output_state_set_custom_mode(&state, width, height, 0);
++	else wlr_output_state_set_custom_mode(&state, 1280, 720, 0);
+ 
+ 	wlr_output_init(wlr_output, &x11->backend, &output_impl, x11->wl_display, &state);
+ 	wlr_output_state_finish(&state);
+-- 
+2.45.1
+
