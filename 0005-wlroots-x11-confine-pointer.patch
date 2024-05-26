@@ -14,7 +14,15 @@ index f4d87624..b348c868 100644
 @@ -678,6 +678,18 @@ struct wlr_output *wlr_x11_output_create(struct wlr_backend *backend) {
  	wl_signal_emit_mutable(&x11->backend.events.new_input, &output->pointer.base);
  	wl_signal_emit_mutable(&x11->backend.events.new_input, &output->touch.base);
- 
++       
++   xcb_cursor_t cursor;
++   xcb_font_t cursor_font=0;
++   cursor = xcb_generate_id (x11->xcb);
++   if (!cursor_font) {
++    	cursor_font = xcb_generate_id (x11->xcb);
++   	xcb_open_font (x11->xcb, cursor_font, strlen ("cursor"), "cursor");
++   }
++        
 +	xcb_grab_pointer(
 +        x11->xcb,
 +        false,               /* get all pointer events specified by the following mask */
