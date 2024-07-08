@@ -36,7 +36,7 @@ build --buildtype=release`.
 
 Cage comes with compile-time support for XWayland. To enable this,
 first make sure that your version of wlroots is compiled with this
-option. Then, add `-Dxwayland=true` to the `meson` command above. Note
+option. Then, add `-Dxwayland=enabled` to the `meson` command above. Note
 that you'll need to have the XWayland binary installed on your system
 for this to work.
 
