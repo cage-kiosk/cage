@@ -64,15 +64,7 @@ server_protos = declare_dependency(
   sources: server_protos_headers,
 )
 
-if not get_option('xwayland').disabled()
-  wlroots_has_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
-  if get_option('xwayland').enabled() and not wlroots_has_xwayland
-    error('Cannot build Cage with XWayland support: wlroots has been built without it')
-  endif
-  have_xwayland = true
-else
-  have_xwayland = false
-endif
+have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
 version = '@0@'.format(meson.project_version())
 git = find_program('git', native: true, required: false)
