@@ -37,7 +37,7 @@ jobs:
       # TODO: use --fatal-meson-warnings when on wlroots 0.15.0
       - name: Compile Cage (XWayland=${{ matrix.xwayland }})
         run: |
-          meson build-${{ matrix.CC }}-${{matrix.xwayland }} -Dxwayland=${{ matrix.xwayland }}
+          meson build-${{ matrix.CC }}-${{matrix.xwayland }} -Dwlroots:xwayland=${{ matrix.xwayland }}
           ninja -C build-${{ matrix.CC }}-${{matrix.xwayland }}
 
   format:
@@ -54,7 +54,7 @@ jobs:
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17
       - name: Check for formatting changes
         run: |
-          meson build-clang-format -Dxwayland=enabled
+          meson build-clang-format -Dwlroots:xwayland=enabled
           ninja -C build-clang-format clang-format-check
 
   scan-build:
@@ -73,5 +73,5 @@ jobs:
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17
       - name: Run scan-build
         run: |
-          meson build-scan-build -Dxwayland=enabled
+          meson build-scan-build -Dwlroots:xwayland=enabled
           ninja -C build-scan-build scan-build
