@@ -1,1 +1,1 @@
-#define TOGGLEKEY "KEY_SUPER_L"
+#define TOGGLEKEY "KEY_F11"
