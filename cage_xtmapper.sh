@@ -23,9 +23,14 @@ while [ $# -gt 0 ]; do
         shift
         XTMAPPER_HEIGHT="$1"
         ;;
+    --window-no-title-bar)
+        shift
+        export WLR_NO_DECORATION=1
+        ;;
     *)
 	echo "Invalid argument"
-        exit 1;;
+        exit 1
+	;;
     esac
     shift
 done
