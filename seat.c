@@ -14,6 +14,7 @@
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/multi.h>
@@ -316,7 +317,6 @@ handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data
 
     if (strcmp(buf, "Control_L") == 0) {
         printf("/dev/input/wl_keyboard: EV_KEY KEY_LEFTCTRL %s\n", action);
-
     } else if (strcmp(buf, "Control_R") == 0) {
         printf("/dev/input/wl_keyboard: EV_KEY KEY_RIGHTCTRL %s\n", action);
     } else if (strcmp(buf, "quotedbl") == 0) {
@@ -324,7 +324,14 @@ handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data
     } else {
 		int buf_n = strlen(buf);
         for (int i=0;i<buf_n;i++) buf[i] = toupper(buf[i]);
-        printf("/dev/input/wl_keyboard: EV_KEY KEY_%s %s\n", buf, action);
+		char keybuf[132];
+		sprintf(keybuf, "KEY_%s", buf);
+		if(strcmp(keybuf, TOGGLEKEY) == 0) {
+			if(strcmp(action, "DOWN") == 0) {
+				seat->xtmapper_disabled = !seat->xtmapper_disabled;
+			} 
+		}
+        printf("/dev/input/wl_keyboard: EV_KEY %s %s\n", keybuf, action);
     }
 
 }
@@ -610,27 +617,42 @@ static void
 handle_cursor_axis(struct wl_listener *listener, void *data)
 {
 	struct wlr_pointer_axis_event *event = data;
-	int delta;
-	
-	if (event->delta_discrete > 0 || event->delta > 0)
-		delta = -1;
-	else if (event->delta_discrete < 0 || event->delta < 0)
-		delta = 1;
-	else
-		return;
+	struct cg_seat *seat = wl_container_of(listener, seat, cursor_axis);
 
-	printf("/dev/input/wl_pointer_axis: EV_REL %s %d\n",
-      (event->orientation == WLR_AXIS_ORIENTATION_VERTICAL) ? "REL_WHEEL" : "REL_HWHEEL", delta);
+	if (seat->xtmapper_disabled) {
+		wlr_seat_pointer_notify_axis(seat->seat, event->time_msec, event->orientation, event->delta,
+						event->delta_discrete, event->source);
+		wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+	} else {
+		int delta;
+		if (event->delta_discrete > 0 || event->delta > 0)
+			delta = -1;
+		else if (event->delta_discrete < 0 || event->delta < 0)
+			delta = 1;
+		else
+			return;
+
+		printf("/dev/input/wl_pointer_axis: EV_REL %s %d\n",
+		(event->orientation == WLR_AXIS_ORIENTATION_VERTICAL) ? "REL_WHEEL" : "REL_HWHEEL", delta);
+	}
 }
 
 static void
 handle_cursor_button(struct wl_listener *listener, void *data)
 {
+	struct cg_seat *seat = wl_container_of(listener, seat, cursor_button);
 	struct wlr_pointer_button_event *event = data;
 
-	int action = event->state == WLR_BUTTON_PRESSED ? 1 : 0;
-    const char *code = event->button == BTN_LEFT ? "BTN_LEFT" : "BTN_RIGHT";
-    printf("/dev/input/wl_pointer_button: EV_KEY %s %d\n", code, action);
+	if (seat->xtmapper_disabled) {
+		wlr_seat_pointer_notify_button(seat->seat, event->time_msec, event->button, event->state);
+		press_cursor_button(seat, &event->pointer->base, event->time_msec, event->button, event->state, seat->cursor->x,
+					seat->cursor->y);
+		wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+	} else {
+		int action = event->state == WLR_BUTTON_PRESSED ? 1 : 0;
+		const char *code = event->button == BTN_LEFT ? "BTN_LEFT" : "BTN_RIGHT";
+		printf("/dev/input/wl_pointer_button: EV_KEY %s %d\n", code, action);
+	}
 }
 
 static void
@@ -672,17 +694,35 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->pointer->base, event->x, event->y, &lx, &ly);
 
-	printf("/dev/input/wl_pointer_motion: EV_ABS ABS_X %d\n", (int)roundf(lx));
-    printf("/dev/input/wl_pointer_motion: EV_ABS ABS_Y %d\n", (int)roundf(ly));
+	if (seat->xtmapper_disabled) {
+		double dx = lx - seat->cursor->x;
+		double dy = ly - seat->cursor->y;
+
+		wlr_cursor_warp_absolute(seat->cursor, &event->pointer->base, event->x, event->y);
+		process_cursor_motion(seat, event->time_msec, dx, dy, dx, dy);
+		wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+	} else {
+		printf("/dev/input/wl_pointer_motion: EV_ABS ABS_X %d\n", (int)roundf(lx));
+		printf("/dev/input/wl_pointer_motion: EV_ABS ABS_Y %d\n", (int)roundf(ly));
+	}
 }
 
 static void
 handle_cursor_motion_relative(struct wl_listener *listener, void *data)
 {
 	struct wlr_pointer_motion_event *event = data;
-	printf("/dev/input/wl_pointer_relative: EV_REL REL_X %d\n", (int)roundf(event->delta_x));
-    printf("/dev/input/wl_pointer_relative: EV_REL REL_Y %d\n", (int)roundf(event->delta_y));
+	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion_relative);
 
+	if (seat->xtmapper_disabled) {
+
+		wlr_cursor_move(seat->cursor, &event->pointer->base, event->delta_x, event->delta_y);
+		process_cursor_motion(seat, event->time_msec, event->delta_x, event->delta_y, event->unaccel_dx,
+					event->unaccel_dy);
+		wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+	} else {
+		printf("/dev/input/wl_pointer_relative: EV_REL REL_X %d\n", (int)roundf(event->delta_x));
+		printf("/dev/input/wl_pointer_relative: EV_REL REL_Y %d\n", (int)roundf(event->delta_y));
+	}
 }
 
 static void
@@ -899,6 +939,7 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	seat->start_drag.notify = handle_start_drag;
 	wl_signal_add(&seat->seat->events.start_drag, &seat->start_drag);
 
+	seat->xtmapper_disabled = false;
 	return seat;
 }
 

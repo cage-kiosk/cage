@@ -10,6 +10,7 @@
 
 #include "server.h"
 #include "view.h"
+#include "togglekey.h"
 
 #define DEFAULT_XCURSOR "left_ptr"
 #define XCURSOR_SIZE 24
@@ -48,6 +49,8 @@ struct cg_seat {
 	struct wl_listener request_set_cursor;
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
+
+	bool xtmapper_disabled;
 };
 
 struct cg_keyboard_group {
