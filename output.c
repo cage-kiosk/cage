@@ -235,6 +235,11 @@ output_destroy(struct cg_output *output)
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
 
+	wlr_scene_node_destroy(&output->layers.shell_background->node);
+	wlr_scene_node_destroy(&output->layers.shell_bottom->node);
+	wlr_scene_node_destroy(&output->layers.shell_top->node);
+	wlr_scene_node_destroy(&output->layers.shell_overlay->node);
+
 	output_layout_remove(output);
 
 	free(output);
@@ -253,6 +258,18 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, destroy);
 	output_destroy(output);
+}
+
+static struct wlr_scene_tree *
+create_layer_for_output(struct cg_output *output)
+{
+	struct cg_server *server = output->server;
+	struct wlr_scene_tree *layer = wlr_scene_tree_create(&server->scene->tree);
+	if (layer == NULL) {
+		return NULL;
+	}
+	layer->node.data = output->wlr_output;
+	return layer;
 }
 
 void
@@ -320,9 +337,10 @@ handle_new_output(struct wl_listener *listener, void *data)
 		output_disable(next);
 	}
 
-	for (size_t i = 0; i < sizeof(output->layers) / sizeof(output->layers[0]); i++) {
-		wl_list_init(&output->layers[i]);
-	}
+	output->layers.shell_background = create_layer_for_output(output);
+	output->layers.shell_bottom = create_layer_for_output(output);
+	output->layers.shell_top = create_layer_for_output(output);
+	output->layers.shell_overlay = create_layer_for_output(output);
 
 	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
