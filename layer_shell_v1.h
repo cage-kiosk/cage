@@ -18,6 +18,8 @@ struct cg_layer_surface {
 
 	struct wl_listener output_destroy;
 
+	bool mapped;
+
 	struct cg_output *output;
 	struct wlr_scene_tree *tree;
 	struct wlr_scene_layer_surface_v1 *scene;
