@@ -101,14 +101,10 @@ get_title(struct cg_view *view)
 }
 
 static void
-get_geometry(struct cg_view *view, int *width_out, int *height_out)
+get_geometry(struct cg_view *view, struct wlr_box *view_box)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_box geom;
-
-	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, &geom);
-	*width_out = geom.width;
-	*height_out = geom.height;
+	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, view_box);
 }
 
 static bool
@@ -183,7 +179,23 @@ handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
 
+	wl_list_remove(&xdg_shell_view->commit.link);
+
 	view_unmap(view);
+}
+
+static void
+handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
+	struct cg_view *view = &xdg_shell_view->view;
+
+	// Check if view dimensions have changed
+	struct wlr_box view_box;
+	get_geometry(view, &view_box);
+	if (view_box.width != view->width || view_box.height != view->height) {
+		view_position(view);
+	}
 }
 
 static void
@@ -191,6 +203,9 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
 	struct cg_view *view = &xdg_shell_view->view;
+
+	xdg_shell_view->commit.notify = handle_xdg_shell_surface_commit;
+	wl_signal_add(&xdg_shell_view->xdg_toplevel->base->surface->events.commit, &xdg_shell_view->commit);
 
 	view_map(view, xdg_shell_view->xdg_toplevel->base->surface);
 }
