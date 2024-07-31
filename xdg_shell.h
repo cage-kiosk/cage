@@ -24,7 +24,8 @@ struct cg_xdg_decoration {
 	struct wl_listener request_mode;
 };
 
-void handle_xdg_shell_surface_new(struct wl_listener *listener, void *data);
+void handle_new_xdg_toplevel(struct wl_listener *listener, void *data);
+void handle_new_xdg_popup(struct wl_listener *listener, void *data);
 
 void handle_xdg_toplevel_decoration(struct wl_listener *listener, void *data);
 
