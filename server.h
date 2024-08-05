@@ -57,6 +57,9 @@ struct cg_server {
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
 
+	struct wlr_pointer_constraints_v1 *pointer_constraints;
+	struct wl_listener pointer_constraint;
+
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	bool return_app_code;
