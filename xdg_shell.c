@@ -221,72 +221,71 @@ static const struct cg_view_impl xdg_shell_view_impl = {
 };
 
 void
-handle_xdg_shell_surface_new(struct wl_listener *listener, void *data)
+handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 {
-	struct cg_server *server = wl_container_of(listener, server, new_xdg_shell_surface);
-	struct wlr_xdg_surface *xdg_surface = data;
+	struct cg_server *server = wl_container_of(listener, server, new_xdg_toplevel);
+	struct wlr_xdg_toplevel *toplevel = data;
 
-	switch (xdg_surface->role) {
+	struct cg_xdg_shell_view *xdg_shell_view = calloc(1, sizeof(struct cg_xdg_shell_view));
+	if (!xdg_shell_view) {
+		wlr_log(WLR_ERROR, "Failed to allocate XDG Shell view");
+		return;
+	}
+
+	view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
+	xdg_shell_view->xdg_toplevel = toplevel;
+
+	xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
+	wl_signal_add(&toplevel->base->surface->events.map, &xdg_shell_view->map);
+	xdg_shell_view->unmap.notify = handle_xdg_shell_surface_unmap;
+	wl_signal_add(&toplevel->base->surface->events.unmap, &xdg_shell_view->unmap);
+	xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
+	wl_signal_add(&toplevel->events.destroy, &xdg_shell_view->destroy);
+	xdg_shell_view->request_fullscreen.notify = handle_xdg_shell_surface_request_fullscreen;
+	wl_signal_add(&toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
+
+	toplevel->base->data = xdg_shell_view;
+}
+
+void
+handle_new_xdg_popup(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, new_xdg_popup);
+	struct wlr_xdg_popup *popup = data;
+
+	struct cg_view *view = popup_get_view(popup);
+	if (view == NULL) {
+		return;
+	}
+
+	struct wlr_scene_tree *parent_scene_tree = NULL;
+	struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(popup->parent);
+	if (parent == NULL) {
+		return;
+	}
+	switch (parent->role) {
 	case WLR_XDG_SURFACE_ROLE_TOPLEVEL:;
-		struct cg_xdg_shell_view *xdg_shell_view = calloc(1, sizeof(struct cg_xdg_shell_view));
-		if (!xdg_shell_view) {
-			wlr_log(WLR_ERROR, "Failed to allocate XDG Shell view");
-			return;
-		}
-
-		view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
-		xdg_shell_view->xdg_toplevel = xdg_surface->toplevel;
-
-		xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
-		wl_signal_add(&xdg_surface->surface->events.map, &xdg_shell_view->map);
-		xdg_shell_view->unmap.notify = handle_xdg_shell_surface_unmap;
-		wl_signal_add(&xdg_surface->surface->events.unmap, &xdg_shell_view->unmap);
-		xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
-		wl_signal_add(&xdg_surface->events.destroy, &xdg_shell_view->destroy);
-		xdg_shell_view->request_fullscreen.notify = handle_xdg_shell_surface_request_fullscreen;
-		wl_signal_add(&xdg_surface->toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
-
-		xdg_surface->data = xdg_shell_view;
+		parent_scene_tree = view->scene_tree;
 		break;
-	case WLR_XDG_SURFACE_ROLE_POPUP:;
-		struct wlr_xdg_popup *popup = xdg_surface->popup;
-		struct cg_view *view = popup_get_view(popup);
-		if (view == NULL) {
-			return;
-		}
-
-		struct wlr_scene_tree *parent_scene_tree = NULL;
-		struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(popup->parent);
-		if (parent == NULL) {
-			return;
-		}
-		switch (parent->role) {
-		case WLR_XDG_SURFACE_ROLE_TOPLEVEL:;
-			parent_scene_tree = view->scene_tree;
-			break;
-		case WLR_XDG_SURFACE_ROLE_POPUP:
-			parent_scene_tree = parent->data;
-			break;
-		case WLR_XDG_SURFACE_ROLE_NONE:
-			break;
-		}
-		if (parent_scene_tree == NULL) {
-			return;
-		}
-
-		struct wlr_scene_tree *popup_scene_tree = wlr_scene_xdg_surface_create(parent_scene_tree, xdg_surface);
-		if (popup_scene_tree == NULL) {
-			wlr_log(WLR_ERROR, "Failed to allocate scene-graph node for XDG popup");
-			return;
-		}
-
-		popup_unconstrain(view, popup);
-
-		xdg_surface->data = popup_scene_tree;
+	case WLR_XDG_SURFACE_ROLE_POPUP:
+		parent_scene_tree = parent->data;
 		break;
 	case WLR_XDG_SURFACE_ROLE_NONE:
-		assert(false); // unreachable
+		break;
 	}
+	if (parent_scene_tree == NULL) {
+		return;
+	}
+
+	struct wlr_scene_tree *popup_scene_tree = wlr_scene_xdg_surface_create(parent_scene_tree, popup->base);
+	if (popup_scene_tree == NULL) {
+		wlr_log(WLR_ERROR, "Failed to allocate scene-graph node for XDG popup");
+		return;
+	}
+
+	popup_unconstrain(view, popup);
+
+	popup->base->data = popup_scene_tree;
 }
 
 void
