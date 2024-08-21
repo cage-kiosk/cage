@@ -25,12 +25,12 @@ scdoc for manual pages. Cage is currently based on branch 0.17 of wlroots.
 Simply execute the following steps to build Cage:
 
 ```
-$ meson build
-$ ninja -C build
+$ meson setup build
+$ meson compile -C build
 ```
 
 By default, this builds a debug build. To build a release build, use `meson
-build --buildtype=release`.
+setup build --buildtype=release`.
 
 Cage comes with compile-time support for XWayland. To enable this, make sure
 that your version of wlroots is compiled with this option. Note that you'll
