@@ -196,11 +196,26 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
+
+	if (!xdg_shell_view->xdg_toplevel->base->initial_commit) {
+		return;
+	}
+
+	/* When an xdg_surface performs an initial commit, the compositor must
+	 * reply with a configure so the client can map the surface. */
+	view_position(&xdg_shell_view->view);
+}
+
+static void
 handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, destroy);
 	struct cg_view *view = &xdg_shell_view->view;
 
+	wl_list_remove(&xdg_shell_view->commit.link);
 	wl_list_remove(&xdg_shell_view->map.link);
 	wl_list_remove(&xdg_shell_view->unmap.link);
 	wl_list_remove(&xdg_shell_view->destroy.link);
@@ -235,6 +250,8 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
 	xdg_shell_view->xdg_toplevel = toplevel;
 
+	xdg_shell_view->commit.notify = handle_xdg_shell_surface_commit;
+	wl_signal_add(&toplevel->base->surface->events.commit, &xdg_shell_view->commit);
 	xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
 	wl_signal_add(&toplevel->base->surface->events.map, &xdg_shell_view->map);
 	xdg_shell_view->unmap.notify = handle_xdg_shell_surface_unmap;

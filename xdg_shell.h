@@ -12,6 +12,7 @@ struct cg_xdg_shell_view {
 	struct wlr_xdg_toplevel *xdg_toplevel;
 
 	struct wl_listener destroy;
+	struct wl_listener commit;
 	struct wl_listener unmap;
 	struct wl_listener map;
 	struct wl_listener request_fullscreen;
