@@ -34,10 +34,11 @@ jobs:
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.17
 
-      # TODO: use --fatal-meson-warnings when on wlroots 0.15.0
       - name: Compile Cage (XWayland=${{ matrix.xwayland }})
         run: |
-          meson build-${{ matrix.CC }}-${{matrix.xwayland }} -Dwlroots:xwayland=${{ matrix.xwayland }}
+          meson --fatal-meson-warnings \
+            build-${{ matrix.CC }}-${{matrix.xwayland }} \
+            -Dwlroots:xwayland=${{ matrix.xwayland }}
           ninja -C build-${{ matrix.CC }}-${{matrix.xwayland }}
 
   format:
