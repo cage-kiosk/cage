@@ -22,6 +22,7 @@ struct cg_xdg_decoration {
 	struct wlr_xdg_toplevel_decoration_v1 *wlr_decoration;
 	struct cg_server *server;
 	struct wl_listener destroy;
+	struct wl_listener commit;
 	struct wl_listener request_mode;
 };
 
