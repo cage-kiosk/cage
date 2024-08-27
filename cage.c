@@ -290,9 +290,9 @@ main(int argc, char *argv[])
 
 	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
 	struct wl_event_source *sigint_source =
-		wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server.wl_display);
+		wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, server.wl_display);
 	struct wl_event_source *sigterm_source =
-		wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server.wl_display);
+		wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, server.wl_display);
 
 	server.backend = wlr_backend_autocreate(server.wl_display, &server.session);
 	if (!server.backend) {
