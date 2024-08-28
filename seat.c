@@ -258,7 +258,7 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 {
 #ifdef DEBUG
 	if (sym == XKB_KEY_Escape) {
-		wl_display_terminate(server->wl_display);
+		server_terminate(server);
 		return true;
 	}
 #endif

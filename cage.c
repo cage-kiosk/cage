@@ -61,6 +61,24 @@
 #include "xwayland.h"
 #endif
 
+void
+server_terminate(struct cg_server *server)
+{
+	// Workaround for https://gitlab.freedesktop.org/wayland/wayland/-/merge_requests/421
+	if (server->terminated) {
+		return;
+	}
+
+	wl_display_terminate(server->wl_display);
+}
+
+static void
+handle_display_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, display_destroy);
+	server->terminated = true;
+}
+
 static int
 sigchld_handler(int fd, uint32_t mask, void *data)
 {
@@ -76,7 +94,7 @@ sigchld_handler(int fd, uint32_t mask, void *data)
 	}
 
 	server->return_app_code = true;
-	wl_display_terminate(server->wl_display);
+	server_terminate(server);
 	return 0;
 }
 
@@ -189,13 +207,13 @@ drop_permissions(void)
 static int
 handle_signal(int signal, void *data)
 {
-	struct wl_display *display = data;
+	struct cg_server *server = data;
 
 	switch (signal) {
 	case SIGINT:
 		/* Fallthrough */
 	case SIGTERM:
-		wl_display_terminate(display);
+		server_terminate(server);
 		return 0;
 	default:
 		return 0;
@@ -288,11 +306,12 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
+	server.display_destroy.notify = handle_display_destroy;
+	wl_display_add_destroy_listener(server.wl_display, &server.display_destroy);
+
 	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
-	struct wl_event_source *sigint_source =
-		wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, server.wl_display);
-	struct wl_event_source *sigterm_source =
-		wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, server.wl_display);
+	struct wl_event_source *sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server);
+	struct wl_event_source *sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server);
 
 	server.backend = wlr_backend_autocreate(event_loop, &server.session);
 	if (!server.backend) {

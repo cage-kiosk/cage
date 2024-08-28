@@ -25,6 +25,7 @@ struct cg_server {
 	struct wlr_renderer *renderer;
 	struct wlr_allocator *allocator;
 	struct wlr_session *session;
+	struct wl_listener display_destroy;
 
 	struct cg_seat *seat;
 	struct wlr_idle_notifier_v1 *idle;
@@ -61,6 +62,9 @@ struct cg_server {
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	bool return_app_code;
+	bool terminated;
 };
+
+void server_terminate(struct cg_server *server);
 
 #endif
