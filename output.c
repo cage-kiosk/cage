@@ -240,7 +240,7 @@ output_destroy(struct cg_output *output)
 	free(output);
 
 	if (wl_list_empty(&server->outputs) && was_nested_output) {
-		wl_display_terminate(server->wl_display);
+		server_terminate(server);
 	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && !wl_list_empty(&server->outputs)) {
 		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
 		output_enable(prev);
