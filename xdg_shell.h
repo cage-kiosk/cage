@@ -26,6 +26,13 @@ struct cg_xdg_decoration {
 	struct wl_listener request_mode;
 };
 
+struct cg_xdg_popup {
+	struct wlr_xdg_popup *xdg_popup;
+
+	struct wl_listener destroy;
+	struct wl_listener commit;
+};
+
 void handle_new_xdg_toplevel(struct wl_listener *listener, void *data);
 void handle_new_xdg_popup(struct wl_listener *listener, void *data);
 
