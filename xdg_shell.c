@@ -85,8 +85,13 @@ popup_get_view(struct wlr_xdg_popup *popup)
 }
 
 static void
-popup_unconstrain(struct cg_view *view, struct wlr_xdg_popup *popup)
+popup_unconstrain(struct wlr_xdg_popup *popup)
 {
+	struct cg_view *view = popup_get_view(popup);
+	if (view == NULL) {
+		return;
+	}
+
 	struct cg_server *server = view->server;
 	struct wlr_box *popup_box = &popup->current.geometry;
 
@@ -283,19 +288,38 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	toplevel->base->data = xdg_shell_view;
 }
 
+static void
+popup_handle_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_popup *popup = wl_container_of(listener, popup, destroy);
+	wl_list_remove(&popup->destroy.link);
+	wl_list_remove(&popup->commit.link);
+	free(popup);
+}
+
+static void
+popup_handle_commit(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_popup *popup = wl_container_of(listener, popup, commit);
+
+	if (popup->xdg_popup->base->initial_commit) {
+		popup_unconstrain(popup->xdg_popup);
+	}
+}
+
 void
 handle_new_xdg_popup(struct wl_listener *listener, void *data)
 {
 	struct cg_server *server = wl_container_of(listener, server, new_xdg_popup);
-	struct wlr_xdg_popup *popup = data;
+	struct wlr_xdg_popup *wlr_popup = data;
 
-	struct cg_view *view = popup_get_view(popup);
+	struct cg_view *view = popup_get_view(wlr_popup);
 	if (view == NULL) {
 		return;
 	}
 
 	struct wlr_scene_tree *parent_scene_tree = NULL;
-	struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(popup->parent);
+	struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(wlr_popup->parent);
 	if (parent == NULL) {
 		return;
 	}
@@ -313,15 +337,28 @@ handle_new_xdg_popup(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	struct wlr_scene_tree *popup_scene_tree = wlr_scene_xdg_surface_create(parent_scene_tree, popup->base);
-	if (popup_scene_tree == NULL) {
-		wlr_log(WLR_ERROR, "Failed to allocate scene-graph node for XDG popup");
+	struct cg_xdg_popup *popup = calloc(1, sizeof(*popup));
+	if (popup == NULL) {
+		wlr_log(WLR_ERROR, "Failed to allocate popup");
 		return;
 	}
 
-	popup_unconstrain(view, popup);
+	popup->xdg_popup = wlr_popup;
 
-	popup->base->data = popup_scene_tree;
+	popup->destroy.notify = popup_handle_destroy;
+	wl_signal_add(&wlr_popup->events.destroy, &popup->destroy);
+
+	popup->commit.notify = popup_handle_commit;
+	wl_signal_add(&wlr_popup->base->surface->events.commit, &popup->commit);
+
+	struct wlr_scene_tree *popup_scene_tree = wlr_scene_xdg_surface_create(parent_scene_tree, wlr_popup->base);
+	if (popup_scene_tree == NULL) {
+		wlr_log(WLR_ERROR, "Failed to allocate scene-graph node for XDG popup");
+		free(popup);
+		return;
+	}
+
+	wlr_popup->base->data = popup_scene_tree;
 }
 
 void
