@@ -7,4 +7,4 @@ Output:
 /dev/input/wl_keyboard: EV_KEY KEY_F11 DOWN
 /dev/input/wl_keyboard: EV_KEY KEY_SUPER_L UP
 */
-#define TOGGLEKEY "KEY_F11"
+#define TOGGLEKEY "KEY_F10"
