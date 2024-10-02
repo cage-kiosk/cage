@@ -34,14 +34,11 @@ jobs:
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b 0.18
 
-      # TODO: drop explicit c_std when this is released:
-      # https://gitlab.freedesktop.org/wayland/wayland/-/merge_requests/401
       - name: Compile Cage (XWayland=${{ matrix.xwayland }})
         run: |
           meson --fatal-meson-warnings \
             build-${{ matrix.CC }}-${{matrix.xwayland }} \
-            -Dwlroots:xwayland=${{ matrix.xwayland }} \
-            -Dwlroots:c_std=c11
+            -Dwlroots:xwayland=${{ matrix.xwayland }}
           ninja -C build-${{ matrix.CC }}-${{matrix.xwayland }}
 
   format:
