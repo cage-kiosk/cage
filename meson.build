@@ -1,5 +1,5 @@
 project('cage', 'c',
-  version: '0.1.5',
+  version: '0.2.0',
   license: 'MIT',
   meson_version: '>=0.58.1',
   default_options: [
