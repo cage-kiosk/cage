@@ -9,6 +9,7 @@ This README is only relevant for development resources and instructions. For a
 description of Cage and installation instructions for end-users, please see
 [its project page](https://www.hjdskes.nl/projects/cage) and [the
 Wiki](https://github.com/cage-kiosk/cage/wiki/).
+See [the man page](./cage.1.scd) for a list of possible environment variables and run options.
 
 ## Release signatures
 
@@ -20,7 +21,7 @@ All releases are published on [GitHub](https://github.com/cage-kiosk/cage/releas
 
 You can build Cage with the [meson](https://mesonbuild.com/) build system. It
 requires wayland, wlroots, and xkbcommon to be installed. Optionally, install
-scdoc for manual pages (or see them [here](./cage.1.scd)). Cage is currently based on branch 0.18 of wlroots.
+scdoc for manual pages. Cage is currently based on branch 0.18 of wlroots.
 
 Simply execute the following steps to build Cage:
 
