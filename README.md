@@ -9,6 +9,7 @@ This README is only relevant for development resources and instructions. For a
 description of Cage and installation instructions for end-users, please see
 [its project page](https://www.hjdskes.nl/projects/cage) and [the
 Wiki](https://github.com/cage-kiosk/cage/wiki/).
+See [the man page](./cage.1.scd) for a list of possible environment variables and run options.
 
 ## Release signatures
 
