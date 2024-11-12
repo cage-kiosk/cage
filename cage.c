@@ -227,6 +227,7 @@ usage(FILE *file, const char *cage)
 		"Usage: %s [OPTIONS] [--] APPLICATION\n"
 		"\n"
 		" -d\t Don't draw client side decorations, when possible\n"
+		" -D\t Enable debug logging\n"
 		" -h\t Display this help message\n"
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
@@ -245,6 +246,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
+			break;
+		case 'D':
+			server->log_level = WLR_DEBUG;
 			break;
 		case 'h':
 			usage(stdout, argv[0]);
@@ -279,20 +283,20 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	struct cg_server server = {0};
+	struct cg_server server = {.log_level = WLR_INFO};
 	struct wl_event_source *sigchld_source = NULL;
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
+
+#ifdef DEBUG
+	server.log_level = WLR_DEBUG;
+#endif
 
 	if (!parse_args(&server, argc, argv)) {
 		return 1;
 	}
 
-#ifdef DEBUG
-	wlr_log_init(WLR_DEBUG, NULL);
-#else
-	wlr_log_init(WLR_ERROR, NULL);
-#endif
+	wlr_log_init(server.log_level, NULL);
 
 	/* Wayland requires XDG_RUNTIME_DIR to be set. */
 	if (!getenv("XDG_RUNTIME_DIR")) {

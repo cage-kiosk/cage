@@ -6,7 +6,7 @@ cage - a Wayland kiosk compositor
 
 # SYNOPSIS
 
-*cage* [-dhmrsv] [--] _application_ [application argument ...]
+*cage* [options...] [--] _application_ [application argument ...]
 
 # DESCRIPTION
 
@@ -18,6 +18,9 @@ activities outside the scope of the running application are prevented.
 
 *-d*
 	Don't draw client side decorations when possible.
+
+*-D*
+	Enable debug logging.
 
 *-h*
 	Show the help message.

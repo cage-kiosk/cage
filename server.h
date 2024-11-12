@@ -9,6 +9,8 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/util/log.h>
+
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
 #endif
@@ -63,6 +65,7 @@ struct cg_server {
 	bool allow_vt_switch;
 	bool return_app_code;
 	bool terminated;
+	enum wlr_log_importance log_level;
 };
 
 void server_terminate(struct cg_server *server);
