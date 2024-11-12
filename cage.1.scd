@@ -6,7 +6,7 @@ cage - a Wayland kiosk compositor
 
 # SYNOPSIS
 
-*cage* [options...] [--] _application_ [application argument ...]
+*cage* [options...] [--] [_application_...]
 
 # DESCRIPTION
 

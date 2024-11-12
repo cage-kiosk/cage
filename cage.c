@@ -224,7 +224,7 @@ static void
 usage(FILE *file, const char *cage)
 {
 	fprintf(file,
-		"Usage: %s [OPTIONS] [--] APPLICATION\n"
+		"Usage: %s [OPTIONS] [--] [APPLICATION...]\n"
 		"\n"
 		" -d\t Don't draw client side decorations, when possible\n"
 		" -D\t Enable debug logging\n"
@@ -270,11 +270,6 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 			usage(stderr, argv[0]);
 			return false;
 		}
-	}
-
-	if (optind >= argc) {
-		usage(stderr, argv[0]);
-		return false;
 	}
 
 	return true;
@@ -592,7 +587,7 @@ main(int argc, char *argv[])
 	}
 #endif
 
-	if (!spawn_primary_client(&server, argv + optind, &pid, &sigchld_source)) {
+	if (optind < argc && !spawn_primary_client(&server, argv + optind, &pid, &sigchld_source)) {
 		ret = 1;
 		goto end;
 	}
@@ -607,7 +602,8 @@ main(int argc, char *argv[])
 	wl_display_destroy_clients(server.wl_display);
 
 end:
-	app_ret = cleanup_primary_client(pid);
+	if (pid != 0)
+		app_ret = cleanup_primary_client(pid);
 	if (!ret && server.return_app_code)
 		ret = app_ret;
 
