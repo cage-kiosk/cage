@@ -113,6 +113,10 @@ output_enable(struct cg_output *output)
 	}
 
 	update_output_manager_config(output->server);
+
+	if (output->server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+		seat_remap_inputs_to_first_enabled_output(output->server->seat);
+	}
 }
 
 static void
@@ -332,6 +336,10 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	view_position_all(output->server);
 	update_output_manager_config(output->server);
+
+	if (output->server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+		seat_remap_inputs_to_first_enabled_output(output->server->seat);
+	}
 }
 
 void
