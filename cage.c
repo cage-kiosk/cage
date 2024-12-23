@@ -242,7 +242,7 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
-	while ((c = getopt(argc, argv, "dhm:sv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:sv")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
