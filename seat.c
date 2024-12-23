@@ -156,6 +156,20 @@ map_input_device_to_output(struct cg_seat *seat, struct wlr_input_device *device
 }
 
 static void
+map_input_device_to_first_enabled_output(struct cg_seat *seat, struct wlr_input_device *device)
+{
+	struct cg_output *output;
+	wl_list_for_each (output, &seat->server->outputs, link) {
+		if (output->wlr_output->enabled) {
+			map_input_device_to_output(seat, device, output->wlr_output->name);
+			return;
+		}
+	}
+
+	wlr_log(WLR_INFO, "No enabled output devices to  map input device %s to\n", device->name);
+}
+
+static void
 handle_touch_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_touch *touch = wl_container_of(listener, touch, destroy);
@@ -186,7 +200,11 @@ handle_new_touch(struct cg_seat *seat, struct wlr_touch *wlr_touch)
 	touch->destroy.notify = handle_touch_destroy;
 	wl_signal_add(&wlr_touch->base.events.destroy, &touch->destroy);
 
-	map_input_device_to_output(seat, &wlr_touch->base, wlr_touch->output_name);
+	if (seat->server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+		map_input_device_to_first_enabled_output(seat, &wlr_touch->base);
+	} else {
+		map_input_device_to_output(seat, &wlr_touch->base, wlr_touch->output_name);
+	}
 }
 
 static void
@@ -220,7 +238,11 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_pointer *wlr_pointer)
 	pointer->destroy.notify = handle_pointer_destroy;
 	wl_signal_add(&wlr_pointer->base.events.destroy, &pointer->destroy);
 
-	map_input_device_to_output(seat, &wlr_pointer->base, wlr_pointer->output_name);
+	if (seat->server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+		map_input_device_to_first_enabled_output(seat, &wlr_pointer->base);
+	} else {
+		map_input_device_to_output(seat, &wlr_pointer->base, wlr_pointer->output_name);
+	}
 }
 
 static void
@@ -965,4 +987,18 @@ seat_center_cursor(struct cg_seat *seat)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(seat->server->output_layout, NULL, &layout_box);
 	wlr_cursor_warp(seat->cursor, NULL, layout_box.width / 2, layout_box.height / 2);
+}
+
+void
+seat_remap_inputs_to_first_enabled_output(struct cg_seat *seat)
+{
+	/* Remap the input devices to the first enabled output device. */
+	struct cg_pointer *pointer;
+	wl_list_for_each (pointer, &seat->pointers, link) {
+		map_input_device_to_first_enabled_output(seat, &pointer->pointer->base);
+	}
+	struct cg_touch *touch;
+	wl_list_for_each (touch, &seat->touch, link) {
+		map_input_device_to_first_enabled_output(seat, &touch->touch->base);
+	}
 }
