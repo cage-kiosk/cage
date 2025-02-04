@@ -33,6 +33,9 @@ activities outside the scope of the running application are prevented.
 *-s*
 	Allow VT switching
 
+*-S <NAME>*
+	Use display socket NAME, instead of trying wayland-1, wayland-2, etc
+
 *-v*
 	Show the version number and exit.
 
