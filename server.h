@@ -61,6 +61,12 @@ struct cg_server {
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
 
+	struct wlr_input_method_manager_v2 *input_method_manager_v2;
+	struct wl_listener new_input_method;
+
+	struct wlr_text_input_manager_v3 *text_input_manager_v3;
+	struct wl_listener new_text_input;
+
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	bool return_app_code;
