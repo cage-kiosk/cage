@@ -272,6 +272,10 @@ handle_new_output(struct wl_listener *listener, void *data)
 		return;
 	}
 
+	if (server->app_id != NULL && wlr_output_is_wl(wlr_output)) {
+		wlr_wl_output_set_app_id(wlr_output, server->app_id);
+	}
+
 	output->wlr_output = wlr_output;
 	wlr_output->data = output;
 	output->server = server;
