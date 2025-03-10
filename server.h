@@ -65,6 +65,7 @@ struct cg_server {
 	bool allow_vt_switch;
 	bool return_app_code;
 	bool terminated;
+	bool numlock;
 	enum wlr_log_importance log_level;
 };
 

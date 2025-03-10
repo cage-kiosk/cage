@@ -45,7 +45,6 @@
 #endif
 
 static uint32_t locked_mods = 0;
-bool numlock = false;
 
 static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 
@@ -362,7 +361,7 @@ cg_keyboard_group_add(struct wlr_keyboard *keyboard, struct cg_seat *seat, bool 
 	cg_group->wlr_group->data = cg_group;
 	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard, keyboard->keymap);
 
-	if (numlock) {
+	if (seat->server->numlock) {
 		xkb_mod_index_t mod_index = xkb_keymap_mod_get_index(keyboard->keymap, XKB_MOD_NAME_NUM);
 		if (mod_index != XKB_MOD_INVALID)
 			locked_mods |= (uint32_t)1 << mod_index;

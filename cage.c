@@ -61,8 +61,6 @@
 #include "xwayland.h"
 #endif
 
-extern bool numlock;
-
 void
 server_terminate(struct cg_server *server)
 {
@@ -264,7 +262,7 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 			}
 			break;
 		case 'n':
-			numlock = true;
+			server->numlock = true;
 			break;
 		case 's':
 			server->allow_vt_switch = true;
