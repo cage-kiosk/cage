@@ -33,6 +33,9 @@ activities outside the scope of the running application are prevented.
 *-s*
 	Allow VT switching
 
+*-n*
+	Enable numlock
+
 *-v*
 	Show the version number and exit.
 

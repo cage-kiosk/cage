@@ -22,6 +22,7 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_keyboard_group.h>
+#include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
@@ -42,6 +43,9 @@
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
+
+static uint32_t locked_mods = 0;
+bool numlock = false;
 
 static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 
@@ -358,6 +362,15 @@ cg_keyboard_group_add(struct wlr_keyboard *keyboard, struct cg_seat *seat, bool 
 	cg_group->wlr_group->data = cg_group;
 	wlr_keyboard_set_keymap(&cg_group->wlr_group->keyboard, keyboard->keymap);
 
+	if (numlock) {
+		xkb_mod_index_t mod_index = xkb_keymap_mod_get_index(keyboard->keymap, XKB_MOD_NAME_NUM);
+		if (mod_index != XKB_MOD_INVALID)
+			locked_mods |= (uint32_t)1 << mod_index;
+	}
+
+	if (locked_mods)
+		wlr_keyboard_notify_modifiers(&cg_group->wlr_group->keyboard, 0, 0, locked_mods, 0);
+
 	wlr_keyboard_set_repeat_info(&cg_group->wlr_group->keyboard, keyboard->repeat_info.rate,
 				     keyboard->repeat_info.delay);
 
@@ -397,6 +410,7 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_keyboard *keyboard, bool vi
 	}
 
 	wlr_keyboard_set_keymap(keyboard, keymap);
+	wlr_keyboard_notify_modifiers(keyboard, 0, 0, locked_mods, 0);
 
 	xkb_keymap_unref(keymap);
 	xkb_context_unref(context);
