@@ -52,6 +52,7 @@ struct cg_server {
 
 	struct wl_listener new_virtual_keyboard;
 	struct wl_listener new_virtual_pointer;
+	struct wl_listener set_gamma;
 #if CAGE_HAS_XWAYLAND
 	struct wl_listener new_xwayland_surface;
 #endif

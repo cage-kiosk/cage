@@ -496,11 +496,8 @@ main(int argc, char *argv[])
 	server.output_manager_test.notify = handle_output_manager_test;
 	wl_signal_add(&server.output_manager_v1->events.test, &server.output_manager_test);
 
-	if (!wlr_gamma_control_manager_v1_create(server.wl_display)) {
-		wlr_log(WLR_ERROR, "Unable to create the gamma control manager");
-		ret = 1;
-		goto end;
-	}
+	struct wlr_gamma_control_manager_v1 *gamma_control_mgr = wlr_gamma_control_manager_v1_create(server.wl_display);
+	wl_signal_add(&gamma_control_mgr->events.set_gamma, &server.set_gamma);
 
 	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard =
 		wlr_virtual_keyboard_manager_v1_create(server.wl_display);

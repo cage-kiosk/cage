@@ -23,6 +23,7 @@
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_primary_selection.h>
+#include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
@@ -405,6 +406,28 @@ handle_new_keyboard(struct cg_seat *seat, struct wlr_keyboard *keyboard, bool vi
 	cg_keyboard_group_add(keyboard, seat, virtual);
 
 	wlr_seat_set_keyboard(seat->seat, keyboard);
+}
+
+static void
+handle_set_gamma(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, set_gamma);
+	struct wlr_gamma_control_manager_v1_set_gamma_event *event = data;
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
+	if (!wlr_gamma_control_v1_apply(event->control, &state)) {
+	  wlr_output_state_finish(&state);
+	  return;
+	}
+  
+	if (!wlr_output_test_state(event->output, &state)) {
+	  wlr_gamma_control_v1_send_failed_and_destroy(event->control);
+	  wlr_output_state_finish(&state);
+	  return;
+	}
+  
+	wlr_output_commit_state(event->output, &state);
+	wlr_output_schedule_frame(event->output);
 }
 
 static void
@@ -870,6 +893,8 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 
 	seat->new_input.notify = handle_new_input;
 	wl_signal_add(&backend->events.new_input, &seat->new_input);
+
+	server->set_gamma.notify = handle_set_gamma;
 
 	server->new_virtual_keyboard.notify = handle_virtual_keyboard;
 	server->new_virtual_pointer.notify = handle_virtual_pointer;
