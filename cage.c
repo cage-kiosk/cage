@@ -596,10 +596,24 @@ main(int argc, char *argv[])
 	wl_display_run(server.wl_display);
 
 #if CAGE_HAS_XWAYLAND
+	if (xwayland) {
+		wl_list_remove(&server.new_xwayland_surface.link);
+	}
 	wlr_xwayland_destroy(xwayland);
 	wlr_xcursor_manager_destroy(xcursor_manager);
 #endif
 	wl_display_destroy_clients(server.wl_display);
+
+	wl_list_remove(&server.new_virtual_pointer.link);
+	wl_list_remove(&server.new_virtual_keyboard.link);
+	wl_list_remove(&server.output_manager_apply.link);
+	wl_list_remove(&server.output_manager_test.link);
+	wl_list_remove(&server.xdg_toplevel_decoration.link);
+	wl_list_remove(&server.new_xdg_toplevel.link);
+	wl_list_remove(&server.new_xdg_popup.link);
+	wl_list_remove(&server.new_idle_inhibitor_v1.link);
+	wl_list_remove(&server.new_output.link);
+	wl_list_remove(&server.output_layout_change.link);
 
 end:
 	if (pid != 0)
