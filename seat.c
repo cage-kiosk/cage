@@ -381,6 +381,16 @@ cleanup:
 }
 
 static void
+keyboard_group_destroy(struct cg_keyboard_group *keyboard_group)
+{
+	wl_list_remove(&keyboard_group->key.link);
+	wl_list_remove(&keyboard_group->modifiers.link);
+	wlr_keyboard_group_destroy(keyboard_group->wlr_group);
+	wl_list_remove(&keyboard_group->link);
+	free(keyboard_group);
+}
+
+static void
 handle_new_keyboard(struct cg_seat *seat, struct wlr_keyboard *keyboard, bool virtual)
 {
 	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
@@ -892,6 +902,11 @@ seat_destroy(struct cg_seat *seat)
 
 	wl_list_remove(&seat->request_start_drag.link);
 	wl_list_remove(&seat->start_drag.link);
+
+	struct cg_keyboard_group *keyboard_group, *keyboard_group_tmp;
+	wl_list_for_each_safe (keyboard_group, keyboard_group_tmp, &seat->keyboard_groups, link) {
+		keyboard_group_destroy(keyboard_group);
+	}
 
 	// Destroying the wlr seat will trigger the destroy handler on our seat,
 	// which will in turn free it.
