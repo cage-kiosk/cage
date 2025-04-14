@@ -35,6 +35,7 @@
 #include <wlr/xwayland.h>
 #endif
 
+#include "ime.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -276,9 +277,47 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 	return true;
 }
 
-static void
-handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data)
+static bool
+is_keyboard_emulated(struct cg_keyboard_group *cg_group)
 {
+	if (!cg_group->is_virtual) {
+		return false;
+	}
+
+	assert(cg_group->original_keyboard);
+
+	struct wlr_input_method_v2 *input_method = cg_group->seat->ime_relay.input_method;
+	struct wlr_virtual_keyboard_v1 *virtual_keyboard =
+		wlr_input_device_get_virtual_keyboard(&cg_group->original_keyboard->base);
+
+	assert(virtual_keyboard);
+
+	return wl_resource_get_client(input_method->resource) == wl_resource_get_client(virtual_keyboard->resource);
+}
+
+/**
+ * Get keyboard grab of the seat from cg_keyboard_group if we should forward events
+ * to it.
+ *
+ * Returns NULL if the keyboard is not grabbed by an input method,
+ * or if event is from virtual keyboard of the same client as grab.
+ * TODO: see https://gitlab.freedesktop.org/wlroots/wlroots/-/issues/2322
+ */
+static struct wlr_input_method_keyboard_grab_v2 *
+get_ime_keyboard_grab(struct cg_keyboard_group *group)
+{
+	struct wlr_input_method_v2 *input_method = group->seat->ime_relay.input_method;
+	if (input_method && !is_keyboard_emulated(group)) {
+		return input_method->keyboard_grab;
+	}
+	return NULL;
+}
+
+static void
+handle_key_event(struct cg_keyboard_group *cg_group, void *data)
+{
+	struct cg_seat *seat = cg_group->seat;
+	struct wlr_keyboard *keyboard = &cg_group->wlr_group->keyboard;
 	struct wlr_keyboard_key_event *event = data;
 
 	/* Translate from libinput keycode to an xkbcommon keycode. */
@@ -298,6 +337,11 @@ handle_key_event(struct wlr_keyboard *keyboard, struct cg_seat *seat, void *data
 		}
 	}
 
+	// try to forward the key to the input method
+	if (!handled && get_ime_keyboard_grab(cg_group)) {
+		handled = cg_ime_keyboard_grab_forward_key(&seat->ime_relay, keyboard, event);
+	}
+
 	if (!handled) {
 		/* Otherwise, we pass it along to the client. */
 		wlr_seat_set_keyboard(seat->seat, keyboard);
@@ -311,14 +355,29 @@ static void
 handle_keyboard_group_key(struct wl_listener *listener, void *data)
 {
 	struct cg_keyboard_group *cg_group = wl_container_of(listener, cg_group, key);
-	handle_key_event(&cg_group->wlr_group->keyboard, cg_group->seat, data);
+	handle_key_event(cg_group, data);
+}
+
+static void
+handle_ime_modifier_event(struct wlr_input_method_keyboard_grab_v2 *keyboard_grab, struct wlr_keyboard *keyboard,
+			  struct cg_seat *seat)
+{
+	wlr_input_method_keyboard_grab_v2_set_keyboard(keyboard_grab, keyboard);
+	wlr_input_method_keyboard_grab_v2_send_modifiers(keyboard_grab, &keyboard->modifiers);
+	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
 static void
 handle_keyboard_group_modifiers(struct wl_listener *listener, void *data)
 {
 	struct cg_keyboard_group *group = wl_container_of(listener, group, modifiers);
-	handle_modifier_event(&group->wlr_group->keyboard, group->seat);
+	struct wlr_keyboard *keyboard = &group->wlr_group->keyboard;
+	struct wlr_input_method_keyboard_grab_v2 *keyboard_grab = get_ime_keyboard_grab(group);
+	if (keyboard_grab) {
+		handle_ime_modifier_event(keyboard_grab, keyboard, group->seat);
+	} else {
+		handle_modifier_event(keyboard, group->seat);
+	}
 }
 
 static void
@@ -370,6 +429,10 @@ cg_keyboard_group_add(struct wlr_keyboard *keyboard, struct cg_seat *seat, bool 
 	cg_group->key.notify = handle_keyboard_group_key;
 	wl_signal_add(&cg_group->wlr_group->keyboard.events.modifiers, &cg_group->modifiers);
 	cg_group->modifiers.notify = handle_keyboard_group_modifiers;
+
+	if (virtual) {
+		cg_group->original_keyboard = keyboard;
+	}
 
 	return;
 
@@ -836,6 +899,8 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 		}
 	}
 
+	cg_ime_relay_init(seat, &seat->ime_relay);
+
 	seat->cursor_motion_relative.notify = handle_cursor_motion_relative;
 	wl_signal_add(&seat->cursor->events.motion, &seat->cursor_motion_relative);
 	seat->cursor_motion_absolute.notify = handle_cursor_motion_absolute;
@@ -893,6 +958,8 @@ seat_destroy(struct cg_seat *seat)
 	wl_list_remove(&seat->request_start_drag.link);
 	wl_list_remove(&seat->start_drag.link);
 
+	cg_ime_relay_finish(&seat->ime_relay);
+
 	// Destroying the wlr seat will trigger the destroy handler on our seat,
 	// which will in turn free it.
 	wlr_seat_destroy(seat->seat);
@@ -940,19 +1007,24 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 
 	view_activate(view, true);
-	char *title = view_get_title(view);
-	struct cg_output *output;
-	wl_list_for_each (output, &server->outputs, link) {
-		output_set_window_title(output, title);
-	}
-	free(title);
 
-	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(wlr_seat);
-	if (keyboard) {
-		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, keyboard->keycodes, keyboard->num_keycodes,
-					       &keyboard->modifiers);
-	} else {
-		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, NULL, 0, NULL);
+	if (view->type != CAGE_INPUT_POPUP_VIEW) {
+		char *title = view_get_title(view);
+		struct cg_output *output;
+		wl_list_for_each (output, &server->outputs, link) {
+			output_set_window_title(output, title);
+		}
+		free(title);
+
+		struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(wlr_seat);
+		if (keyboard) {
+			wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, keyboard->keycodes,
+						       keyboard->num_keycodes, &keyboard->modifiers);
+		} else {
+			wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, NULL, 0, NULL);
+		}
+
+		cg_ime_relay_set_focus(&seat->ime_relay, view->wlr_surface);
 	}
 
 	process_cursor_motion(seat, -1, 0, 0, 0, 0);

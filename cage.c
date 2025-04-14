@@ -52,6 +52,7 @@
 #endif
 
 #include "idle_inhibit_v1.h"
+#include "ime.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -526,6 +527,24 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+
+	server.input_method_manager_v2 = wlr_input_method_manager_v2_create(server.wl_display);
+	if (!server.input_method_manager_v2) {
+		wlr_log(WLR_ERROR, "Unable to create the input method manager");
+		ret = 1;
+		goto end;
+	}
+	server.new_input_method.notify = cg_ime_handle_new_input_method;
+	wl_signal_add(&server.input_method_manager_v2->events.input_method, &server.new_input_method);
+
+	server.text_input_manager_v3 = wlr_text_input_manager_v3_create(server.wl_display);
+	if (!server.text_input_manager_v3) {
+		wlr_log(WLR_ERROR, "Unable to create the text input manager");
+		ret = 1;
+		goto end;
+	}
+	server.new_text_input.notify = cg_ime_handle_new_text_input;
+	wl_signal_add(&server.text_input_manager_v3->events.text_input, &server.new_text_input);
 
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xcursor_manager *xcursor_manager = NULL;

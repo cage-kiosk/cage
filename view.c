@@ -137,7 +137,7 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 #if CAGE_HAS_XWAYLAND
 	/* We shouldn't position override-redirect windows. They set
 	   their own (x,y) coordinates in handle_wayland_surface_map. */
-	if (view->type != CAGE_XWAYLAND_VIEW || xwayland_view_should_manage(view))
+	if (view->type == CAGE_XDG_SHELL_VIEW || (view->type == CAGE_XWAYLAND_VIEW && xwayland_view_should_manage(view)))
 #endif
 	{
 		view_position(view);
