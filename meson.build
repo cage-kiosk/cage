@@ -39,6 +39,7 @@ wlroots        = dependency('wlroots-0.18', fallback: ['wlroots', 'wlroots'])
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
+pixman         = dependency('pixman-1')
 math           = cc.find_library('m')
 
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
@@ -51,6 +52,7 @@ wayland_scanner_server = generator(
 
 server_protocols = [
   [wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
+  [wl_protocol_dir, 'unstable/pointer-constraints/pointer-constraints-unstable-v1.xml'],
 ]
 
 server_protos_headers = []
@@ -145,6 +147,7 @@ executable(
     wlroots,
     xkbcommon,
     math,
+    pixman,
   ],
   install: true,
 )
