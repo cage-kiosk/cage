@@ -66,6 +66,26 @@ update_output_manager_config(struct cg_server *server)
 	wlr_output_manager_v1_set_configuration(server->output_manager_v1, config);
 }
 
+static void
+update_cursor_map_to_output(struct cg_server *server)
+{
+	struct cg_output *only_enabled_output = NULL;
+	struct cg_output *output;
+	wl_list_for_each (output, &server->outputs, link) {
+		if (!only_enabled_output && output->wlr_output->enabled) {
+			only_enabled_output = output;
+		} else {
+			only_enabled_output = NULL;
+		}
+	}
+
+	if (only_enabled_output) {
+		wlr_cursor_map_to_output(server->seat->cursor, only_enabled_output->wlr_output);
+	} else {
+		wlr_cursor_map_to_output(server->seat->cursor, NULL);
+	}
+}
+
 static inline void
 output_layout_add_auto(struct cg_output *output)
 {
@@ -111,6 +131,7 @@ output_enable(struct cg_output *output)
 		output_layout_add_auto(output);
 	}
 
+	update_cursor_map_to_output(output->server);
 	update_output_manager_config(output->server);
 }
 
@@ -182,6 +203,7 @@ handle_output_commit(struct wl_listener *listener, void *data)
 	 * - always update output manager configuration even if the output is now disabled */
 
 	if (event->state->committed & OUTPUT_CONFIG_UPDATED) {
+		update_cursor_map_to_output(output->server);
 		update_output_manager_config(output->server);
 	}
 }
@@ -193,6 +215,7 @@ handle_output_request_state(struct wl_listener *listener, void *data)
 	struct wlr_output_event_request_state *event = data;
 
 	if (wlr_output_commit_state(output->wlr_output, event->state)) {
+		update_cursor_map_to_output(output->server);
 		update_output_manager_config(output->server);
 	}
 }
@@ -203,6 +226,7 @@ handle_output_layout_change(struct wl_listener *listener, void *data)
 	struct cg_server *server = wl_container_of(listener, server, output_layout_change);
 
 	view_position_all(server);
+	update_cursor_map_to_output(server);
 	update_output_manager_config(server);
 }
 
@@ -330,6 +354,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 	}
 
 	view_position_all(output->server);
+	update_cursor_map_to_output(output->server);
 	update_output_manager_config(output->server);
 }
 
