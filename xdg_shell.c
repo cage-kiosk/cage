@@ -125,14 +125,10 @@ get_title(struct cg_view *view)
 }
 
 static void
-get_geometry(struct cg_view *view, int *width_out, int *height_out)
+get_geometry(struct cg_view *view, struct wlr_box *view_box)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_box geom;
-
-	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, &geom);
-	*width_out = geom.width;
-	*height_out = geom.height;
+	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, view_box);
 }
 
 static bool
