@@ -17,6 +17,15 @@ struct cg_output {
 	struct wl_listener destroy;
 	struct wl_listener frame;
 
+	struct {
+		struct wlr_scene_tree *shell_background;
+		struct wlr_scene_tree *shell_bottom;
+		struct wlr_scene_tree *shell_top;
+		struct wlr_scene_tree *shell_overlay;
+	} layers;
+
+	struct wlr_box usable_area;
+
 	struct wl_list link; // cg_server::outputs
 };
 
