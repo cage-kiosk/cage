@@ -227,6 +227,8 @@ handle_xdg_toplevel_commit(struct wl_listener *listener, void *data)
 		return;
 	}
 
+	wlr_xdg_toplevel_set_wm_capabilities(xdg_shell_view->xdg_toplevel, XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
+
 	/* When an xdg_surface performs an initial commit, the compositor must
 	 * reply with a configure so the client can map the surface. */
 	view_position(&xdg_shell_view->view);

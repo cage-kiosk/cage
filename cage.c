@@ -416,7 +416,7 @@ main(int argc, char *argv[])
 	wl_signal_add(&server.idle_inhibit_v1->events.new_inhibitor, &server.new_idle_inhibitor_v1);
 	wl_list_init(&server.inhibitors);
 
-	struct wlr_xdg_shell *xdg_shell = wlr_xdg_shell_create(server.wl_display, 4);
+	struct wlr_xdg_shell *xdg_shell = wlr_xdg_shell_create(server.wl_display, 5);
 	if (!xdg_shell) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
 		ret = 1;
