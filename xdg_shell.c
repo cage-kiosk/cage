@@ -293,6 +293,7 @@ popup_handle_destroy(struct wl_listener *listener, void *data)
 	struct cg_xdg_popup *popup = wl_container_of(listener, popup, destroy);
 	wl_list_remove(&popup->destroy.link);
 	wl_list_remove(&popup->commit.link);
+	wl_list_remove(&popup->reposition.link);
 	free(popup);
 }
 
@@ -304,6 +305,14 @@ popup_handle_commit(struct wl_listener *listener, void *data)
 	if (popup->xdg_popup->base->initial_commit) {
 		popup_unconstrain(popup->xdg_popup);
 	}
+}
+
+static void
+popup_handle_reposition(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_popup *popup = wl_container_of(listener, popup, reposition);
+
+	popup_unconstrain(popup->xdg_popup);
 }
 
 void
@@ -349,6 +358,9 @@ handle_new_xdg_popup(struct wl_listener *listener, void *data)
 
 	popup->commit.notify = popup_handle_commit;
 	wl_signal_add(&wlr_popup->base->surface->events.commit, &popup->commit);
+
+	popup->reposition.notify = popup_handle_reposition;
+	wl_signal_add(&wlr_popup->events.reposition, &popup->reposition);
 
 	struct wlr_scene_tree *popup_scene_tree = wlr_scene_xdg_surface_create(parent_scene_tree, wlr_popup->base);
 	if (popup_scene_tree == NULL) {
