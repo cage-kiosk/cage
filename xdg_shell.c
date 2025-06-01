@@ -184,7 +184,7 @@ destroy(struct cg_view *view)
 }
 
 static void
-handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *data)
+handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
 
@@ -201,7 +201,7 @@ handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *
 }
 
 static void
-handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
+handle_xdg_toplevel_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
@@ -210,7 +210,7 @@ handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
+handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
 	struct cg_view *view = &xdg_shell_view->view;
@@ -219,7 +219,7 @@ handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
+handle_xdg_toplevel_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
 
@@ -233,7 +233,7 @@ handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
+handle_xdg_toplevel_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, destroy);
 	struct cg_view *view = &xdg_shell_view->view;
@@ -273,15 +273,15 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
 	xdg_shell_view->xdg_toplevel = toplevel;
 
-	xdg_shell_view->commit.notify = handle_xdg_shell_surface_commit;
+	xdg_shell_view->commit.notify = handle_xdg_toplevel_commit;
 	wl_signal_add(&toplevel->base->surface->events.commit, &xdg_shell_view->commit);
-	xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
+	xdg_shell_view->map.notify = handle_xdg_toplevel_map;
 	wl_signal_add(&toplevel->base->surface->events.map, &xdg_shell_view->map);
-	xdg_shell_view->unmap.notify = handle_xdg_shell_surface_unmap;
+	xdg_shell_view->unmap.notify = handle_xdg_toplevel_unmap;
 	wl_signal_add(&toplevel->base->surface->events.unmap, &xdg_shell_view->unmap);
-	xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
+	xdg_shell_view->destroy.notify = handle_xdg_toplevel_destroy;
 	wl_signal_add(&toplevel->events.destroy, &xdg_shell_view->destroy);
-	xdg_shell_view->request_fullscreen.notify = handle_xdg_shell_surface_request_fullscreen;
+	xdg_shell_view->request_fullscreen.notify = handle_xdg_toplevel_request_fullscreen;
 	wl_signal_add(&toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
 
 	toplevel->base->data = xdg_shell_view;
