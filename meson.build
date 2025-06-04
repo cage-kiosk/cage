@@ -41,28 +41,7 @@ wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
 
-wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
-wayland_scanner = find_program('wayland-scanner')
-wayland_scanner_server = generator(
-  wayland_scanner,
-  output: '@BASENAME@-protocol.h',
-  arguments: ['server-header', '@INPUT@', '@OUTPUT@'],
-)
-
-server_protocols = [
-  [wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
-]
-
-server_protos_headers = []
-
-foreach p : server_protocols
-  xml = join_paths(p)
-  server_protos_headers += wayland_scanner_server.process(xml)
-endforeach
-
-server_protos = declare_dependency(
-  sources: server_protos_headers,
-)
+subdir('protocols')
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
@@ -113,6 +92,7 @@ endif
 cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
+  'layer_shell_v1.c',
   'output.c',
   'seat.c',
   'view.c',
@@ -124,6 +104,7 @@ cage_headers = [
                  output: 'config.h',
                  configuration: conf_data),
   'idle_inhibit_v1.h',
+  'layer_shell_v1.h',
   'output.h',
   'seat.h',
   'server.h',
