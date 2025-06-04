@@ -18,6 +18,7 @@
 enum cg_multi_output_mode {
 	CAGE_MULTI_OUTPUT_MODE_EXTEND,
 	CAGE_MULTI_OUTPUT_MODE_LAST,
+	CAGE_MULTI_OUTPUT_MODE_NAMED,
 };
 
 struct cg_server {
