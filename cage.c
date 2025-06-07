@@ -6,7 +6,7 @@
  * See the LICENSE file accompanying this file.
  */
 
-#define _POSIX_C_SOURCE 200112L
+#define _POSIX_C_SOURCE 200809L
 
 #include "config.h"
 
@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
@@ -232,6 +233,7 @@ usage(FILE *file, const char *cage)
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
 		" -s\t Allow VT switching\n"
+		" -S NAME Use display socket NAME, instead of trying wayland-1, wayland-2, etc\n"
 		" -v\t Show the version number and exit\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
@@ -242,7 +244,7 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:sv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:sS:v")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -262,6 +264,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 			break;
 		case 's':
 			server->allow_vt_switch = true;
+			break;
+		case 'S':
+			server->socket = strdup(optarg);
 			break;
 		case 'v':
 			fprintf(stdout, "Cage version " CAGE_VERSION "\n");
@@ -562,8 +567,23 @@ main(int argc, char *argv[])
 	}
 #endif
 
-	const char *socket = wl_display_add_socket_auto(server.wl_display);
-	if (!socket) {
+	if (server.socket) {
+		if (wl_display_add_socket(server.wl_display, server.socket) < 0) {
+			server.socket = NULL;
+		}
+	} else {
+		// Try display socket "wayland-1" and upwards, no "wayland-0"
+		char name_candidate[16];
+		for (unsigned int i = 1; i <= 32; ++i) {
+			snprintf(name_candidate, sizeof(name_candidate), "wayland-%u", i);
+			if (wl_display_add_socket(server.wl_display, name_candidate) >= 0) {
+				server.socket = strdup(name_candidate);
+				break;
+			}
+		}
+	}
+
+	if (!server.socket) {
 		wlr_log_errno(WLR_ERROR, "Unable to open Wayland socket");
 		ret = 1;
 		goto end;
@@ -575,10 +595,10 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	if (setenv("WAYLAND_DISPLAY", socket, true) < 0) {
+	if (setenv("WAYLAND_DISPLAY", server.socket, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY. Clients may not be able to connect");
 	} else {
-		wlr_log(WLR_DEBUG, "Cage " CAGE_VERSION " is running on Wayland display %s", socket);
+		wlr_log(WLR_DEBUG, "Cage " CAGE_VERSION " is running on Wayland display %s", server.socket);
 	}
 
 #if CAGE_HAS_XWAYLAND
