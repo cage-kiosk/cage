@@ -39,7 +39,7 @@ jobs:
 
       - name: Compile Cage (XWayland=${{ matrix.xwayland }})
         run: |
-          meson --fatal-meson-warnings \
+          meson --fatal-meson-warnings --wrap-mode=nodownload \
             build-${{ matrix.CC }}-${{matrix.xwayland }} \
             -Dwlroots:xwayland=${{ matrix.xwayland }}
           ninja -C build-${{ matrix.CC }}-${{matrix.xwayland }}
@@ -58,7 +58,7 @@ jobs:
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
       - name: Check for formatting changes
         run: |
-          meson build-clang-format -Dwlroots:xwayland=enabled
+          meson --wrap-mode=nodownload build-clang-format -Dwlroots:xwayland=enabled
           ninja -C build-clang-format clang-format-check
 
   scan-build:
@@ -77,5 +77,5 @@ jobs:
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
       - name: Run scan-build
         run: |
-          meson build-scan-build -Dwlroots:xwayland=enabled
+          meson --wrap-mode=nodownload build-scan-build -Dwlroots:xwayland=enabled
           ninja -C build-scan-build scan-build
