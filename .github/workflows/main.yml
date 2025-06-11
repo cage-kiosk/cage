@@ -26,13 +26,13 @@ jobs:
 
       - name: Install dependencies (Alpine)
         if: "matrix.OS == 'alpine:edge'"
-        run: apk add build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland-dev scdoc-doc hwdata
+        run: apk add build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland-dev scdoc-doc hwdata libdisplay-info-dev
 
       - name: Install dependencies (Arch)
         if: "matrix.OS == 'archlinux:base-devel'"
         run: |
           pacman-key --init
-          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc
+          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc libdisplay-info
 
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
@@ -53,7 +53,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman-key --init
-          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata
+          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata libdisplay-info
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
       - name: Check for formatting changes
@@ -72,7 +72,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman-key --init
-          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata
+          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata libdisplay-info
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
       - name: Run scan-build
