@@ -238,9 +238,12 @@ output_destroy(struct cg_output *output)
 
 	free(output);
 
-	if (wl_list_empty(&server->outputs) && was_nested_output) {
-		server_terminate(server);
-	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && !wl_list_empty(&server->outputs)) {
+	if (wl_list_empty(&server->outputs)) {
+		if (was_nested_output) {
+			server_terminate(server);
+		}
+	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST ||
+		   server->output_mode == CAGE_MULTI_OUTPUT_MODE_NAMED) {
 		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
 		output_enable(prev);
 		view_position_all(server);
@@ -314,11 +317,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 		}
 	}
 
-	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && wl_list_length(&server->outputs) > 1) {
-		struct cg_output *next = wl_container_of(output->link.next, next, link);
-		output_disable(next);
-	}
-
 	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
 			wlr_output->scale);
@@ -327,6 +325,24 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wlr_log(WLR_DEBUG, "Enabling new output %s", wlr_output->name);
 	if (wlr_output_commit_state(wlr_output, &state)) {
 		output_layout_add_auto(output);
+	}
+
+	if (wl_list_length(&server->outputs) > 1) {
+		struct cg_output *next = wl_container_of(output->link.next, next, link);
+		const char *output_name = getenv("CAGE_OUTPUT_NAME");
+		switch (server->output_mode) {
+		case CAGE_MULTI_OUTPUT_MODE_NAMED:
+			if (output_name && strcmp(next->wlr_output->name, output_name) == 0) {
+				wl_list_remove(&next->link);
+				wl_list_insert(&server->outputs, &next->link);
+				next = output;
+			}
+			// fall through
+		case CAGE_MULTI_OUTPUT_MODE_LAST:
+			output_disable(next);
+			break;
+		case CAGE_MULTI_OUTPUT_MODE_EXTEND:;
+		}
 	}
 
 	view_position_all(output->server);
