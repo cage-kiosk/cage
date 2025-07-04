@@ -29,6 +29,7 @@
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
@@ -526,6 +527,15 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+
+	server.pointer_constraints = wlr_pointer_constraints_v1_create(server.wl_display);
+	if (!server.pointer_constraints) {
+		wlr_log(WLR_ERROR, "Unable to create the pointer constraints");
+		ret = 1;
+		goto end;
+	}
+	server.pointer_constraint.notify = handle_pointer_constraint;
+	wl_signal_add(&server.pointer_constraints->events.new_constraint, &server.pointer_constraint);
 
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xcursor_manager *xcursor_manager = NULL;
