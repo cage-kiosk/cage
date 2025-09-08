@@ -31,7 +31,6 @@ struct cg_xdg_popup {
 
 	struct wl_listener destroy;
 	struct wl_listener commit;
-	struct wl_listener reposition;
 };
 
 void handle_new_xdg_toplevel(struct wl_listener *listener, void *data);

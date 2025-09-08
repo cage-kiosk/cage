@@ -226,13 +226,15 @@ usage(FILE *file, const char *cage)
 	fprintf(file,
 		"Usage: %s [OPTIONS] [--] [APPLICATION...]\n"
 		"\n"
-		" -d\t Don't draw client side decorations, when possible\n"
-		" -D\t Enable debug logging\n"
-		" -h\t Display this help message\n"
+		" -d        Don't draw client side decorations, when possible\n"
+		" -D        Enable debug logging\n"
+		" -h        Display this help message\n"
+		" -r        Transform display\n"
+		"           [90, 180, 270, flipped, flipped-90, flipped-180, flipped-170]\n"
 		" -m extend Extend the display across all connected outputs (default)\n"
-		" -m last Use only the last connected output\n"
-		" -s\t Allow VT switching\n"
-		" -v\t Show the version number and exit\n"
+		" -m last   Use only the last connected output\n"
+		" -s        Allow VT switching\n"
+		" -v        Show the version number and exit\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
 		cage);
@@ -242,7 +244,7 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:sv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:r:sv")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -258,6 +260,25 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 				server->output_mode = CAGE_MULTI_OUTPUT_MODE_LAST;
 			} else if (strcmp(optarg, "extend") == 0) {
 				server->output_mode = CAGE_MULTI_OUTPUT_MODE_EXTEND;
+			}
+			break;
+		case 'r':
+			if (strcmp(optarg, "90") == 0) {
+				server->transform = WL_OUTPUT_TRANSFORM_90;
+			} else if (strcmp(optarg, "180") == 0) {
+				server->transform = WL_OUTPUT_TRANSFORM_180;
+			} else if (strcmp(optarg, "270") == 0) {
+				server->transform = WL_OUTPUT_TRANSFORM_270;
+			} else if (strcmp(optarg, "flipped") == 0) {
+				server->transform = WL_OUTPUT_TRANSFORM_FLIPPED;
+			} else if (strcmp(optarg, "flipped-90") == 0) {
+				server->transform = WL_OUTPUT_TRANSFORM_FLIPPED_90;
+			} else if (strcmp(optarg, "flipped-180") == 0) {
+				server->transform = WL_OUTPUT_TRANSFORM_FLIPPED_180;
+			} else if (strcmp(optarg, "flipped-270") == 0) {
+				server->transform = WL_OUTPUT_TRANSFORM_FLIPPED_270;
+			} else {
+				wlr_log(WLR_ERROR, "got unknown transform value: %s", optarg);
 			}
 			break;
 		case 's':
@@ -280,6 +301,8 @@ main(int argc, char *argv[])
 {
 	struct cg_server server = {.log_level = WLR_INFO};
 	struct wl_event_source *sigchld_source = NULL;
+	server.transform = WL_OUTPUT_TRANSFORM_NORMAL;
+
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
 
@@ -304,7 +327,7 @@ main(int argc, char *argv[])
 		wlr_log(WLR_ERROR, "Cannot allocate a Wayland display");
 		return 1;
 	}
-
+	
 	server.display_destroy.notify = handle_display_destroy;
 	wl_display_add_destroy_listener(server.wl_display, &server.display_destroy);
 
@@ -416,7 +439,7 @@ main(int argc, char *argv[])
 	wl_signal_add(&server.idle_inhibit_v1->events.new_inhibitor, &server.new_idle_inhibitor_v1);
 	wl_list_init(&server.inhibitors);
 
-	struct wlr_xdg_shell *xdg_shell = wlr_xdg_shell_create(server.wl_display, 5);
+	struct wlr_xdg_shell *xdg_shell = wlr_xdg_shell_create(server.wl_display, 4);
 	if (!xdg_shell) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG shell interface");
 		ret = 1;
@@ -454,7 +477,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	struct wlr_presentation *presentation = wlr_presentation_create(server.wl_display, server.backend, 2);
+	struct wlr_presentation *presentation = wlr_presentation_create(server.wl_display, server.backend);
 	if (!presentation) {
 		wlr_log(WLR_ERROR, "Unable to create the presentation interface");
 		ret = 1;
@@ -630,8 +653,5 @@ end:
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
 	wl_display_destroy(server.wl_display);
-	wlr_scene_node_destroy(&server.scene->tree.node);
-	wlr_allocator_destroy(server.allocator);
-	wlr_renderer_destroy(server.renderer);
 	return ret;
 }

@@ -128,10 +128,11 @@ static void
 get_geometry(struct cg_view *view, int *width_out, int *height_out)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
-	struct wlr_xdg_surface *xdg_surface = xdg_shell_view->xdg_toplevel->base;
+	struct wlr_box geom;
 
-	*width_out = xdg_surface->geometry.width;
-	*height_out = xdg_surface->geometry.height;
+	wlr_xdg_surface_get_geometry(xdg_shell_view->xdg_toplevel->base, &geom);
+	*width_out = geom.width;
+	*height_out = geom.height;
 }
 
 static bool
@@ -184,7 +185,7 @@ destroy(struct cg_view *view)
 }
 
 static void
-handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
+handle_xdg_shell_surface_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
 
@@ -201,7 +202,7 @@ handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_xdg_toplevel_unmap(struct wl_listener *listener, void *data)
+handle_xdg_shell_surface_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
@@ -210,7 +211,7 @@ handle_xdg_toplevel_unmap(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
+handle_xdg_shell_surface_map(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, map);
 	struct cg_view *view = &xdg_shell_view->view;
@@ -219,7 +220,7 @@ handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_xdg_toplevel_commit(struct wl_listener *listener, void *data)
+handle_xdg_shell_surface_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
 
@@ -227,15 +228,13 @@ handle_xdg_toplevel_commit(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	wlr_xdg_toplevel_set_wm_capabilities(xdg_shell_view->xdg_toplevel, XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
-
 	/* When an xdg_surface performs an initial commit, the compositor must
 	 * reply with a configure so the client can map the surface. */
 	view_position(&xdg_shell_view->view);
 }
 
 static void
-handle_xdg_toplevel_destroy(struct wl_listener *listener, void *data)
+handle_xdg_shell_surface_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, destroy);
 	struct cg_view *view = &xdg_shell_view->view;
@@ -275,15 +274,15 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
 	xdg_shell_view->xdg_toplevel = toplevel;
 
-	xdg_shell_view->commit.notify = handle_xdg_toplevel_commit;
+	xdg_shell_view->commit.notify = handle_xdg_shell_surface_commit;
 	wl_signal_add(&toplevel->base->surface->events.commit, &xdg_shell_view->commit);
-	xdg_shell_view->map.notify = handle_xdg_toplevel_map;
+	xdg_shell_view->map.notify = handle_xdg_shell_surface_map;
 	wl_signal_add(&toplevel->base->surface->events.map, &xdg_shell_view->map);
-	xdg_shell_view->unmap.notify = handle_xdg_toplevel_unmap;
+	xdg_shell_view->unmap.notify = handle_xdg_shell_surface_unmap;
 	wl_signal_add(&toplevel->base->surface->events.unmap, &xdg_shell_view->unmap);
-	xdg_shell_view->destroy.notify = handle_xdg_toplevel_destroy;
+	xdg_shell_view->destroy.notify = handle_xdg_shell_surface_destroy;
 	wl_signal_add(&toplevel->events.destroy, &xdg_shell_view->destroy);
-	xdg_shell_view->request_fullscreen.notify = handle_xdg_toplevel_request_fullscreen;
+	xdg_shell_view->request_fullscreen.notify = handle_xdg_shell_surface_request_fullscreen;
 	wl_signal_add(&toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
 
 	toplevel->base->data = xdg_shell_view;
@@ -295,7 +294,6 @@ popup_handle_destroy(struct wl_listener *listener, void *data)
 	struct cg_xdg_popup *popup = wl_container_of(listener, popup, destroy);
 	wl_list_remove(&popup->destroy.link);
 	wl_list_remove(&popup->commit.link);
-	wl_list_remove(&popup->reposition.link);
 	free(popup);
 }
 
@@ -307,14 +305,6 @@ popup_handle_commit(struct wl_listener *listener, void *data)
 	if (popup->xdg_popup->base->initial_commit) {
 		popup_unconstrain(popup->xdg_popup);
 	}
-}
-
-static void
-popup_handle_reposition(struct wl_listener *listener, void *data)
-{
-	struct cg_xdg_popup *popup = wl_container_of(listener, popup, reposition);
-
-	popup_unconstrain(popup->xdg_popup);
 }
 
 void
@@ -360,9 +350,6 @@ handle_new_xdg_popup(struct wl_listener *listener, void *data)
 
 	popup->commit.notify = popup_handle_commit;
 	wl_signal_add(&wlr_popup->base->surface->events.commit, &popup->commit);
-
-	popup->reposition.notify = popup_handle_reposition;
-	wl_signal_add(&wlr_popup->events.reposition, &popup->reposition);
 
 	struct wlr_scene_tree *popup_scene_tree = wlr_scene_xdg_surface_create(parent_scene_tree, wlr_popup->base);
 	if (popup_scene_tree == NULL) {

@@ -22,6 +22,10 @@ activities outside the scope of the running application are prevented.
 *-D*
 	Enable debug logging.
 
+*-r*
+	Transform display orienation
+	90 | 180 | 270 | flipped | flipped-90 | flipped-180 | flipped-170
+
 *-h*
 	Show the help message.
 

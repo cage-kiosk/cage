@@ -1,0 +1,6 @@
+[binaries]
+c = 'clang'
+cpp = 'clang'
+
+[properties]
+pkg_config_libdir = '/lib/aarch64-linux-gnu/pkgconfig/'

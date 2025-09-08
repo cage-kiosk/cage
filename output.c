@@ -15,24 +15,24 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
+#include <wlr/version.h>
 #include <wlr/backend.h>
 #include <wlr/backend/wayland.h>
 #include <wlr/config.h>
 #if WLR_HAS_X11_BACKEND
 #include <wlr/backend/x11.h>
 #endif
-#include <wlr/render/swapchain.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
-#include <wlr/types/wlr_output_swapchain_manager.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
+#include <wlr/types/wlr_output_management_v1.h>
 
 #include "output.h"
 #include "seat.h"
@@ -62,6 +62,7 @@ update_output_manager_config(struct cg_server *server)
 		if (!wlr_box_empty(&output_box)) {
 			config_head->state.x = output_box.x;
 			config_head->state.y = output_box.y;
+			config_head->state.transform = server->transform;
 		}
 	}
 
@@ -132,6 +133,31 @@ output_disable(struct cg_output *output)
 	output_layout_remove(output);
 }
 
+static bool
+output_apply_config(struct cg_output *output, struct wlr_output_configuration_head_v1 *head, bool test_only)
+{
+	struct wlr_output_state state = {0};
+	wlr_output_head_v1_state_apply(&head->state, &state);
+
+	if (test_only) {
+		bool ret = wlr_output_test_state(output->wlr_output, &state);
+		return ret;
+	}
+
+	/* Apply output configuration */
+	if (!wlr_output_commit_state(output->wlr_output, &state)) {
+		return false;
+	}
+
+	if (head->state.enabled) {
+		output_layout_add(output, head->state.x, head->state.y);
+	} else {
+		output_layout_remove(output);
+	}
+
+	return true;
+}
+
 static void
 handle_output_frame(struct wl_listener *listener, void *data)
 {
@@ -178,7 +204,6 @@ void
 handle_output_layout_change(struct wl_listener *listener, void *data)
 {
 	struct cg_server *server = wl_container_of(listener, server, output_layout_change);
-
 	view_position_all(server);
 	update_output_manager_config(server);
 }
@@ -291,7 +316,8 @@ handle_new_output(struct wl_listener *listener, void *data)
 		}
 	}
 
-	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && wl_list_length(&server->outputs) > 1) {
+	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST 
+						&& wl_list_length(&server->outputs) > 1) {
 		struct cg_output *next = wl_container_of(output->link.next, next, link);
 		output_disable(next);
 	}
@@ -300,8 +326,12 @@ handle_new_output(struct wl_listener *listener, void *data)
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
 			wlr_output->scale);
 	}
+	
+	if (server->transform != WL_OUTPUT_TRANSFORM_NORMAL) {
+		wlr_output_state_set_transform(&state, server->transform);
+	}
 
-	wlr_log(WLR_DEBUG, "Enabling new output %s", wlr_output->name);
+	wlr_log(WLR_INFO, "Enabling new output %s", wlr_output->name);
 	if (wlr_output_commit_state(wlr_output, &state)) {
 		output_layout_add_auto(output);
 	}
@@ -332,63 +362,17 @@ output_set_window_title(struct cg_output *output, const char *title)
 static bool
 output_config_apply(struct cg_server *server, struct wlr_output_configuration_v1 *config, bool test_only)
 {
-	bool ok = false;
-
-	size_t states_len;
-	struct wlr_backend_output_state *states = wlr_output_configuration_v1_build_state(config, &states_len);
-	if (states == NULL) {
-		return false;
-	}
-
-	struct wlr_output_swapchain_manager swapchain_manager;
-	wlr_output_swapchain_manager_init(&swapchain_manager, server->backend);
-
-	ok = wlr_output_swapchain_manager_prepare(&swapchain_manager, states, states_len);
-	if (!ok || test_only) {
-		goto out;
-	}
-
-	for (size_t i = 0; i < states_len; i++) {
-		struct wlr_backend_output_state *backend_state = &states[i];
-		struct cg_output *output = backend_state->output->data;
-
-		struct wlr_swapchain *swapchain =
-			wlr_output_swapchain_manager_get_swapchain(&swapchain_manager, backend_state->output);
-		struct wlr_scene_output_state_options options = {
-			.swapchain = swapchain,
-		};
-		struct wlr_output_state *state = &backend_state->base;
-		if (!wlr_scene_output_build_state(output->scene_output, state, &options)) {
-			ok = false;
-			goto out;
-		}
-	}
-
-	ok = wlr_backend_commit(server->backend, states, states_len);
-	if (!ok) {
-		goto out;
-	}
-
-	wlr_output_swapchain_manager_apply(&swapchain_manager);
-
 	struct wlr_output_configuration_head_v1 *head;
+
 	wl_list_for_each (head, &config->heads, link) {
 		struct cg_output *output = head->state.output->data;
 
-		if (head->state.enabled) {
-			output_layout_add(output, head->state.x, head->state.y);
-		} else {
-			output_layout_remove(output);
+		if (!output_apply_config(output, head, test_only)) {
+			return false;
 		}
 	}
 
-out:
-	wlr_output_swapchain_manager_finish(&swapchain_manager);
-	for (size_t i = 0; i < states_len; i++) {
-		wlr_output_state_finish(&states[i].base);
-	}
-	free(states);
-	return ok;
+	return true;
 }
 
 void

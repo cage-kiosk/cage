@@ -1,5 +1,5 @@
 project('cage', 'c',
-  version: '0.2.0',
+  version: '0.2.1',
   license: 'MIT',
   meson_version: '>=0.58.1',
   default_options: [
@@ -35,7 +35,7 @@ if is_freebsd
   )
 endif
 
-wlroots        = dependency('wlroots-0.19', fallback: ['wlroots', 'wlroots'])
+wlroots        = dependency('wlroots-0.18', fallback: ['wlroots', 'wlroots'], version: '>=0.17.0',)
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
