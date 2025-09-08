@@ -1,0 +1,8 @@
+[wrap-git]
+directory = seatd
+url = https://github.com/kennylevinsen/seatd.git
+revision = master
+tag = v0.9.1
+depth = 1
+
+[patch]

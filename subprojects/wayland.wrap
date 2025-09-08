@@ -1,0 +1,7 @@
+[wrap-git]
+directory = wayland
+url = https://gitlab.freedesktop.org/wayland/wayland.git
+revision = a9fec8dd65977c57f4039ced34327204d9b9d779
+depth = 1
+
+[patch]
