@@ -945,6 +945,8 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 
 	if (prev_view) {
 		view_activate(prev_view, false);
+		if (prev_view->foreign_toplevel_handle)
+			wlr_foreign_toplevel_handle_v1_set_activated(prev_view->foreign_toplevel_handle, false);
 	}
 
 	/* Move the view to the front, but only if it isn't a
@@ -955,6 +957,10 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 
 	view_activate(view, true);
+
+	if (view->foreign_toplevel_handle)
+		wlr_foreign_toplevel_handle_v1_set_activated(view->foreign_toplevel_handle, true);
+
 	char *title = view_get_title(view);
 	struct cg_output *output;
 	wl_list_for_each (output, &server->outputs, link) {

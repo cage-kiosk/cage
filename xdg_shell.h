@@ -7,6 +7,14 @@
 
 #include "view.h"
 
+struct cg_foreign_toplevel_handle {
+	struct cg_xdg_shell_view *view;
+
+	struct wl_listener request_activate;
+	struct wl_listener request_close;
+	struct wl_listener request_fullscreen;
+};
+
 struct cg_xdg_shell_view {
 	struct cg_view view;
 	struct wlr_xdg_toplevel *xdg_toplevel;
@@ -16,6 +24,8 @@ struct cg_xdg_shell_view {
 	struct wl_listener unmap;
 	struct wl_listener map;
 	struct wl_listener request_fullscreen;
+
+	struct cg_foreign_toplevel_handle *foreign_toplevel;
 };
 
 struct cg_xdg_decoration {

@@ -32,6 +32,8 @@ struct cg_view {
 
 	enum cg_view_type type;
 	const struct cg_view_impl *impl;
+
+	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel_handle;
 };
 
 struct cg_view_impl {
