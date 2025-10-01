@@ -24,6 +24,7 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
@@ -523,6 +524,13 @@ main(int argc, char *argv[])
 	server.relative_pointer_manager = wlr_relative_pointer_manager_v1_create(server.wl_display);
 	if (!server.relative_pointer_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the relative pointer manager");
+		ret = 1;
+		goto end;
+	}
+
+	server.foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(server.wl_display);
+	if (!server.foreign_toplevel_manager) {
+		wlr_log(WLR_ERROR, "Unable to create the foreign toplevel manager");
 		ret = 1;
 		goto end;
 	}

@@ -61,6 +61,8 @@ struct cg_server {
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
 
+	struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
+
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	bool return_app_code;
