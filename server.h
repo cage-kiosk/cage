@@ -4,6 +4,7 @@
 #include "config.h"
 
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -60,6 +61,8 @@ struct cg_server {
 	struct wl_listener output_manager_test;
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
+
+	struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
 
 	bool xdg_decoration;
 	bool allow_vt_switch;

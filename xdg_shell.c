@@ -10,10 +10,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
+#include "seat.h"
 #include "server.h"
 #include "view.h"
 #include "xdg_shell.h"
@@ -184,20 +186,60 @@ destroy(struct cg_view *view)
 }
 
 static void
+xdg_toplevel_set_fullscreen(struct cg_xdg_shell_view *xdg_shell_view, bool fullscreen)
+{
+	struct wlr_box layout_box;
+	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
+	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
+	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, fullscreen);
+
+	if (xdg_shell_view->view.foreign_toplevel_handle) {
+		wlr_foreign_toplevel_handle_v1_set_fullscreen(xdg_shell_view->view.foreign_toplevel_handle, fullscreen);
+	}
+}
+
+static void
 handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
 
-	/**
-	 * Certain clients do not like figuring out their own window geometry if they
-	 * display in fullscreen mode, so we set it here.
-	 */
-	struct wlr_box layout_box;
-	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
-	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
+	xdg_toplevel_set_fullscreen(xdg_shell_view, xdg_shell_view->xdg_toplevel->requested.fullscreen);
+}
 
-	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel,
-					xdg_shell_view->xdg_toplevel->requested.fullscreen);
+static void
+handle_foreign_toplevel_request_activate(struct wl_listener *listener, void *data)
+{
+	struct cg_foreign_toplevel_handle *foreign_toplevel =
+		wl_container_of(listener, foreign_toplevel, request_activate);
+	struct cg_xdg_shell_view *xdg_shell_view = foreign_toplevel->view;
+	struct cg_view *view = &xdg_shell_view->view;
+
+	if (view->scene_tree) {
+		wlr_scene_node_raise_to_top(&view->scene_tree->node);
+	}
+
+	seat_set_focus(view->server->seat, view);
+}
+
+static void
+handle_foreign_toplevel_request_close(struct wl_listener *listener, void *data)
+{
+	struct cg_foreign_toplevel_handle *foreign_toplevel =
+		wl_container_of(listener, foreign_toplevel, request_close);
+	struct cg_xdg_shell_view *xdg_shell_view = foreign_toplevel->view;
+
+	wlr_xdg_toplevel_send_close(xdg_shell_view->xdg_toplevel);
+}
+
+static void
+handle_foreign_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
+{
+	struct cg_foreign_toplevel_handle *foreign_toplevel =
+		wl_container_of(listener, foreign_toplevel, request_fullscreen);
+	struct cg_xdg_shell_view *xdg_shell_view = foreign_toplevel->view;
+	struct wlr_foreign_toplevel_handle_v1_fullscreen_event *event = data;
+
+	xdg_toplevel_set_fullscreen(xdg_shell_view, event->fullscreen);
 }
 
 static void
@@ -205,6 +247,10 @@ handle_xdg_toplevel_unmap(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, unmap);
 	struct cg_view *view = &xdg_shell_view->view;
+
+	if (view->foreign_toplevel_handle) {
+		wlr_foreign_toplevel_handle_v1_set_activated(view->foreign_toplevel_handle, false);
+	}
 
 	view_unmap(view);
 }
@@ -216,6 +262,14 @@ handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
 	struct cg_view *view = &xdg_shell_view->view;
 
 	view_map(view, xdg_shell_view->xdg_toplevel->base->surface);
+
+	if (view->foreign_toplevel_handle) {
+		wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle,
+							 xdg_shell_view->xdg_toplevel->title);
+		wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle,
+							  xdg_shell_view->xdg_toplevel->app_id);
+		/* Activation state will be set by seat_set_focus */
+	}
 }
 
 static void
@@ -239,6 +293,19 @@ handle_xdg_toplevel_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, destroy);
 	struct cg_view *view = &xdg_shell_view->view;
+
+	if (xdg_shell_view->foreign_toplevel) {
+		wl_list_remove(&xdg_shell_view->foreign_toplevel->request_activate.link);
+		wl_list_remove(&xdg_shell_view->foreign_toplevel->request_close.link);
+		wl_list_remove(&xdg_shell_view->foreign_toplevel->request_fullscreen.link);
+		free(xdg_shell_view->foreign_toplevel);
+		xdg_shell_view->foreign_toplevel = NULL;
+	}
+
+	if (view->foreign_toplevel_handle) {
+		wlr_foreign_toplevel_handle_v1_destroy(view->foreign_toplevel_handle);
+		view->foreign_toplevel_handle = NULL;
+	}
 
 	wl_list_remove(&xdg_shell_view->commit.link);
 	wl_list_remove(&xdg_shell_view->map.link);
@@ -275,6 +342,9 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	view_init(&xdg_shell_view->view, server, CAGE_XDG_SHELL_VIEW, &xdg_shell_view_impl);
 	xdg_shell_view->xdg_toplevel = toplevel;
 
+	xdg_shell_view->view.foreign_toplevel_handle =
+		wlr_foreign_toplevel_handle_v1_create(server->foreign_toplevel_manager);
+
 	xdg_shell_view->commit.notify = handle_xdg_toplevel_commit;
 	wl_signal_add(&toplevel->base->surface->events.commit, &xdg_shell_view->commit);
 	xdg_shell_view->map.notify = handle_xdg_toplevel_map;
@@ -285,6 +355,27 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	wl_signal_add(&toplevel->events.destroy, &xdg_shell_view->destroy);
 	xdg_shell_view->request_fullscreen.notify = handle_xdg_toplevel_request_fullscreen;
 	wl_signal_add(&toplevel->events.request_fullscreen, &xdg_shell_view->request_fullscreen);
+
+	if (xdg_shell_view->view.foreign_toplevel_handle) {
+		struct cg_foreign_toplevel_handle *foreign_toplevel =
+			calloc(1, sizeof(struct cg_foreign_toplevel_handle));
+		if (!foreign_toplevel) {
+			wlr_log(WLR_ERROR, "Failed to allocate foreign toplevel handle");
+		} else {
+			foreign_toplevel->view = xdg_shell_view;
+			xdg_shell_view->foreign_toplevel = foreign_toplevel;
+
+			foreign_toplevel->request_activate.notify = handle_foreign_toplevel_request_activate;
+			wl_signal_add(&xdg_shell_view->view.foreign_toplevel_handle->events.request_activate,
+				      &foreign_toplevel->request_activate);
+			foreign_toplevel->request_close.notify = handle_foreign_toplevel_request_close;
+			wl_signal_add(&xdg_shell_view->view.foreign_toplevel_handle->events.request_close,
+				      &foreign_toplevel->request_close);
+			foreign_toplevel->request_fullscreen.notify = handle_foreign_toplevel_request_fullscreen;
+			wl_signal_add(&xdg_shell_view->view.foreign_toplevel_handle->events.request_fullscreen,
+				      &foreign_toplevel->request_fullscreen);
+		}
+	}
 
 	toplevel->base->data = xdg_shell_view;
 }
