@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
@@ -184,9 +185,17 @@ destroy(struct cg_view *view)
 }
 
 static void
+close(struct cg_view *view)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
+	wlr_xdg_toplevel_send_close(xdg_shell_view->xdg_toplevel);
+}
+
+static void
 handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
+	bool fullscreen = xdg_shell_view->xdg_toplevel->requested.fullscreen;
 
 	/**
 	 * Certain clients do not like figuring out their own window geometry if they
@@ -195,9 +204,8 @@ handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
 	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
-
-	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel,
-					xdg_shell_view->xdg_toplevel->requested.fullscreen);
+	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, fullscreen);
+	wlr_foreign_toplevel_handle_v1_set_fullscreen(xdg_shell_view->view.foreign_toplevel_handle, fullscreen);
 }
 
 static void
@@ -216,6 +224,10 @@ handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
 	struct cg_view *view = &xdg_shell_view->view;
 
 	view_map(view, xdg_shell_view->xdg_toplevel->base->surface);
+
+	wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle, xdg_shell_view->xdg_toplevel->title);
+	wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle, xdg_shell_view->xdg_toplevel->app_id);
+	/* Activation state will be set by seat_set_focus */
 }
 
 static void
@@ -258,6 +270,7 @@ static const struct cg_view_impl xdg_shell_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
+	.close = close,
 };
 
 void

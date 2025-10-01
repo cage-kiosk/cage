@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
 
@@ -50,6 +51,7 @@ void
 view_activate(struct cg_view *view, bool activate)
 {
 	view->impl->activate(view, activate);
+	wlr_foreign_toplevel_handle_v1_set_activated(view->foreign_toplevel_handle, activate);
 }
 
 static bool
@@ -115,6 +117,11 @@ view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
 
+	wl_list_remove(&view->request_activate.link);
+	wl_list_remove(&view->request_close.link);
+	wlr_foreign_toplevel_handle_v1_destroy(view->foreign_toplevel_handle);
+	view->foreign_toplevel_handle = NULL;
+
 	wlr_scene_node_destroy(&view->scene_tree->node);
 
 	view->wlr_surface->data = NULL;
@@ -122,13 +129,27 @@ view_unmap(struct cg_view *view)
 }
 
 void
+handle_surface_request_activate(struct wl_listener *listener, void *data)
+{
+	struct cg_view *view = wl_container_of(listener, view, request_activate);
+
+	wlr_scene_node_raise_to_top(&view->scene_tree->node);
+	seat_set_focus(view->server->seat, view);
+}
+
+void
+handle_surface_request_close(struct wl_listener *listener, void *data)
+{
+	struct cg_view *view = wl_container_of(listener, view, request_close);
+	view->impl->close(view);
+}
+
+void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
 	view->scene_tree = wlr_scene_subsurface_tree_create(&view->server->scene->tree, surface);
-	if (!view->scene_tree) {
-		wl_resource_post_no_memory(surface->resource);
-		return;
-	}
+	if (!view->scene_tree)
+		goto fail;
 	view->scene_tree->node.data = view;
 
 	view->wlr_surface = surface;
@@ -144,7 +165,21 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 	}
 
 	wl_list_insert(&view->server->views, &view->link);
+
+	view->foreign_toplevel_handle = wlr_foreign_toplevel_handle_v1_create(view->server->foreign_toplevel_manager);
+	if (!view->foreign_toplevel_handle)
+		goto fail;
+
+	view->request_activate.notify = handle_surface_request_activate;
+	wl_signal_add(&view->foreign_toplevel_handle->events.request_activate, &view->request_activate);
+	view->request_close.notify = handle_surface_request_close;
+	wl_signal_add(&view->foreign_toplevel_handle->events.request_close, &view->request_close);
+
 	seat_set_focus(view->server->seat, view);
+	return;
+
+fail:
+	wl_resource_post_no_memory(surface->resource);
 }
 
 void

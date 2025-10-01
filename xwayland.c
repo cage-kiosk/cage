@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/util/log.h>
 #include <wlr/xwayland.h>
 
@@ -103,11 +104,20 @@ destroy(struct cg_view *view)
 }
 
 static void
+close(struct cg_view *view)
+{
+	struct cg_xwayland_view *xwayland_view = xwayland_view_from_view(view);
+	wlr_xwayland_surface_close(xwayland_view->xwayland_surface);
+}
+
+static void
 handle_xwayland_surface_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, request_fullscreen);
 	struct wlr_xwayland_surface *xwayland_surface = xwayland_view->xwayland_surface;
 	wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, xwayland_surface->fullscreen);
+	wlr_foreign_toplevel_handle_v1_set_fullscreen(xwayland_view->view.foreign_toplevel_handle,
+						      xwayland_surface->fullscreen);
 }
 
 static void
@@ -131,6 +141,10 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 	}
 
 	view_map(view, xwayland_view->xwayland_surface->surface);
+
+	wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle, xwayland_view->xwayland_surface->title);
+	wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle,
+						  xwayland_view->xwayland_surface->class);
 }
 
 static void
@@ -154,6 +168,7 @@ static const struct cg_view_impl xwayland_view_impl = {
 	.activate = activate,
 	.maximize = maximize,
 	.destroy = destroy,
+	.close = close,
 };
 
 void
