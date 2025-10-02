@@ -1,0 +1,9 @@
+[wrap-file]
+directory = pixman-0.43.4
+source_url = https://www.x.org/releases/individual/lib/pixman-0.43.4.tar.xz
+source_filename = pixman-0.43.4.tar.xz
+source_hash = 48d8539f35488d694a2fef3ce17394d1153ed4e71c05d1e621904d574be5df19
+
+[provide]
+pixman-1 = idep_pixman
+

@@ -1,0 +1,18 @@
+[binaries]
+c = 'aarch64-linux-gnu-gcc'
+cpp = 'aarch64-linux-gnu-g++'
+ar = 'aarch64-linux-gnu-ar'
+windres = 'aarch64-linux-gnu-windres'
+strip = 'aarch64-linux-gnu-strip'
+pkgconfig = 'pkg-config'
+
+
+
+[host_machine]
+system = 'linux'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'
+
+[properties]
+pkg_config_libdir = '/lib/aarch64-linux-gnu/pkgconfig/'

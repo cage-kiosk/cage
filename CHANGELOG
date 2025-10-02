@@ -1,0 +1,5 @@
+cage-kiosk (0.2.1-1) unstable; urgency=low
+
+  * Enabled rotation again with wlroots >= 0.18.0
+
+ -- Joerg Bernau <Joerg.Bernau@salz-automation.com>  Mon, 26 May 2025 12:00:00 +0000

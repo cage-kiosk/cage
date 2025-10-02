@@ -1,0 +1,35 @@
+Source: cage
+Section: x11
+Priority: optional
+Maintainer: Sway and related packages team <team+swaywm@tracker.debian.org>
+Uploaders: Birger Schacht <birger@debian.org>
+Build-Depends:
+ debhelper-compat (= 13),
+ libwlroots-0.18-dev (>= 0.18.0),
+ wayland-protocols (>= 1.14.0),
+ libwayland-server0,
+ libpixman-1-dev,
+ libxkbcommon-dev,
+ scdoc,
+ meson,
+ pkgconf,
+Standards-Version: 4.6.2
+Homepage: https://github.com/cage-kiosk/cage
+Vcs-Browser: https://salsa.debian.org/swaywm-team/cage
+Vcs-Git: https://salsa.debian.org/swaywm-team/cage.git
+Rules-Requires-Root: no
+
+Package: cage
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ xwayland
+Description: Kiosk compositor for Wayland
+ Cage is a kiosk compositor for Wayland. A kiosk is a window manager (in the
+ X11 world) or compositor (in the Wayland world) that is designed for a user
+ experience wherein user interaction and activities outside the scope of the
+ running application are prevented. That is, a kiosk compositor displays a
+ single maximized application at a time and prevents the user from interacting
+ with anything but this application.
+

@@ -1,0 +1,87 @@
+cage (0.2.1-1) experimental; urgency=low
+
+  * Added rotation again under wlroots-18
+
+ -- Joerg.Bernau  <Joerg.Bernau@salz-automation.com>  Mon, 26 May 2025 12:00:00 +0000
+
+cage (0.2.0-2) unstable; urgency=medium
+
+  * Reupload to unstable
+
+ -- Birger Schacht <birger@debian.org>  Thu, 26 Dec 2024 15:07:29 +0100
+
+cage (0.2.0-1) experimental; urgency=medium
+
+  * New upstream release (Closes: #1081391)
+  * d/control: bump wlroots build dependency
+  * d/rules: drop dh_auto_configure override (it was only used for the
+    xwayland compile time option, which does not exist anymore)
+
+ -- Birger Schacht <birger@debian.org>  Mon, 07 Oct 2024 16:06:52 +0200
+
+cage (0.1.5+20240127-2) unstable; urgency=medium
+
+  * Add xwayland to Dependencies (Closes: #1063495)
+
+ -- Birger Schacht <birger@debian.org>  Fri, 09 Feb 2024 08:32:52 +0100
+
+cage (0.1.5+20240127-1) unstable; urgency=medium
+
+  * Upload updated unrelease upstream sources for wlroots 0.17
+    compatibility (Closes: #1058495)
+  * d/rules: change meson option from `true` to `enabled`
+  * d/copyright: bump years
+  * d/control: set and update build-dep version constraints
+
+ -- Birger Schacht <birger@debian.org>  Sat, 27 Jan 2024 10:44:53 +0100
+
+cage (0.1.5-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Birger Schacht <birger@debian.org>  Fri, 28 Jul 2023 18:56:42 +0200
+
+cage (0.1.4+20230724-1) unstable; urgency=medium
+
+  * Package latest upstream sources (Closes: #1041851)
+  * Drop backported patches
+  * Update all references to new git repository
+  * d/control:
+   + Bump standards-version to 4.6.2 (no changes required)
+  * d/changelog:
+   + Bump years
+
+ -- Birger Schacht <birger@debian.org>  Mon, 24 Jul 2023 14:26:42 +0200
+
+cage (0.1.4-4) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Remove constraints unnecessary since buster:
+    + Build-Depends: Drop versioned constraint on wayland-protocols.
+
+  [ Birger Schacht ]
+  * Adapt d/watch to use gitmode
+  * Bump Standards-Version to 4.6.1.0 (no changes required)
+
+ -- Birger Schacht <birger@debian.org>  Wed, 12 Oct 2022 15:54:08 +0200
+
+cage (0.1.4-3) unstable; urgency=medium
+
+  * Add patches to build with wlroots 0.15 (thanks to jbicha, Closes: #1008350)
+  * Drop filenamemangle option from d/watch
+  * Update year range in d/copyright stanza for debian/*
+
+ -- Birger Schacht <birger@debian.org>  Sun, 03 Apr 2022 19:27:37 +0200
+
+cage (0.1.4-2) unstable; urgency=medium
+
+  * Fix d/watch
+  * Add upstream signing key
+
+ -- Birger Schacht <birger@debian.org>  Tue, 28 Dec 2021 10:05:58 +0100
+
+cage (0.1.4-1) unstable; urgency=medium
+
+  * Initial packaging (Closes: #927899)
+
+ -- Birger Schacht <birger@debian.org>  Thu, 16 Dec 2021 12:19:06 +0100

@@ -1,0 +1,7 @@
+[wrap-git]
+directory = libdrm
+url = https://gitlab.freedesktop.org/mesa/drm.git
+revision = 38ec7dbd4df3141441afafe5ac62dfc9df36a77e
+depth = 1
+
+[patch]

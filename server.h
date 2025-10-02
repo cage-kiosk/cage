@@ -66,6 +66,7 @@ struct cg_server {
 	bool return_app_code;
 	bool terminated;
 	enum wlr_log_importance log_level;
+	enum wl_output_transform transform;
 };
 
 void server_terminate(struct cg_server *server);

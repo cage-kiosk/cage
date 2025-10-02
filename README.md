@@ -19,6 +19,13 @@ All releases are published on [GitHub](https://github.com/cage-kiosk/cage/releas
 
 ## Building and running Cage
 
+
+### Installing dependencies
+
+``` bash
+sudo apt install -y libexpat-dev  libdisplay-info-dev libliftoff-dev libxcb-errors-dev mesa-common-dev libegl1-mesa-dev libgl1-mesa-dev libgbm-dev libglvnd-core-dev libglw1-mesa-dev libwxgtk3.2-dev libxcb-dri3-dev libxcb-composite0-dev libxcb-present-dev libxcb-render-util0-dev libxcb-ewmh-dev libxcb-xinput-dev libxcb-res0-dev libxcb-icccm4-dev libinput-dev libcairo2-dev libvulkan-dev glslang-dev libseat-dev libsystemd-dev libmng-dev libicu-dev scdoc xwayland hwdata valgrind librust-xkb-dev
+```
+
 You can build Cage with the [meson](https://mesonbuild.com/) build system. It
 requires wayland, wlroots, and xkbcommon to be installed. Optionally, install
 scdoc for manual pages. Cage is currently based on branch 0.18 of wlroots.
