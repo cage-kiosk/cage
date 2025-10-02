@@ -52,6 +52,7 @@
 #endif
 
 #include "idle_inhibit_v1.h"
+#include "notify.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -220,6 +221,16 @@ handle_signal(int signal, void *data)
 	}
 }
 
+static int
+handle_alive_timer(void *data)
+{
+	struct cg_server *server = data;
+
+	notify_set_state(CAGE_ALIVE);
+	wl_event_source_timer_update(server->alive_source, CAGE_ALIVE_PERIOD_MS);
+	return 0;
+}
+
 static void
 usage(FILE *file, const char *cage)
 {
@@ -311,6 +322,7 @@ main(int argc, char *argv[])
 	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
 	struct wl_event_source *sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server);
 	struct wl_event_source *sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server);
+	server.alive_source = wl_event_loop_add_timer(event_loop, handle_alive_timer, &server);
 
 	server.backend = wlr_backend_autocreate(event_loop, &server.session);
 	if (!server.backend) {
@@ -593,7 +605,13 @@ main(int argc, char *argv[])
 	}
 
 	seat_center_cursor(server.seat);
+
+	notify_set_state(CAGE_READY);
+	wl_event_source_timer_update(server.alive_source, CAGE_ALIVE_PERIOD_MS);
+
 	wl_display_run(server.wl_display);
+
+	notify_set_state(CAGE_STOPPING);
 
 #if CAGE_HAS_XWAYLAND
 	if (xwayland) {
@@ -623,6 +641,7 @@ end:
 
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
+	wl_event_source_remove(server.alive_source);
 	if (sigchld_source) {
 		wl_event_source_remove(sigchld_source);
 	}
