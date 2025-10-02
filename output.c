@@ -198,11 +198,29 @@ is_nested_output(struct cg_output *output)
 }
 
 static void
+pending_autoconfigure_destroy(struct cg_output_pending_autoconfigure *pending_autoconfigure)
+{
+	wl_list_remove(&pending_autoconfigure->resource_destroy.link);
+	wl_list_remove(&pending_autoconfigure->link);
+	free(pending_autoconfigure);
+}
+
+static void
+output_clear_pending_autoconfigures(struct cg_output *output)
+{
+	struct cg_output_pending_autoconfigure *pending_autoconfigure, *tmp;
+	wl_list_for_each_safe (pending_autoconfigure, tmp, &output->pending_autoconfigures, link) {
+		pending_autoconfigure_destroy(pending_autoconfigure);
+	}
+}
+
+static void
 output_destroy(struct cg_output *output)
 {
 	struct cg_server *server = output->server;
 	bool was_nested_output = is_nested_output(output);
 
+	output_clear_pending_autoconfigures(output);
 	output->wlr_output->data = NULL;
 
 	wl_list_remove(&output->destroy.link);
@@ -231,43 +249,45 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	output_destroy(output);
 }
 
-void
-handle_new_output(struct wl_listener *listener, void *data)
+static void output_autoconfigure(struct cg_output *output);
+
+static void
+pending_autoconfigure_handle_resource_destroy(struct wl_listener *listener, void *data)
 {
-	struct cg_server *server = wl_container_of(listener, server, new_output);
-	struct wlr_output *wlr_output = data;
-
-	if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer)) {
-		wlr_log(WLR_ERROR, "Failed to initialize output rendering");
-		return;
+	struct cg_output_pending_autoconfigure *pending_autoconfigure =
+		wl_container_of(listener, pending_autoconfigure, resource_destroy);
+	struct cg_output *output = pending_autoconfigure->output;
+	pending_autoconfigure_destroy(pending_autoconfigure);
+	if (wl_list_empty(&output->server->output_manager_v1->resources)) {
+		output_autoconfigure(output);
 	}
+}
 
-	struct cg_output *output = calloc(1, sizeof(struct cg_output));
-	if (!output) {
-		wlr_log(WLR_ERROR, "Failed to allocate output");
-		return;
+static void
+output_queue_pending_autoconfigures(struct cg_output *output)
+{
+	struct wl_resource *resource;
+	wl_resource_for_each(resource, &output->server->output_manager_v1->resources)
+	{
+		struct cg_output_pending_autoconfigure *pending_autoconfigure =
+			calloc(1, sizeof(*pending_autoconfigure));
+		if (pending_autoconfigure == NULL) {
+			break;
+		}
+
+		pending_autoconfigure->output = output;
+		wl_list_insert(&output->pending_autoconfigures, &pending_autoconfigure->link);
+
+		pending_autoconfigure->resource_destroy.notify = pending_autoconfigure_handle_resource_destroy;
+		wl_resource_add_destroy_listener(resource, &pending_autoconfigure->resource_destroy);
 	}
+}
 
-	output->wlr_output = wlr_output;
-	wlr_output->data = output;
-	output->server = server;
-
-	wl_list_insert(&server->outputs, &output->link);
-
-	output->commit.notify = handle_output_commit;
-	wl_signal_add(&wlr_output->events.commit, &output->commit);
-	output->request_state.notify = handle_output_request_state;
-	wl_signal_add(&wlr_output->events.request_state, &output->request_state);
-	output->destroy.notify = handle_output_destroy;
-	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
-	output->frame.notify = handle_output_frame;
-	wl_signal_add(&wlr_output->events.frame, &output->frame);
-
-	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
-	if (!output->scene_output) {
-		wlr_log(WLR_ERROR, "Failed to allocate scene output");
-		return;
-	}
+static void
+output_autoconfigure(struct cg_output *output)
+{
+	struct wlr_output *wlr_output = output->wlr_output;
+	struct cg_server *server = output->server;
 
 	struct wlr_output_state state = {0};
 	wlr_output_state_set_enabled(&state, true);
@@ -296,11 +316,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 		output_disable(next);
 	}
 
-	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
-		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
-			wlr_output->scale);
-	}
-
 	wlr_log(WLR_DEBUG, "Enabling new output %s", wlr_output->name);
 	if (wlr_output_commit_state(wlr_output, &state)) {
 		output_layout_add_auto(output);
@@ -308,6 +323,57 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	view_position_all(output->server);
 	update_output_manager_config(output->server);
+	output_clear_pending_autoconfigures(output);
+}
+
+void
+handle_new_output(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, new_output);
+	struct wlr_output *wlr_output = data;
+
+	if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer)) {
+		wlr_log(WLR_ERROR, "Failed to initialize output rendering");
+		return;
+	}
+
+	struct cg_output *output = calloc(1, sizeof(struct cg_output));
+	if (!output) {
+		wlr_log(WLR_ERROR, "Failed to allocate output");
+		return;
+	}
+
+	output->wlr_output = wlr_output;
+	wlr_output->data = output;
+	output->server = server;
+	wl_list_init(&output->pending_autoconfigures);
+
+	wl_list_insert(&server->outputs, &output->link);
+
+	output->commit.notify = handle_output_commit;
+	wl_signal_add(&wlr_output->events.commit, &output->commit);
+	output->request_state.notify = handle_output_request_state;
+	wl_signal_add(&wlr_output->events.request_state, &output->request_state);
+	output->destroy.notify = handle_output_destroy;
+	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
+	output->frame.notify = handle_output_frame;
+	wl_signal_add(&wlr_output->events.frame, &output->frame);
+
+	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
+	if (!output->scene_output) {
+		wlr_log(WLR_ERROR, "Failed to allocate scene output");
+		return;
+	}
+
+	/* If an output management client is connected, delay output
+	 * auto-configuration until the client has either set up the new output
+	 * or disconnected, so that we don't flicker if the output management
+	 * client disagrees with the auto-configuration. */
+	if (wl_list_empty(&server->output_manager_v1->resources)) {
+		output_autoconfigure(output);
+	} else {
+		output_queue_pending_autoconfigures(output);
+	}
 }
 
 void
@@ -380,6 +446,8 @@ output_config_apply(struct cg_server *server, struct wlr_output_configuration_v1
 		} else {
 			output_layout_remove(output);
 		}
+
+		output_clear_pending_autoconfigures(output);
 	}
 
 out:
