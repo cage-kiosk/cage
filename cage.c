@@ -617,6 +617,7 @@ main(int argc, char *argv[])
 
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
+	wl_list_remove(&server.new_layer_shell_v1_surface.link);
 	wl_list_remove(&server.output_manager_apply.link);
 	wl_list_remove(&server.output_manager_test.link);
 	wl_list_remove(&server.xdg_toplevel_decoration.link);
