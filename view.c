@@ -115,8 +115,6 @@ view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
 
-	wlr_scene_node_destroy(&view->scene_tree->node);
-
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
 }
@@ -124,12 +122,16 @@ view_unmap(struct cg_view *view)
 void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
-	view->scene_tree = wlr_scene_subsurface_tree_create(&view->server->scene->tree, surface);
 	if (!view->scene_tree) {
-		wl_resource_post_no_memory(surface->resource);
-		return;
+		view->scene_tree = wlr_scene_subsurface_tree_create(&view->server->scene->tree, surface);
+		if (!view->scene_tree) {
+			wl_resource_post_no_memory(surface->resource);
+			return;
+		}
 	}
-	view->scene_tree->node.data = view;
+	if (view->scene_tree) {
+		view->scene_tree->node.data = view;
+	}
 
 	view->wlr_surface = surface;
 	surface->data = view;
@@ -137,11 +139,12 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 #if CAGE_HAS_XWAYLAND
 	/* We shouldn't position override-redirect windows. They set
 	   their own (x,y) coordinates in handle_wayland_surface_map. */
-	if (view->type != CAGE_XWAYLAND_VIEW || xwayland_view_should_manage(view))
-#endif
-	{
+	if (view->type != CAGE_XWAYLAND_VIEW || xwayland_view_should_manage(view)) {
 		view_position(view);
 	}
+#else
+	view_position(view);
+#endif
 
 	wl_list_insert(&view->server->views, &view->link);
 	seat_set_focus(view->server->seat, view);
