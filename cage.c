@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
@@ -519,6 +520,13 @@ main(int argc, char *argv[])
 		goto end;
 	}
 	wl_signal_add(&virtual_pointer->events.new_virtual_pointer, &server.new_virtual_pointer);
+
+ 	struct wlr_pointer_constraints_v1 *pointer_contraints = wlr_pointer_constraints_v1_create(server.wl_display);
+	if (!pointer_contraints) {
+		wlr_log(WLR_ERROR, "Unable to create the pointer constraints manager");
+		ret = 1;
+		goto end;
+	}
 
 	server.relative_pointer_manager = wlr_relative_pointer_manager_v1_create(server.wl_display);
 	if (!server.relative_pointer_manager) {
