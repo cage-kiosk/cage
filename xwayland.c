@@ -142,9 +142,12 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 
 	view_map(view, xwayland_view->xwayland_surface->surface);
 
-	wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle, xwayland_view->xwayland_surface->title);
-	wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle,
-						  xwayland_view->xwayland_surface->class);
+	if (xwayland_view->xwayland_surface->title)
+		wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle,
+							 xwayland_view->xwayland_surface->title);
+	if (xwayland_view->xwayland_surface->class)
+		wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle,
+							  xwayland_view->xwayland_surface->class);
 }
 
 static void

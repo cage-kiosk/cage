@@ -225,8 +225,12 @@ handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
 
 	view_map(view, xdg_shell_view->xdg_toplevel->base->surface);
 
-	wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle, xdg_shell_view->xdg_toplevel->title);
-	wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle, xdg_shell_view->xdg_toplevel->app_id);
+	if (xdg_shell_view->xdg_toplevel->title)
+		wlr_foreign_toplevel_handle_v1_set_title(view->foreign_toplevel_handle,
+							 xdg_shell_view->xdg_toplevel->title);
+	if (xdg_shell_view->xdg_toplevel->app_id)
+		wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle,
+							  xdg_shell_view->xdg_toplevel->app_id);
 	/* Activation state will be set by seat_set_focus */
 }
 
