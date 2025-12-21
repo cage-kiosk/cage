@@ -197,6 +197,10 @@ handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
 	bool fullscreen = xdg_shell_view->xdg_toplevel->requested.fullscreen;
 
+	if (!xdg_shell_view->xdg_toplevel->base->surface->mapped) {
+		return;
+	}
+
 	/**
 	 * Certain clients do not like figuring out their own window geometry if they
 	 * display in fullscreen mode, so we set it here.
