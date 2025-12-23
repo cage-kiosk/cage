@@ -234,6 +234,7 @@ usage(FILE *file, const char *cage)
 		" -m last Use only the last connected output\n"
 		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
+		" -i app-id Set application idendifier for the toplevel window\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
 		cage);
@@ -243,7 +244,7 @@ static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:sv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:svi:")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -263,6 +264,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 			break;
 		case 's':
 			server->allow_vt_switch = true;
+			break;
+		case 'i':
+			server->app_id = optarg;
 			break;
 		case 'v':
 			fprintf(stdout, "Cage version " CAGE_VERSION "\n");
