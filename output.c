@@ -97,42 +97,6 @@ output_layout_remove(struct cg_output *output)
 }
 
 static void
-output_enable(struct cg_output *output)
-{
-	struct wlr_output *wlr_output = output->wlr_output;
-
-	/* Outputs get enabled by the backend before firing the new_output event,
-	 * so we can't do a check for already enabled outputs here unless we
-	 * duplicate the enabled property in cg_output. */
-	wlr_log(WLR_DEBUG, "Enabling output %s", wlr_output->name);
-
-	struct wlr_output_state state = {0};
-	wlr_output_state_set_enabled(&state, true);
-
-	if (wlr_output_commit_state(wlr_output, &state)) {
-		output_layout_add_auto(output);
-	}
-
-	update_output_manager_config(output->server);
-}
-
-static void
-output_disable(struct cg_output *output)
-{
-	struct wlr_output *wlr_output = output->wlr_output;
-	if (!wlr_output->enabled) {
-		wlr_log(WLR_DEBUG, "Not disabling already disabled output %s", wlr_output->name);
-		return;
-	}
-
-	wlr_log(WLR_DEBUG, "Disabling output %s", wlr_output->name);
-	struct wlr_output_state state = {0};
-	wlr_output_state_set_enabled(&state, false);
-	wlr_output_commit_state(wlr_output, &state);
-	output_layout_remove(output);
-}
-
-static void
 handle_output_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, frame);
@@ -217,10 +181,6 @@ output_destroy(struct cg_output *output)
 
 	if (wl_list_empty(&server->outputs) && was_nested_output) {
 		server_terminate(server);
-	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && !wl_list_empty(&server->outputs)) {
-		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
-		output_enable(prev);
-		view_position_all(server);
 	}
 }
 
@@ -289,11 +249,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 				}
 			}
 		}
-	}
-
-	if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && wl_list_length(&server->outputs) > 1) {
-		struct cg_output *next = wl_container_of(output->link.next, next, link);
-		output_disable(next);
 	}
 
 	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
