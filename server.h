@@ -15,11 +15,6 @@
 #include <wlr/xwayland.h>
 #endif
 
-enum cg_multi_output_mode {
-	CAGE_MULTI_OUTPUT_MODE_EXTEND,
-	CAGE_MULTI_OUTPUT_MODE_LAST,
-};
-
 struct cg_server {
 	struct wl_display *wl_display;
 	struct wl_list views;
@@ -35,7 +30,6 @@ struct cg_server {
 	struct wl_listener new_idle_inhibitor_v1;
 	struct wl_list inhibitors;
 
-	enum cg_multi_output_mode output_mode;
 	struct wlr_output_layout *output_layout;
 	struct wlr_scene_output_layout *scene_output_layout;
 
