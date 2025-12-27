@@ -116,8 +116,10 @@ handle_xwayland_surface_request_fullscreen(struct wl_listener *listener, void *d
 	struct cg_xwayland_view *xwayland_view = wl_container_of(listener, xwayland_view, request_fullscreen);
 	struct wlr_xwayland_surface *xwayland_surface = xwayland_view->xwayland_surface;
 	wlr_xwayland_surface_set_fullscreen(xwayland_view->xwayland_surface, xwayland_surface->fullscreen);
-	wlr_foreign_toplevel_handle_v1_set_fullscreen(xwayland_view->view.foreign_toplevel_handle,
-						      xwayland_surface->fullscreen);
+	if (xwayland_view->view.foreign_toplevel_handle) {
+		wlr_foreign_toplevel_handle_v1_set_fullscreen(xwayland_view->view.foreign_toplevel_handle,
+							      xwayland_surface->fullscreen);
+	}
 }
 
 static void
@@ -148,6 +150,8 @@ handle_xwayland_surface_map(struct wl_listener *listener, void *data)
 	if (xwayland_view->xwayland_surface->class)
 		wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign_toplevel_handle,
 							  xwayland_view->xwayland_surface->class);
+	wlr_foreign_toplevel_handle_v1_set_fullscreen(view->foreign_toplevel_handle,
+						      xwayland_view->xwayland_surface->fullscreen);
 }
 
 static void
