@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
+#include <wlr/config.h>
 #include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
@@ -79,6 +80,19 @@ handle_display_destroy(struct wl_listener *listener, void *data)
 	struct cg_server *server = wl_container_of(listener, server, display_destroy);
 	server->terminated = true;
 }
+
+#if WLR_HAS_DRM_BACKEND
+static void
+handle_drm_lease_request(struct wl_listener *listener, void *data)
+{
+	struct wlr_drm_lease_request_v1 *req = data;
+	struct wlr_drm_lease_v1 *lease = wlr_drm_lease_request_v1_grant(req);
+	if (!lease) {
+		wlr_log(WLR_ERROR, "Failed to grant lease");
+		wlr_drm_lease_request_v1_reject(req);
+	}
+}
+#endif
 
 static int
 sigchld_handler(int fd, uint32_t mask, void *data)
@@ -497,6 +511,16 @@ main(int argc, char *argv[])
 	server.output_manager_test.notify = handle_output_manager_test;
 	wl_signal_add(&server.output_manager_v1->events.test, &server.output_manager_test);
 
+#if WLR_HAS_DRM_BACKEND
+	server.drm_lease_v1 = wlr_drm_lease_v1_manager_create(server.wl_display, server.backend);
+	if (server.drm_lease_v1) {
+		server.drm_lease_request.notify = handle_drm_lease_request;
+		wl_signal_add(&server.drm_lease_v1->events.request, &server.drm_lease_request);
+	} else {
+		wlr_log(WLR_INFO, "Failed to create wlr_drm_lease_manager_v1");
+	}
+#endif
+
 	if (!wlr_gamma_control_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the gamma control manager");
 		ret = 1;
@@ -612,6 +636,11 @@ main(int argc, char *argv[])
 #endif
 	wl_display_destroy_clients(server.wl_display);
 
+#if WLR_HAS_DRM_BACKEND
+	if (server.drm_lease_v1) {
+		wl_list_remove(&server.drm_lease_request.link);
+	}
+#endif
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
 	wl_list_remove(&server.output_manager_apply.link);

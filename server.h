@@ -4,6 +4,8 @@
 #include "config.h"
 
 #include <wayland-server-core.h>
+#include <wlr/config.h>
+#include <wlr/types/wlr_drm_lease_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -58,6 +60,11 @@ struct cg_server {
 	struct wlr_output_manager_v1 *output_manager_v1;
 	struct wl_listener output_manager_apply;
 	struct wl_listener output_manager_test;
+
+#if WLR_HAS_DRM_BACKEND
+	struct wlr_drm_lease_v1_manager *drm_lease_v1;
+	struct wl_listener drm_lease_request;
+#endif
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
 

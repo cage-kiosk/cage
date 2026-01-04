@@ -237,6 +237,16 @@ handle_new_output(struct wl_listener *listener, void *data)
 	struct cg_server *server = wl_container_of(listener, server, new_output);
 	struct wlr_output *wlr_output = data;
 
+	if (wlr_output->non_desktop) {
+		wlr_log(WLR_DEBUG, "Not configuring non-desktop output: %s", wlr_output->name);
+#if WLR_HAS_DRM_BACKEND
+		if (server->drm_lease_v1) {
+			wlr_drm_lease_v1_manager_offer_output(server->drm_lease_v1, wlr_output);
+		}
+#endif
+		return;
+	}
+
 	if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer)) {
 		wlr_log(WLR_ERROR, "Failed to initialize output rendering");
 		return;
