@@ -18,6 +18,14 @@ struct cg_output {
 	struct wl_listener frame;
 
 	struct wl_list link; // cg_server::outputs
+
+	struct wl_list pending_autoconfigures; // cg_output_pending_autoconfigure::link
+};
+
+struct cg_output_pending_autoconfigure {
+	struct cg_output *output;
+	struct wl_listener resource_destroy;
+	struct wl_list link; // cg_output::pending_configures
 };
 
 void handle_output_manager_apply(struct wl_listener *listener, void *data);
