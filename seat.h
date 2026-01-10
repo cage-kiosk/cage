@@ -48,6 +48,8 @@ struct cg_seat {
 	struct wl_listener request_set_cursor;
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
+
+	struct wlr_box clone_confine_box;
 };
 
 struct cg_keyboard_group {
@@ -92,5 +94,6 @@ void seat_destroy(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);
 void seat_center_cursor(struct cg_seat *seat);
+void seat_get_clone_confines(struct cg_server *server, struct wlr_box *confine_box);
 
 #endif

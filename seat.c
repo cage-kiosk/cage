@@ -626,6 +626,7 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, doubl
 	struct wlr_surface *surface = NULL;
 
 	struct cg_view *view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
+
 	if (!view) {
 		wlr_seat_pointer_clear_focus(wlr_seat);
 	} else {
@@ -669,9 +670,23 @@ handle_cursor_motion_relative(struct wl_listener *listener, void *data)
 {
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion_relative);
 	struct wlr_pointer_motion_event *event = data;
+	double delta_x = event->delta_x;
+	double delta_y = event->delta_y;
 
-	wlr_cursor_move(seat->cursor, &event->pointer->base, event->delta_x, event->delta_y);
-	process_cursor_motion(seat, event->time_msec, event->delta_x, event->delta_y, event->unaccel_dx,
+	if (seat->server->clone_mode) {
+		struct wlr_box confine_box = seat->clone_confine_box;
+
+		if (seat->cursor->x + delta_x >= confine_box.width) {
+			delta_x = confine_box.width - seat->cursor->x;
+		}
+
+		if (seat->cursor->y + delta_y >= confine_box.height) {
+			delta_y = confine_box.height - seat->cursor->y;
+		}
+	}
+
+	wlr_cursor_move(seat->cursor, &event->pointer->base, delta_x, delta_y);
+	process_cursor_motion(seat, event->time_msec, delta_x, delta_y, event->unaccel_dx,
 			      event->unaccel_dy);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
@@ -978,6 +993,34 @@ seat_center_cursor(struct cg_seat *seat)
 {
 	/* Place the cursor in the center of the output layout. */
 	struct wlr_box layout_box;
-	wlr_output_layout_get_box(seat->server->output_layout, NULL, &layout_box);
+	if (seat->server->clone_mode) {
+		layout_box = seat->clone_confine_box;
+	} else {
+		wlr_output_layout_get_box(seat->server->output_layout, NULL, &layout_box);
+	}
 	wlr_cursor_warp(seat->cursor, NULL, layout_box.width / 2, layout_box.height / 2);
+}
+
+void
+seat_get_clone_confines(struct cg_server *server, struct wlr_box *confine_box)
+{
+	int width = 0;
+	int height = 0;
+	struct cg_output *output;
+
+	/* Get the smallest dimensions out of all the screens */
+	wl_list_for_each (output, &server->outputs, link) {
+		if (width == 0 || width > output->wlr_output->width) {
+			width = output->wlr_output->width;
+		}
+
+		if (height == 0 || height > output->wlr_output->height) {
+			height = output->wlr_output->height;
+		}
+	}
+
+	confine_box->x = 0;
+	confine_box->y = 0;
+	confine_box->width = width;
+	confine_box->height = height;
 }
