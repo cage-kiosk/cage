@@ -41,10 +41,6 @@ wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
 
-# Add wlroots protocol directory to include path
-wlroots_incdir = wlroots.get_variable('includedir', default_value: '/usr/local/include')
-add_project_arguments('-I' + wlroots_incdir + '/wlroots-0.19/protocol', language: 'c')
-
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
 wayland_scanner = find_program('wayland-scanner')
 wayland_scanner_server = generator(

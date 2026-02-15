@@ -59,10 +59,15 @@ update_output_manager_config(struct cg_server *server)
 			wlr_output_configuration_head_v1_create(config, wlr_output);
 		struct wlr_box output_box;
 
-		wlr_output_layout_get_box(server->output_layout, wlr_output, &output_box);
-		if (!wlr_box_empty(&output_box)) {
-			config_head->state.x = output_box.x;
-			config_head->state.y = output_box.y;
+		bool in_layout = wlr_output_layout_get(server->output_layout, wlr_output) != NULL;
+		config_head->state.enabled = in_layout;
+
+		if (in_layout) {
+			wlr_output_layout_get_box(server->output_layout, wlr_output, &output_box);
+			if (!wlr_box_empty(&output_box)) {
+				config_head->state.x = output_box.x;
+				config_head->state.y = output_box.y;
+			}
 		}
 	}
 
@@ -444,7 +449,7 @@ handle_output_power_manager_set_mode(struct wl_listener *listener, void *data)
 	}
 
 	struct wlr_output_state state = {0};
-	
+
 	switch (event->mode) {
 	case ZWLR_OUTPUT_POWER_V1_MODE_OFF:
 		wlr_output_state_set_enabled(&state, false);
@@ -454,7 +459,6 @@ handle_output_power_manager_set_mode(struct wl_listener *listener, void *data)
 		break;
 	}
 
-	if (wlr_output_test_state(event->output, &state)) {
-		wlr_output_commit_state(event->output, &state);
-	}
+	wlr_output_commit_state(event->output, &state);
+	wlr_output_state_finish(&state);
 }
