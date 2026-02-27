@@ -21,7 +21,7 @@ All releases are published on [GitHub](https://github.com/cage-kiosk/cage/releas
 
 You can build Cage with the [meson](https://mesonbuild.com/) build system. It
 requires wayland, wlroots, and xkbcommon to be installed. Optionally, install
-scdoc for manual pages. Cage is currently based on branch 0.18 of wlroots.
+scdoc for manual pages. Cage is currently based on branch 0.20 of wlroots.
 
 Simply execute the following steps to build Cage:
 

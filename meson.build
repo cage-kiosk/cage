@@ -35,34 +35,10 @@ if is_freebsd
   )
 endif
 
-wlroots        = dependency('wlroots-0.19', fallback: ['wlroots', 'wlroots'])
-wayland_protos = dependency('wayland-protocols', version: '>=1.14')
+wlroots        = dependency('wlroots-0.20', fallback: ['wlroots', 'wlroots'])
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
-
-wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
-wayland_scanner = find_program('wayland-scanner')
-wayland_scanner_server = generator(
-  wayland_scanner,
-  output: '@BASENAME@-protocol.h',
-  arguments: ['server-header', '@INPUT@', '@OUTPUT@'],
-)
-
-server_protocols = [
-  [wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
-]
-
-server_protos_headers = []
-
-foreach p : server_protocols
-  xml = join_paths(p)
-  server_protos_headers += wayland_scanner_server.process(xml)
-endforeach
-
-server_protos = declare_dependency(
-  sources: server_protos_headers,
-)
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
@@ -140,7 +116,6 @@ executable(
   meson.project_name(),
   cage_sources + cage_headers,
   dependencies: [
-    server_protos,
     wayland_server,
     wlroots,
     xkbcommon,

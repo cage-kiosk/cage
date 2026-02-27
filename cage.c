@@ -588,8 +588,8 @@ main(int argc, char *argv[])
 		struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
 		if (xcursor) {
 			struct wlr_xcursor_image *image = xcursor->images[0];
-			wlr_xwayland_set_cursor(xwayland, image->buffer, image->width * 4, image->width, image->height,
-						image->hotspot_x, image->hotspot_y);
+			wlr_xwayland_set_cursor(xwayland, wlr_xcursor_image_get_buffer(image), image->hotspot_x,
+						image->hotspot_y);
 		}
 	}
 #endif
