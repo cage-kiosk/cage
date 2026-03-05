@@ -667,7 +667,9 @@ end:
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
 	wl_display_destroy(server.wl_display);
-	wlr_scene_node_destroy(&server.scene->tree.node);
+	if (server.scene != NULL) {
+		wlr_scene_node_destroy(&server.scene->tree.node);
+	}
 	wlr_allocator_destroy(server.allocator);
 	wlr_renderer_destroy(server.renderer);
 	return ret;
