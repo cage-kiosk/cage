@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 
@@ -48,6 +49,8 @@ struct cg_seat {
 	struct wl_listener request_set_cursor;
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
+
+	struct wlr_layer_surface_v1 *focused_layer;
 };
 
 struct cg_keyboard_group {
@@ -91,6 +94,7 @@ struct cg_seat *seat_create(struct cg_server *server, struct wlr_backend *backen
 void seat_destroy(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);
+void seat_set_focus_layer(struct cg_seat *seat, struct wlr_layer_surface_v1 *layer);
 void seat_center_cursor(struct cg_seat *seat);
 
 #endif

@@ -21,6 +21,11 @@
 #if WLR_HAS_X11_BACKEND
 #include <wlr/backend/x11.h>
 #endif
+#include "layer_shell_v1.h"
+#include "output.h"
+#include "seat.h"
+#include "server.h"
+#include "view.h"
 #include <wlr/render/swapchain.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
@@ -33,11 +38,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
-
-#include "output.h"
-#include "seat.h"
-#include "server.h"
-#include "view.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
@@ -205,11 +205,22 @@ output_destroy(struct cg_output *output)
 
 	output->wlr_output->data = NULL;
 
+	struct cg_layer_surface *layer, *layer_tmp;
+	wl_list_for_each_safe (layer, layer_tmp, &output->layer_surfaces, link) {
+		layer->output = NULL;
+		wlr_layer_surface_v1_destroy(layer->layer_surface);
+	}
+
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->commit.link);
 	wl_list_remove(&output->request_state.link);
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
+
+	wlr_scene_node_destroy(&output->layers.shell_background->node);
+	wlr_scene_node_destroy(&output->layers.shell_bottom->node);
+	wlr_scene_node_destroy(&output->layers.shell_top->node);
+	wlr_scene_node_destroy(&output->layers.shell_overlay->node);
 
 	output_layout_remove(output);
 
@@ -229,6 +240,18 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, destroy);
 	output_destroy(output);
+}
+
+static struct wlr_scene_tree *
+create_layer_for_output(struct cg_output *output)
+{
+	struct cg_server *server = output->server;
+	struct wlr_scene_tree *layer = wlr_scene_tree_create(&server->scene->tree);
+	if (layer == NULL) {
+		return NULL;
+	}
+	layer->node.data = output->wlr_output;
+	return layer;
 }
 
 void
@@ -262,6 +285,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wlr_output->data = output;
 	output->server = server;
 
+	wl_list_init(&output->layer_surfaces);
 	wl_list_insert(&server->outputs, &output->link);
 
 	output->commit.notify = handle_output_commit;
@@ -305,6 +329,11 @@ handle_new_output(struct wl_listener *listener, void *data)
 		struct cg_output *next = wl_container_of(output->link.next, next, link);
 		output_disable(next);
 	}
+
+	output->layers.shell_background = create_layer_for_output(output);
+	output->layers.shell_bottom = create_layer_for_output(output);
+	output->layers.shell_top = create_layer_for_output(output);
+	output->layers.shell_overlay = create_layer_for_output(output);
 
 	if (!wlr_xcursor_manager_load(server->seat->xcursor_manager, wlr_output->scale)) {
 		wlr_log(WLR_ERROR, "Cannot load XCursor theme for output '%s' with scale %f", wlr_output->name,
@@ -399,6 +428,91 @@ out:
 	}
 	free(states);
 	return ok;
+}
+
+static void
+arrange_surface(struct cg_output *output, const struct wlr_box *full_area, struct wlr_box *usable_area,
+		enum zwlr_layer_shell_v1_layer layer, bool exclusive)
+{
+	struct cg_layer_surface *surface;
+	wl_list_for_each (surface, &output->layer_surfaces, link) {
+		struct wlr_layer_surface_v1 *layer_surface = surface->layer_surface;
+
+		if (layer_surface->current.layer != layer) {
+			continue;
+		}
+
+		if (!layer_surface->initialized) {
+			continue;
+		}
+
+		if ((layer_surface->current.exclusive_zone > 0) != exclusive) {
+			continue;
+		}
+
+		wlr_scene_layer_surface_v1_configure(surface->scene, full_area, usable_area);
+	}
+}
+
+void
+arrange_layers(struct cg_output *output)
+{
+	struct wlr_box usable_area = {0};
+	wlr_output_effective_resolution(output->wlr_output, &usable_area.width, &usable_area.height);
+	const struct wlr_box full_area = usable_area;
+
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, true);
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_TOP, true);
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM, true);
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND, true);
+
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, false);
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_TOP, false);
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM, false);
+	arrange_surface(output, &full_area, &usable_area, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND, false);
+
+	if (!wlr_box_equal(&usable_area, &output->usable_area)) {
+		wlr_log(WLR_DEBUG, "Usable area changed, rearranging output");
+		output->usable_area = usable_area;
+		view_position_all(output->server);
+	}
+
+	/* Ensure proper z-ordering: top and overlay layers above views */
+	wlr_scene_node_raise_to_top(&output->layers.shell_top->node);
+	wlr_scene_node_raise_to_top(&output->layers.shell_overlay->node);
+
+	enum zwlr_layer_shell_v1_layer layers_above_shell[] = {
+		ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY,
+		ZWLR_LAYER_SHELL_V1_LAYER_TOP,
+	};
+	size_t nlayers = sizeof(layers_above_shell) / sizeof(layers_above_shell[0]);
+	struct cg_layer_surface *topmost = NULL;
+	for (size_t i = 0; i < nlayers; ++i) {
+		struct cg_layer_surface *surface;
+		wl_list_for_each_reverse (surface, &output->layer_surfaces, link) {
+			struct wlr_layer_surface_v1 *layer_surface = surface->layer_surface;
+			if (layer_surface->current.layer != layers_above_shell[i]) {
+				continue;
+			}
+			if (layer_surface->current.keyboard_interactive ==
+				    ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE &&
+			    layer_surface->surface->mapped) {
+				topmost = surface;
+				break;
+			}
+		}
+		if (topmost != NULL) {
+			break;
+		}
+	}
+
+	struct cg_seat *seat = output->server->seat;
+	if (topmost != NULL) {
+		seat_set_focus_layer(seat, topmost->layer_surface);
+	} else if (seat->focused_layer && seat->focused_layer->current.keyboard_interactive !=
+						  ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE) {
+		seat_set_focus_layer(seat, NULL);
+	}
 }
 
 void

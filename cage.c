@@ -1,7 +1,7 @@
 /*
  * Cage: A Wayland kiosk.
  *
- * Copyright (C) 2018-2020 Jente Hidskes
+ * Copyright (C) 2018-2021 Jente Hidskes
  *
  * See the LICENSE file accompanying this file.
  */
@@ -29,6 +29,7 @@
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -54,6 +55,7 @@
 #endif
 
 #include "idle_inhibit_v1.h"
+#include "layer_shell_v1.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -476,6 +478,15 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
+	server.layer_shell_v1 = wlr_layer_shell_v1_create(server.wl_display, 5);
+	if (!server.layer_shell_v1) {
+		wlr_log(WLR_ERROR, "Unable to create the layer shell");
+		ret = 1;
+		goto end;
+	}
+	server.new_layer_shell_v1_surface.notify = handle_layer_shell_v1_surface_new;
+	wl_signal_add(&server.layer_shell_v1->events.new_surface, &server.new_layer_shell_v1_surface);
+
 	if (!wlr_export_dmabuf_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the export DMABUF manager");
 		ret = 1;
@@ -588,8 +599,8 @@ main(int argc, char *argv[])
 		struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
 		if (xcursor) {
 			struct wlr_xcursor_image *image = xcursor->images[0];
-			wlr_xwayland_set_cursor(xwayland, image->buffer, image->width * 4, image->width, image->height,
-						image->hotspot_x, image->hotspot_y);
+			wlr_xwayland_set_cursor(xwayland, wlr_xcursor_image_get_buffer(image), image->hotspot_x,
+						image->hotspot_y);
 		}
 	}
 #endif
@@ -643,6 +654,7 @@ main(int argc, char *argv[])
 #endif
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
+	wl_list_remove(&server.new_layer_shell_v1_surface.link);
 	wl_list_remove(&server.output_manager_apply.link);
 	wl_list_remove(&server.output_manager_test.link);
 	wl_list_remove(&server.xdg_toplevel_decoration.link);

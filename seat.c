@@ -74,17 +74,23 @@ desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surfa
 
 	/* Walk up the tree until we find a node with a data pointer. When done,
 	 * we've found the node representing the view. */
-	while (!node->data) {
+	while (node) {
+		if (node->data) {
+			struct cg_view *candidate = node->data;
+			struct cg_view *view;
+			wl_list_for_each (view, &server->views, link) {
+				if (view == candidate) {
+					return view;
+				}
+			}
+		}
 		if (!node->parent) {
-			node = NULL;
 			break;
 		}
-
 		node = &node->parent->node;
 	}
 
-	assert(node != NULL);
-	return node->data;
+	return NULL;
 }
 
 static void
@@ -104,7 +110,7 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device, uint3
 
 		/* Focus that client if the button was pressed and
 		   it has no open dialogs. */
-		if (view && !view_is_transient_for(current, view)) {
+		if (view && (!current || !view_is_transient_for(current, view))) {
 			seat_set_focus(seat, view);
 		}
 	}
@@ -625,8 +631,8 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, doubl
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct wlr_surface *surface = NULL;
 
-	struct cg_view *view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
-	if (!view) {
+	desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
+	if (!surface) {
 		wlr_seat_pointer_clear_focus(wlr_seat);
 	} else {
 		wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
@@ -920,6 +926,11 @@ seat_get_focus(struct cg_seat *seat)
 	if (!prev_surface) {
 		return NULL;
 	}
+
+	if (seat->focused_layer && seat->focused_layer->surface == prev_surface) {
+		return NULL;
+	}
+
 	return view_from_wlr_surface(prev_surface);
 }
 
@@ -971,6 +982,34 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 
 	process_cursor_motion(seat, -1, 0, 0, 0, 0);
+}
+
+void
+seat_set_focus_layer(struct cg_seat *seat, struct wlr_layer_surface_v1 *layer)
+{
+	if (seat->focused_layer == layer) {
+		return;
+	}
+
+	seat->focused_layer = layer;
+
+	if (!layer) {
+		struct cg_view *view = seat_get_focus(seat);
+		if (view) {
+			seat_set_focus(seat, view);
+		}
+		return;
+	}
+
+	if (layer->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
+		struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat->seat);
+		if (keyboard) {
+			wlr_seat_keyboard_notify_enter(seat->seat, layer->surface, keyboard->keycodes,
+						       keyboard->num_keycodes, &keyboard->modifiers);
+		} else {
+			wlr_seat_keyboard_notify_enter(seat->seat, layer->surface, NULL, 0, NULL);
+		}
+	}
 }
 
 void
