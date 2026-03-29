@@ -93,28 +93,18 @@ cage_sources = [
   'seat.c',
   'view.c',
   'xdg_shell.c',
-]
-
-cage_headers = [
   configure_file(input: 'config.h.in',
                  output: 'config.h',
                  configuration: conf_data),
-  'idle_inhibit_v1.h',
-  'output.h',
-  'seat.h',
-  'server.h',
-  'view.h',
-  'xdg_shell.h',
 ]
 
 if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
   cage_sources += 'xwayland.c'
-  cage_headers += 'xwayland.h'
 endif
 
 executable(
   meson.project_name(),
-  cage_sources + cage_headers,
+  cage_sources,
   dependencies: [
     wayland_server,
     wlroots,
