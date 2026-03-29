@@ -93,6 +93,7 @@ cage_sources = [
   'seat.c',
   'view.c',
   'xdg_shell.c',
+  'ime.c',
 ]
 
 cage_headers = [
