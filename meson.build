@@ -96,6 +96,7 @@ endif
 cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
+  'layer_shell_v1.c',
   'output.c',
   'seat.c',
   'view.c',
@@ -111,7 +112,7 @@ endif
 
 executable(
   meson.project_name(),
-  cage_sources,
+  cage_sources + wl_protos_src,
   dependencies: [
     wayland_server,
     wlroots,

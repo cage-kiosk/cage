@@ -88,8 +88,8 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
-	view->lx = (layout_box->width - width) / 2;
-	view->ly = (layout_box->height - height) / 2;
+	view->lx = layout_box->x + (layout_box->width - width) / 2;
+	view->ly = layout_box->y + (layout_box->height - height) / 2;
 	view_update_position(view);
 }
 
@@ -98,6 +98,25 @@ view_position(struct cg_view *view)
 {
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
+
+	/* With a single output, keep views out of the area reserved by
+	 * layer-shell exclusive zones. With multiple outputs, views span the
+	 * whole layout. */
+	struct cg_output *output, *active = NULL;
+	int n = 0;
+	wl_list_for_each (output, &view->server->outputs, link) {
+		if (wlr_output_layout_get(view->server->output_layout, output->wlr_output)) {
+			active = output;
+			n++;
+		}
+	}
+	if (n == 1 && !wlr_box_empty(&active->usable_area)) {
+		struct wlr_box output_box;
+		wlr_output_layout_get_box(view->server->output_layout, active->wlr_output, &output_box);
+		layout_box = active->usable_area;
+		layout_box.x += output_box.x;
+		layout_box.y += output_box.y;
+	}
 
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
 		view_maximize(view, &layout_box);
