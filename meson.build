@@ -39,8 +39,11 @@ endif
 
 wlroots        = dependency('wlroots-0.20', fallback: ['wlroots', 'wlroots'])
 wayland_server = dependency('wayland-server')
+wayland_protos = dependency('wayland-protocols')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
+
+subdir('protocols')
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
