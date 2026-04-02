@@ -248,6 +248,7 @@ usage(FILE *file, const char *cage)
 		" -m last Use only the last connected output\n"
 		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
+		" -x\t Disable XWayland\n"
 		"\n"
 		" Use -- when you want to pass arguments to APPLICATION\n",
 		cage);
@@ -256,8 +257,10 @@ usage(FILE *file, const char *cage)
 static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
+	server->enable_xwayland = true;
+
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:sv")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:svx")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -281,6 +284,9 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 		case 'v':
 			fprintf(stdout, "Cage version " CAGE_VERSION "\n");
 			exit(0);
+		case 'x':
+			server->enable_xwayland = false;
+			break;
 		default:
 			usage(stderr, argv[0]);
 			return false;
@@ -562,35 +568,39 @@ main(int argc, char *argv[])
 
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xcursor_manager *xcursor_manager = NULL;
-	struct wlr_xwayland *xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
-	if (!xwayland) {
-		wlr_log(WLR_ERROR, "Cannot create XWayland server");
-	} else {
-		server.new_xwayland_surface.notify = handle_xwayland_surface_new;
-		wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
-
-		xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
-		if (!xcursor_manager) {
-			wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
-			ret = 1;
-			goto end;
-		}
-
-		if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
-			wlr_log_errno(WLR_ERROR,
-				      "Unable to set DISPLAY for XWayland. Clients may not be able to connect");
+	struct wlr_xwayland *xwayland = NULL;
+	if (server.enable_xwayland) {
+		xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
+		if (!xwayland) {
+			wlr_log(WLR_ERROR, "Cannot create XWayland server");
 		} else {
-			wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
-		}
+			server.new_xwayland_surface.notify = handle_xwayland_surface_new;
+			wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
 
-		if (!wlr_xcursor_manager_load(xcursor_manager, 1)) {
-			wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
-		}
-		struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
-		if (xcursor) {
-			struct wlr_xcursor_image *image = xcursor->images[0];
-			wlr_xwayland_set_cursor(xwayland, wlr_xcursor_image_get_buffer(image), image->hotspot_x,
-						image->hotspot_y);
+			xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
+			if (!xcursor_manager) {
+				wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
+				ret = 1;
+				goto end;
+			}
+
+			if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
+				wlr_log_errno(WLR_ERROR,
+					      "Unable to set DISPLAY for XWayland. Clients may not be able to connect");
+			} else {
+				wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
+			}
+
+			if (!wlr_xcursor_manager_load(xcursor_manager, 1)) {
+				wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
+			}
+			struct wlr_xcursor *xcursor =
+				wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
+			if (xcursor) {
+				struct wlr_xcursor_image *image = xcursor->images[0];
+				wlr_xwayland_set_cursor(xwayland, wlr_xcursor_image_get_buffer(image), image->hotspot_x,
+							image->hotspot_y);
+			}
 		}
 	}
 #endif

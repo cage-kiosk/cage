@@ -72,6 +72,7 @@ struct cg_server {
 
 	bool xdg_decoration;
 	bool allow_vt_switch;
+	bool enable_xwayland;
 	bool return_app_code;
 	bool terminated;
 	enum wlr_log_importance log_level;
