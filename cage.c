@@ -320,6 +320,7 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
+	wl_display_set_default_max_buffer_size(server.wl_display, 1024 * 1024);
 	server.display_destroy.notify = handle_display_destroy;
 	wl_display_add_destroy_listener(server.wl_display, &server.display_destroy);
 
