@@ -836,7 +836,21 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	wlr_cursor_attach_output_layout(seat->cursor, server->output_layout);
 
 	if (!seat->xcursor_manager) {
-		seat->xcursor_manager = wlr_xcursor_manager_create(NULL, XCURSOR_SIZE);
+		const char *theme = getenv("XCURSOR_THEME");
+		const char *size_str = getenv("XCURSOR_SIZE");
+
+		int32_t size = XCURSOR_SIZE;
+		if (size_str) {
+			char *end_ptr = NULL;
+			unsigned long value = strtoul(size_str, &end_ptr, 10);
+			if (end_ptr != size_str && *end_ptr == '\0') {
+				size = (int32_t)value;
+			} else {
+				wlr_log(WLR_ERROR, "Invalid value for XCURSOR_SIZE: '%s'", size_str);
+			}
+		}
+
+		seat->xcursor_manager = wlr_xcursor_manager_create(theme, size);
 		if (!seat->xcursor_manager) {
 			wlr_log(WLR_ERROR, "Cannot create XCursor manager");
 			wlr_cursor_destroy(seat->cursor);
