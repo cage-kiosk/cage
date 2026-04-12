@@ -75,6 +75,8 @@ struct cg_server {
 	bool return_app_code;
 	bool terminated;
 	enum wlr_log_importance log_level;
+
+	char *socket;
 };
 
 void server_terminate(struct cg_server *server);
