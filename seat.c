@@ -118,7 +118,7 @@ update_capabilities(struct cg_seat *seat)
 	if (!wl_list_empty(&seat->keyboard_groups)) {
 		caps |= WL_SEAT_CAPABILITY_KEYBOARD;
 	}
-	if (!wl_list_empty(&seat->pointers)) {
+	if (!wl_list_empty(&seat->pointers) && !seat->server->disable_mouse) {
 		caps |= WL_SEAT_CAPABILITY_POINTER;
 	}
 	if (!wl_list_empty(&seat->touch)) {
