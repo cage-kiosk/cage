@@ -816,9 +816,9 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 		return NULL;
 	}
 
-	seat->seat = wlr_seat_create(server->wl_display, "seat0");
+	seat->seat = wlr_seat_create(server->wl_display, "default");
 	if (!seat->seat) {
-		wlr_log(WLR_ERROR, "Cannot allocate seat0");
+		wlr_log(WLR_ERROR, "Cannot allocate seat");
 		free(seat);
 		return NULL;
 	}
