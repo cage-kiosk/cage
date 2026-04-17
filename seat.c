@@ -816,7 +816,7 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 		return NULL;
 	}
 
-	const char *seat_name = getenv("XDG_SEAT") ?: "seat0";
+	const char *seat_name = getenv("CAGE_SEAT") ?: "seat0";
 	seat->seat = wlr_seat_create(server.wl_display, seat_name);
 	if (!seat->seat) {
 		wlr_log(WLR_ERROR, "Cannot allocate %s", seat_name);
