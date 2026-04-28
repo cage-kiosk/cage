@@ -7,6 +7,8 @@ on:
 
 env:
   WLROOTS_VERSION: "0.20"
+  ALPINE_PACKAGES: "build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland-dev scdoc-doc hwdata libdisplay-info-dev"
+  ARCHLINUX_PACKAGES: "xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc libdisplay-info"
 
 jobs:
   compile:
@@ -26,13 +28,13 @@ jobs:
 
       - name: Install dependencies (Alpine)
         if: "matrix.OS == 'alpine:edge'"
-        run: apk add build-base xcb-util-wm-dev libseat-dev clang git eudev-dev mesa-dev libdrm-dev libinput-dev libxkbcommon-dev pixman-dev wayland-dev meson wayland-protocols xwayland-dev scdoc-doc hwdata libdisplay-info-dev
+        run: apk add $ALPINE_PACKAGES
 
       - name: Install dependencies (Arch)
         if: "matrix.OS == 'archlinux:base-devel'"
         run: |
           pacman-key --init
-          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc libdisplay-info
+          pacman -Syu --noconfirm $ARCHLINUX_PACKAGES
 
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
@@ -53,7 +55,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman-key --init
-          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata libdisplay-info
+          pacman -Syu --noconfirm $ARCHLINUX_PACKAGES
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
       - name: Check for formatting changes
@@ -72,7 +74,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman-key --init
-          pacman -Syu --noconfirm xcb-util-wm seatd git clang meson libinput libdrm mesa libxkbcommon wayland wayland-protocols xorg-server-xwayland scdoc hwdata libdisplay-info
+          pacman -Syu --noconfirm $ARCHLINUX_PACKAGES
       - name: Fetch wlroots as a subproject
         run: git clone https://gitlab.freedesktop.org/wlroots/wlroots.git subprojects/wlroots -b $WLROOTS_VERSION
       - name: Run scan-build
