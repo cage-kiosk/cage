@@ -38,6 +38,7 @@ endif
 wlroots        = dependency('wlroots-0.20', fallback: ['wlroots', 'wlroots'])
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
+systemd        = dependency('libsystemd', required: get_option('systemd'))
 math           = cc.find_library('m')
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
@@ -58,6 +59,7 @@ endif
 
 conf_data = configuration_data()
 conf_data.set10('CAGE_HAS_XWAYLAND', have_xwayland)
+conf_data.set10('CAGE_HAS_SYSTEMD', systemd.found())
 conf_data.set_quoted('CAGE_VERSION', version)
 
 scdoc = dependency('scdoc', version: '>=1.9.2', native: true, required: get_option('man-pages'))
@@ -102,6 +104,10 @@ if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
   cage_sources += 'xwayland.c'
 endif
 
+if conf_data.get('CAGE_HAS_SYSTEMD', 0) == 1
+  cage_sources += 'notify_systemd.c'
+endif
+
 executable(
   meson.project_name(),
   cage_sources,
@@ -109,6 +115,7 @@ executable(
     wayland_server,
     wlroots,
     xkbcommon,
+    systemd,
     math,
   ],
   install: true,
