@@ -31,6 +31,7 @@
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
+#include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
@@ -518,6 +519,15 @@ main(int argc, char *argv[])
 	server.output_manager_test.notify = handle_output_manager_test;
 	wl_signal_add(&server.output_manager_v1->events.test, &server.output_manager_test);
 
+	server.output_power_manager_v1 = wlr_output_power_manager_v1_create(server.wl_display);
+	if (!server.output_power_manager_v1) {
+		wlr_log(WLR_ERROR, "Unable to create output power manager");
+		ret = 1;
+		goto end;
+	}
+	server.output_power_manager_set_mode.notify = handle_output_power_manager_set_mode;
+	wl_signal_add(&server.output_power_manager_v1->events.set_mode, &server.output_power_manager_set_mode);
+
 #if WLR_HAS_DRM_BACKEND
 	server.drm_lease_v1 = wlr_drm_lease_v1_manager_create(server.wl_display, server.backend);
 	if (server.drm_lease_v1) {
@@ -654,6 +664,7 @@ main(int argc, char *argv[])
 #endif
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
+	wl_list_remove(&server.output_power_manager_set_mode.link);
 	wl_list_remove(&server.output_manager_apply.link);
 	wl_list_remove(&server.output_manager_test.link);
 	wl_list_remove(&server.xdg_toplevel_decoration.link);

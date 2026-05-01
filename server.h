@@ -61,6 +61,9 @@ struct cg_server {
 	struct wl_listener output_manager_apply;
 	struct wl_listener output_manager_test;
 
+	struct wlr_output_power_manager_v1 *output_power_manager_v1;
+	struct wl_listener output_power_manager_set_mode;
+
 #if WLR_HAS_DRM_BACKEND
 	struct wlr_drm_lease_v1_manager *drm_lease_v1;
 	struct wl_listener drm_lease_request;
