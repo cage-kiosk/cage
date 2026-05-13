@@ -6,7 +6,6 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_seat.h>
-#include <wlr/types/wlr_xcursor_manager.h>
 
 #include "server.h"
 #include "view.h"
@@ -26,7 +25,6 @@ struct cg_seat {
 	struct wl_listener new_input;
 
 	struct wlr_cursor *cursor;
-	struct wlr_xcursor_manager *xcursor_manager;
 	struct wl_listener cursor_motion_relative;
 	struct wl_listener cursor_motion_absolute;
 	struct wl_listener cursor_button;
