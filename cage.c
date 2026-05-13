@@ -577,7 +577,7 @@ main(int argc, char *argv[])
 			server.new_xwayland_surface.notify = handle_xwayland_surface_new;
 			wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
 
-			xcursor_manager = wlr_xcursor_manager_create(DEFAULT_XCURSOR, XCURSOR_SIZE);
+			xcursor_manager = wlr_xcursor_manager_create(NULL, XCURSOR_SIZE);
 			if (!xcursor_manager) {
 				wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
 				ret = 1;
