@@ -42,9 +42,7 @@
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
-#if CAGE_HAS_XWAYLAND
 #include <wlr/types/wlr_xcursor_manager.h>
-#endif
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -130,6 +128,26 @@ set_cloexec(int fd)
 	}
 
 	return true;
+}
+
+static struct wlr_xcursor_manager *
+create_xcursor_manager(void)
+{
+	const char *theme = getenv("XCURSOR_THEME");
+	const char *size_str = getenv("XCURSOR_SIZE");
+
+	int32_t size = XCURSOR_SIZE;
+	if (size_str) {
+		char *end_ptr = NULL;
+		unsigned long value = strtoul(size_str, &end_ptr, 10);
+		if (end_ptr != size_str && *end_ptr == '\0') {
+			size = (int32_t) value;
+		} else {
+			wlr_log(WLR_ERROR, "Invalid value for XCURSOR_SIZE: '%s'", size_str);
+		}
+	}
+
+	return wlr_xcursor_manager_create(theme, size);
 }
 
 static bool
@@ -414,6 +432,13 @@ main(int argc, char *argv[])
 	server.new_output.notify = handle_new_output;
 	wl_signal_add(&server.backend->events.new_output, &server.new_output);
 
+	server.xcursor_manager = create_xcursor_manager();
+	if (!server.xcursor_manager) {
+		wlr_log(WLR_ERROR, "Unable to create XCursor manager");
+		ret = 1;
+		goto end;
+	}
+
 	server.seat = seat_create(&server, server.backend);
 	if (!server.seat) {
 		wlr_log(WLR_ERROR, "Unable to create the seat");
@@ -567,7 +592,6 @@ main(int argc, char *argv[])
 	}
 
 #if CAGE_HAS_XWAYLAND
-	struct wlr_xcursor_manager *xcursor_manager = NULL;
 	struct wlr_xwayland *xwayland = NULL;
 	if (server.enable_xwayland) {
 		xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
@@ -577,13 +601,6 @@ main(int argc, char *argv[])
 			server.new_xwayland_surface.notify = handle_xwayland_surface_new;
 			wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
 
-			xcursor_manager = wlr_xcursor_manager_create(NULL, XCURSOR_SIZE);
-			if (!xcursor_manager) {
-				wlr_log(WLR_ERROR, "Cannot create XWayland XCursor manager");
-				ret = 1;
-				goto end;
-			}
-
 			if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
 				wlr_log_errno(WLR_ERROR,
 					      "Unable to set DISPLAY for XWayland. Clients may not be able to connect");
@@ -591,11 +608,11 @@ main(int argc, char *argv[])
 				wlr_log(WLR_DEBUG, "XWayland is running on display %s", xwayland->display_name);
 			}
 
-			if (!wlr_xcursor_manager_load(xcursor_manager, 1)) {
+			if (!wlr_xcursor_manager_load(server.xcursor_manager, 1)) {
 				wlr_log(WLR_ERROR, "Cannot load XWayland XCursor theme");
 			}
 			struct wlr_xcursor *xcursor =
-				wlr_xcursor_manager_get_xcursor(xcursor_manager, DEFAULT_XCURSOR, 1);
+				wlr_xcursor_manager_get_xcursor(server.xcursor_manager, DEFAULT_XCURSOR, 1);
 			if (xcursor) {
 				struct wlr_xcursor_image *image = xcursor->images[0];
 				wlr_xwayland_set_cursor(xwayland, wlr_xcursor_image_get_buffer(image), image->hotspot_x,
@@ -643,7 +660,6 @@ main(int argc, char *argv[])
 		wl_list_remove(&server.new_xwayland_surface.link);
 	}
 	wlr_xwayland_destroy(xwayland);
-	wlr_xcursor_manager_destroy(xcursor_manager);
 #endif
 	wl_display_destroy_clients(server.wl_display);
 
@@ -678,6 +694,7 @@ end:
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
 	wl_display_destroy(server.wl_display);
+	wlr_xcursor_manager_destroy(server.xcursor_manager);
 	if (server.scene != NULL) {
 		wlr_scene_node_destroy(&server.scene->tree.node);
 	}

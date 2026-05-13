@@ -29,7 +29,6 @@
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
-#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -130,7 +129,7 @@ update_capabilities(struct cg_seat *seat)
 	if ((caps & WL_SEAT_CAPABILITY_POINTER) == 0) {
 		wlr_cursor_unset_image(seat->cursor);
 	} else {
-		wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager, DEFAULT_XCURSOR);
+		wlr_cursor_set_xcursor(seat->cursor, seat->server->xcursor_manager, DEFAULT_XCURSOR);
 	}
 }
 
@@ -800,7 +799,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 	}
 	wl_list_remove(&seat->new_input.link);
 
-	wlr_xcursor_manager_destroy(seat->xcursor_manager);
 	if (seat->cursor) {
 		wlr_cursor_destroy(seat->cursor);
 	}
@@ -834,31 +832,6 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 		return NULL;
 	}
 	wlr_cursor_attach_output_layout(seat->cursor, server->output_layout);
-
-	if (!seat->xcursor_manager) {
-		const char *theme = getenv("XCURSOR_THEME");
-		const char *size_str = getenv("XCURSOR_SIZE");
-
-		int32_t size = XCURSOR_SIZE;
-		if (size_str) {
-			char *end_ptr = NULL;
-			unsigned long value = strtoul(size_str, &end_ptr, 10);
-			if (end_ptr != size_str && *end_ptr == '\0') {
-				size = (int32_t) value;
-			} else {
-				wlr_log(WLR_ERROR, "Invalid value for XCURSOR_SIZE: '%s'", size_str);
-			}
-		}
-
-		seat->xcursor_manager = wlr_xcursor_manager_create(theme, size);
-		if (!seat->xcursor_manager) {
-			wlr_log(WLR_ERROR, "Cannot create XCursor manager");
-			wlr_cursor_destroy(seat->cursor);
-			wl_list_remove(&seat->destroy.link);
-			free(seat);
-			return NULL;
-		}
-	}
 
 	seat->cursor_motion_relative.notify = handle_cursor_motion_relative;
 	wl_signal_add(&seat->cursor->events.motion, &seat->cursor_motion_relative);
