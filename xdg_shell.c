@@ -197,7 +197,7 @@ handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
 	bool fullscreen = xdg_shell_view->xdg_toplevel->requested.fullscreen;
 
-	if (!xdg_shell_view->xdg_toplevel->base->surface->mapped) {
+	if (!xdg_shell_view->xdg_toplevel->base->initialized) {
 		return;
 	}
 
@@ -209,7 +209,9 @@ handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
 	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
 	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, fullscreen);
-	wlr_foreign_toplevel_handle_v1_set_fullscreen(xdg_shell_view->view.foreign_toplevel_handle, fullscreen);
+	if (xdg_shell_view->view.foreign_toplevel_handle != NULL) {
+		wlr_foreign_toplevel_handle_v1_set_fullscreen(xdg_shell_view->view.foreign_toplevel_handle, fullscreen);
+	}
 }
 
 static void
