@@ -66,6 +66,13 @@ update_output_manager_config(struct cg_server *server)
 	}
 
 	wlr_output_manager_v1_set_configuration(server->output_manager_v1, config);
+
+	if (server->clone_mode) {
+		struct wlr_box confine_box;
+		seat_get_clone_confines(server, &confine_box);
+		server->seat->clone_confine_box = confine_box;
+	}
+
 }
 
 static inline void
@@ -110,7 +117,11 @@ output_enable(struct cg_output *output)
 	wlr_output_state_set_enabled(&state, true);
 
 	if (wlr_output_commit_state(wlr_output, &state)) {
-		output_layout_add_auto(output);
+		if (output->server->clone_mode) {
+			output_layout_add(output, 0, 0);
+		} else {
+			output_layout_add_auto(output);
+		}
 	}
 
 	update_output_manager_config(output->server);
@@ -313,7 +324,11 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	wlr_log(WLR_DEBUG, "Enabling new output %s", wlr_output->name);
 	if (wlr_output_commit_state(wlr_output, &state)) {
-		output_layout_add_auto(output);
+		if (output->server->clone_mode) {
+			output_layout_add(output, 0, 0);
+		} else {
+			output_layout_add_auto(output);
+		}
 	}
 
 	view_position_all(output->server);
