@@ -15,10 +15,11 @@
 #include "server.h"
 
 enum cg_view_type {
-	CAGE_XDG_SHELL_VIEW,
+	CAGE_XDG_SHELL_VIEW = 0,
 #if CAGE_HAS_XWAYLAND
-	CAGE_XWAYLAND_VIEW,
+	CAGE_XWAYLAND_VIEW = 1,
 #endif
+	CAGE_INPUT_POPUP_VIEW = 2,
 };
 
 struct cg_view {
