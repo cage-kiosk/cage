@@ -13,6 +13,11 @@
 
 #define DEFAULT_XCURSOR "left_ptr"
 #define XCURSOR_SIZE 24
+struct cage_cursor {
+struct wlr_cursor *cursor;
+bool hidden;
+struct wl_event_source *hide_cursor_timer;
+};
 
 struct cg_seat {
 	struct wlr_seat *seat;
@@ -25,7 +30,7 @@ struct cg_seat {
 	struct wl_list touch;
 	struct wl_listener new_input;
 
-	struct wlr_cursor *cursor;
+	struct cage_cursor *cage_cursor;
 	struct wlr_xcursor_manager *xcursor_manager;
 	struct wl_listener cursor_motion_relative;
 	struct wl_listener cursor_motion_absolute;
