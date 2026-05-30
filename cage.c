@@ -450,7 +450,7 @@ main(int argc, char *argv[])
 	wl_signal_add(&xdg_shell->events.new_popup, &server.new_xdg_popup);
 
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager =
-		wlr_xdg_decoration_manager_v1_create(server.wl_display);
+		wlr_xdg_decoration_manager_v1_create(server.wl_display, 2);
 	if (!xdg_decoration_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the XDG decoration manager");
 		ret = 1;
