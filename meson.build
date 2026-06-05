@@ -102,9 +102,11 @@ if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
   cage_sources += 'xwayland.c'
 endif
 
+subdir('protocols')
+
 executable(
   meson.project_name(),
-  cage_sources,
+  cage_sources + wl_protos_src,
   dependencies: [
     wayland_server,
     wlroots,

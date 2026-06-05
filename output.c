@@ -112,6 +112,7 @@ output_enable(struct cg_output *output)
 	if (wlr_output_commit_state(wlr_output, &state)) {
 		output_layout_add_auto(output);
 	}
+	output->dpms_powered_off = false;
 
 	update_output_manager_config(output->server);
 }
@@ -399,6 +400,29 @@ out:
 	}
 	free(states);
 	return ok;
+}
+
+void
+handle_output_power_manager_set_mode(struct wl_listener *listener, void *data)
+{
+	struct wlr_output_power_v1_set_mode_event *event = data;
+	struct cg_output *output = event->output->data;
+
+	if (event->mode == ZWLR_OUTPUT_POWER_V1_MODE_ON) {
+		if (!output->dpms_powered_off) {
+			return;
+		}
+		output->dpms_powered_off = false;
+	} else {
+		output->dpms_powered_off = true;
+	}
+
+	struct wlr_output_state state = {0};
+	wlr_output_state_set_enabled(&state, event->mode == ZWLR_OUTPUT_POWER_V1_MODE_ON);
+
+	if (!wlr_output_commit_state(output->wlr_output, &state)) {
+		wlr_log(WLR_ERROR, "Failed to set power mode for output %s", output->wlr_output->name);
+	}
 }
 
 void
