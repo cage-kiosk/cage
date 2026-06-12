@@ -18,6 +18,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
+#include <wayland-server-protocol.h>
 #include <wlr/backend.h>
 #include <wlr/config.h>
 #include <wlr/render/allocator.h>
@@ -246,6 +247,7 @@ usage(FILE *file, const char *cage)
 		" -h\t Display this help message\n"
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
+		" -r 0|90|180|270  Rotate the output (default: 0)\n"
 		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
 		" -x\t Disable XWayland\n"
@@ -260,7 +262,7 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 	server->enable_xwayland = true;
 
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:svx")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:r:svx")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -276,6 +278,21 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 				server->output_mode = CAGE_MULTI_OUTPUT_MODE_LAST;
 			} else if (strcmp(optarg, "extend") == 0) {
 				server->output_mode = CAGE_MULTI_OUTPUT_MODE_EXTEND;
+			}
+			break;
+		case 'r':
+			if (strcmp(optarg, "0") == 0) {
+				server->output_rotation = WL_OUTPUT_TRANSFORM_NORMAL;
+			} else if (strcmp(optarg, "90") == 0) {
+				server->output_rotation = WL_OUTPUT_TRANSFORM_90;
+			} else if (strcmp(optarg, "180") == 0) {
+				server->output_rotation = WL_OUTPUT_TRANSFORM_180;
+			} else if (strcmp(optarg, "270") == 0) {
+				server->output_rotation = WL_OUTPUT_TRANSFORM_270;
+			} else {
+				fprintf(stderr, "Invalid rotation '%s'. Expected one of: 0, 90, 180, 270.\n", optarg);
+				usage(stderr, argv[0]);
+				return false;
 			}
 			break;
 		case 's':

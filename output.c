@@ -281,6 +281,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	struct wlr_output_state state = {0};
 	wlr_output_state_set_enabled(&state, true);
+	wlr_output_state_set_transform(&state, server->output_rotation);
 	if (!wl_list_empty(&wlr_output->modes)) {
 		struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
 		if (preferred_mode) {

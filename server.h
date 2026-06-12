@@ -4,6 +4,7 @@
 #include "config.h"
 
 #include <wayland-server-core.h>
+#include <wayland-server-protocol.h>
 #include <wlr/config.h>
 #include <wlr/types/wlr_drm_lease_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
@@ -73,6 +74,7 @@ struct cg_server {
 	bool xdg_decoration;
 	bool allow_vt_switch;
 	bool enable_xwayland;
+	enum wl_output_transform output_rotation;
 	bool return_app_code;
 	bool terminated;
 	enum wlr_log_importance log_level;
