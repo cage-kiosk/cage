@@ -24,7 +24,7 @@ jobs:
       CC: ${{ matrix.CC }}
     steps:
       - name: Checkout Cage
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install dependencies (Alpine)
         if: "matrix.OS == 'alpine:edge'"
@@ -51,7 +51,7 @@ jobs:
     container: "archlinux:base-devel"
     steps:
       - name: Checkout Cage
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           pacman-key --init
@@ -70,7 +70,7 @@ jobs:
       CC: clang
     steps:
       - name: Checkout Cage
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           pacman-key --init
