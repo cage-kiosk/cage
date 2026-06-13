@@ -543,6 +543,15 @@ main(int argc, char *argv[])
 	server.output_manager_test.notify = handle_output_manager_test;
 	wl_signal_add(&server.output_manager_v1->events.test, &server.output_manager_test);
 
+	server.output_power_manager_v1 = wlr_output_power_manager_v1_create(server.wl_display);
+	if (!server.output_power_manager_v1) {
+		wlr_log(WLR_ERROR, "Unable to create the output power manager");
+		ret = 1;
+		goto end;
+	}
+	server.output_power_manager_set_mode.notify = handle_output_power_manager_set_mode;
+	wl_signal_add(&server.output_power_manager_v1->events.set_mode, &server.output_power_manager_set_mode);
+
 #if WLR_HAS_DRM_BACKEND
 	server.drm_lease_v1 = wlr_drm_lease_v1_manager_create(server.wl_display, server.backend);
 	if (server.drm_lease_v1) {
@@ -678,6 +687,7 @@ main(int argc, char *argv[])
 	wl_list_remove(&server.new_idle_inhibitor_v1.link);
 	wl_list_remove(&server.new_output.link);
 	wl_list_remove(&server.output_layout_change.link);
+	wl_list_remove(&server.output_power_manager_set_mode.link);
 
 end:
 	if (pid != 0)
