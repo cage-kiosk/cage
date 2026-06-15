@@ -201,12 +201,15 @@ cleanup_primary_client(pid_t pid)
 	wlr_log(WLR_DEBUG, "Sending SIGTERM to child with pid %d", pid);
 	kill(pid, SIGTERM);
 
+	/* 100 ms in nanoseconds */
+	struct timespec ts = {0, 100000000};
+
 	/* 10 sec timeout with 100ms intervals */
 	for(int i = 0; i < 100; i++) {
 		if(waitpid(pid, &status, WNOHANG) > 0) {
 			goto done;
 		}
-		usleep(100000);
+		nanosleep(&ts, NULL);
 	}
 
 	wlr_log(WLR_INFO, "Child did not exit after 10s, sending SIGKILL");
