@@ -1,9 +1,9 @@
 name: Continuous integration build
 on:
   push:
-    branches: [ master ]
+    branches: [ "master", "v[0-9]+.[0-9]+" ]
   pull_request:
-    branches: [ master ]
+    branches: [ "master", "v[0-9]+.[0-9]+" ]
 
 env:
   WLROOTS_VERSION: "0.20"
