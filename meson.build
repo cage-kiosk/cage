@@ -18,6 +18,8 @@ add_project_arguments(
   language: 'c',
 )
 
+fs = import('fs')
+
 if get_option('buildtype').startswith('debug')
   add_project_arguments('-DDEBUG', language : 'c')
 endif
@@ -43,16 +45,18 @@ math           = cc.find_library('m')
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
 version = '@0@'.format(meson.project_version())
-git = find_program('git', native: true, required: false)
-if git.found()
-  git_commit = run_command([git, 'rev-parse', '--short', 'HEAD'], check: false)
-  git_branch = run_command([git, 'rev-parse', '--abbrev-ref', 'HEAD'], check: false)
-  if git_commit.returncode() == 0 and git_branch.returncode() == 0
-    version = '@0@-@1@ (branch \'@2@\')'.format(
-      meson.project_version(),
-      git_commit.stdout().strip(),
-      git_branch.stdout().strip(),
-    )
+if fs.is_dir('.git')
+  git = find_program('git', native: true, required: false)
+  if git.found()
+    git_commit = run_command([git, 'rev-parse', '--short', 'HEAD'], check: false)
+    git_branch = run_command([git, 'rev-parse', '--abbrev-ref', 'HEAD'], check: false)
+    if git_commit.returncode() == 0 and git_branch.returncode() == 0
+      version = '@0@-@1@ (branch \'@2@\')'.format(
+        meson.project_version(),
+        git_commit.stdout().strip(),
+        git_branch.stdout().strip(),
+      )
+    endif
   endif
 endif
 

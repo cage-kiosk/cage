@@ -192,15 +192,8 @@ close(struct cg_view *view)
 }
 
 static void
-handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
+set_fullscreen(struct cg_xdg_shell_view *xdg_shell_view, bool fullscreen)
 {
-	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
-	bool fullscreen = xdg_shell_view->xdg_toplevel->requested.fullscreen;
-
-	if (!xdg_shell_view->xdg_toplevel->base->surface->mapped) {
-		return;
-	}
-
 	/**
 	 * Certain clients do not like figuring out their own window geometry if they
 	 * display in fullscreen mode, so we set it here.
@@ -209,7 +202,19 @@ handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
 	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
 	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
 	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, fullscreen);
-	wlr_foreign_toplevel_handle_v1_set_fullscreen(xdg_shell_view->view.foreign_toplevel_handle, fullscreen);
+}
+
+static void
+handle_xdg_toplevel_request_fullscreen(struct wl_listener *listener, void *data)
+{
+	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, request_fullscreen);
+	bool fullscreen = xdg_shell_view->xdg_toplevel->requested.fullscreen;
+
+	if (!xdg_shell_view->xdg_toplevel->base->initialized) {
+		return;
+	}
+
+	set_fullscreen(xdg_shell_view, fullscreen);
 }
 
 static void
@@ -239,19 +244,33 @@ handle_xdg_toplevel_map(struct wl_listener *listener, void *data)
 }
 
 static void
+handle_xdg_toplevel_initial_commit(struct cg_xdg_shell_view *xdg_shell_view)
+{
+	/* When an xdg_surface performs an initial commit, the compositor must
+	 * reply with a configure so the client can map the surface. */
+	wlr_xdg_surface_schedule_configure(xdg_shell_view->xdg_toplevel->base);
+	wlr_xdg_toplevel_set_wm_capabilities(xdg_shell_view->xdg_toplevel, XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
+
+	if (xdg_shell_view->xdg_toplevel->requested.fullscreen) {
+		set_fullscreen(xdg_shell_view, true);
+	} else {
+		view_position(&xdg_shell_view->view);
+	}
+}
+
+static void
 handle_xdg_toplevel_commit(struct wl_listener *listener, void *data)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = wl_container_of(listener, xdg_shell_view, commit);
 
-	if (!xdg_shell_view->xdg_toplevel->base->initial_commit) {
-		return;
+	if (xdg_shell_view->xdg_toplevel->base->surface->mapped) {
+		wlr_foreign_toplevel_handle_v1_set_fullscreen(xdg_shell_view->view.foreign_toplevel_handle,
+							      xdg_shell_view->xdg_toplevel->current.fullscreen);
 	}
 
-	wlr_xdg_toplevel_set_wm_capabilities(xdg_shell_view->xdg_toplevel, XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
-
-	/* When an xdg_surface performs an initial commit, the compositor must
-	 * reply with a configure so the client can map the surface. */
-	view_position(&xdg_shell_view->view);
+	if (xdg_shell_view->xdg_toplevel->base->initial_commit) {
+		handle_xdg_toplevel_initial_commit(xdg_shell_view);
+	}
 }
 
 static void
