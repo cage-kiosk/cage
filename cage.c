@@ -259,6 +259,7 @@ usage(FILE *file, const char *cage)
 	fprintf(file,
 		"Usage: %s [OPTIONS] [--] [APPLICATION...]\n"
 		"\n"
+		" -C\t Hide the cursor\n"
 		" -d\t Don't draw client side decorations, when possible\n"
 		" -D\t Enable debug logging\n"
 		" -h\t Display this help message\n"
@@ -278,8 +279,11 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 	server->enable_xwayland = true;
 
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:svx")) != -1) {
+	while ((c = getopt(argc, argv, "CdDhm:svx")) != -1) {
 		switch (c) {
+		case 'C':
+			server->hide_cursor = true;
+			break;
 		case 'd':
 			server->xdg_decoration = true;
 			break;

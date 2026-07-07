@@ -16,6 +16,9 @@ activities outside the scope of the running application are prevented.
 
 # OPTIONS
 
+*-C*
+	Hide the cursor.
+
 *-d*
 	Don't draw client side decorations when possible.
 

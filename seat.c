@@ -125,8 +125,9 @@ update_capabilities(struct cg_seat *seat)
 	}
 	wlr_seat_set_capabilities(seat->seat, caps);
 
-	/* Hide cursor if the seat doesn't have pointer capability. */
-	if ((caps & WL_SEAT_CAPABILITY_POINTER) == 0) {
+	/* Hide cursor if the seat doesn't have pointer capability, or if the
+	 * cursor was explicitly hidden by the user. */
+	if (seat->server->hide_cursor || (caps & WL_SEAT_CAPABILITY_POINTER) == 0) {
 		wlr_cursor_unset_image(seat->cursor);
 	} else {
 		wlr_cursor_set_xcursor(seat->cursor, seat->server->xcursor_manager, DEFAULT_XCURSOR);
@@ -487,6 +488,10 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 	struct wl_client *focused_client = NULL;
 	if (has_focused) {
 		focused_client = wl_resource_get_client(focused_surface->resource);
+	}
+
+	if (seat->server->hide_cursor) {
+		return;
 	}
 
 	/* This can be sent by any client, so we check to make sure
