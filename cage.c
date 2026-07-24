@@ -23,6 +23,7 @@
 #include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
+#include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
@@ -443,6 +444,16 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
+	server.cursor_shape_manager_v1 = wlr_cursor_shape_manager_v1_create(server.wl_display, 2);
+	if (!server.cursor_shape_manager_v1) {
+		wlr_log(WLR_ERROR, "Unable to create cursor shape manager");
+		ret = 1;
+		goto end;
+	}
+	server.cursor_shape_manager_set_shape.notify = handle_request_set_shape;
+	wl_signal_add(&server.cursor_shape_manager_v1->events.request_set_shape,
+		      &server.cursor_shape_manager_set_shape);
+
 	server.seat = seat_create(&server, server.backend);
 	if (!server.seat) {
 		wlr_log(WLR_ERROR, "Unable to create the seat");
@@ -679,6 +690,7 @@ main(int argc, char *argv[])
 	wl_list_remove(&server.xdg_toplevel_decoration.link);
 	wl_list_remove(&server.new_xdg_toplevel.link);
 	wl_list_remove(&server.new_xdg_popup.link);
+	wl_list_remove(&server.cursor_shape_manager_set_shape.link);
 	wl_list_remove(&server.new_idle_inhibitor_v1.link);
 	wl_list_remove(&server.new_output.link);
 	wl_list_remove(&server.output_layout_change.link);

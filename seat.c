@@ -19,6 +19,7 @@
 #include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_keyboard_group.h>
@@ -29,6 +30,7 @@
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
+#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -477,22 +479,44 @@ handle_request_set_selection(struct wl_listener *listener, void *data)
 	wlr_seat_set_selection(seat->seat, event->source, event->serial);
 }
 
-static void
-handle_request_set_cursor(struct wl_listener *listener, void *data)
+static bool
+client_has_pointer_focus(struct cg_seat *seat, struct wl_client *client)
 {
-	struct cg_seat *seat = wl_container_of(listener, seat, request_set_cursor);
-	struct wlr_seat_pointer_request_set_cursor_event *event = data;
-	struct wlr_surface *focused_surface = event->seat_client->seat->pointer_state.focused_surface;
+	struct wlr_surface *focused_surface = seat->seat->pointer_state.focused_surface;
 	bool has_focused = focused_surface != NULL && focused_surface->resource != NULL;
 	struct wl_client *focused_client = NULL;
 	if (has_focused) {
 		focused_client = wl_resource_get_client(focused_surface->resource);
 	}
 
+	return focused_client == client;
+}
+
+static void
+handle_request_set_cursor(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, request_set_cursor);
+	struct wlr_seat_pointer_request_set_cursor_event *event = data;
+
 	/* This can be sent by any client, so we check to make sure
 	 * this one actually has pointer focus first. */
-	if (focused_client == event->seat_client->client) {
+	if (client_has_pointer_focus(seat, event->seat_client->client)) {
 		wlr_cursor_set_surface(seat->cursor, event->surface, event->hotspot_x, event->hotspot_y);
+	}
+}
+
+void
+handle_request_set_shape(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, cursor_shape_manager_set_shape);
+	struct cg_seat *seat = server->seat;
+	struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
+
+	/* This can be sent by any client, so we check to make sure
+	 * this one actually has pointer focus first. */
+	if (client_has_pointer_focus(seat, event->seat_client->client)) {
+		const char *shape_name = wlr_cursor_shape_v1_name(event->shape);
+		wlr_cursor_set_xcursor(seat->cursor, seat->server->xcursor_manager, shape_name);
 	}
 }
 
