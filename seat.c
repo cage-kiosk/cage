@@ -500,7 +500,8 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 
 	/* This can be sent by any client, so we check to make sure
 	 * this one actually has pointer focus first. */
-	if (client_has_pointer_focus(seat, event->seat_client->client)) {
+	if (client_has_pointer_focus(seat, event->seat_client->client) &&
+	    (seat->seat->capabilities & WL_SEAT_CAPABILITY_POINTER) != 0) {
 		wlr_cursor_set_surface(seat->cursor, event->surface, event->hotspot_x, event->hotspot_y);
 	}
 }
@@ -514,7 +515,8 @@ handle_request_set_shape(struct wl_listener *listener, void *data)
 
 	/* This can be sent by any client, so we check to make sure
 	 * this one actually has pointer focus first. */
-	if (client_has_pointer_focus(seat, event->seat_client->client)) {
+	if (client_has_pointer_focus(seat, event->seat_client->client) &&
+	    (seat->seat->capabilities & WL_SEAT_CAPABILITY_POINTER) != 0) {
 		const char *shape_name = wlr_cursor_shape_v1_name(event->shape);
 		wlr_cursor_set_xcursor(seat->cursor, seat->server->xcursor_manager, shape_name);
 	}
