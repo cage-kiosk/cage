@@ -12,8 +12,10 @@
 
 #include <assert.h>
 #include <linux/input-event-codes.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
 #include <wlr/backend/multi.h>
@@ -23,6 +25,7 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_keyboard_group.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
@@ -32,6 +35,7 @@
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
+#include <wlr/util/region.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
 #endif
@@ -222,6 +226,18 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_pointer *wlr_pointer)
 	wl_signal_add(&wlr_pointer->base.events.destroy, &pointer->destroy);
 
 	map_input_device_to_output(seat, &wlr_pointer->base, wlr_pointer->output_name);
+}
+
+static struct cg_pointer *
+pointer_from_wlr_pointer(struct cg_seat *seat, struct wlr_pointer *wlr_pointer)
+{
+	struct cg_pointer *pointer;
+	wl_list_for_each (pointer, &seat->pointers, link) {
+		if (pointer->pointer == wlr_pointer) {
+			return pointer;
+		}
+	}
+	return NULL;
 }
 
 static void
@@ -642,26 +658,534 @@ handle_cursor_button(struct wl_listener *listener, void *data)
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
-static void
-process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, double dy, double dx_unaccel,
-		      double dy_unaccel)
-{
-	double sx, sy;
-	struct wlr_seat *wlr_seat = seat->seat;
-	struct wlr_surface *surface = NULL;
+/* Pointer constraints (zwp_pointer_constraints_v1): clients — games, or
+ * nested compositors on their behalf — ask for the pointer to be locked in
+ * place or confined to a region of their surface. The constraint of the
+ * pointer-focused surface is enforced: a locked pointer pins the cursor
+ * (clients follow the zwp_relative_pointer_v1 stream instead), a confined
+ * pointer is clamped to the constraint region. The active constraint always
+ * belongs to the pointer-focused surface — it is updated on every focus
+ * change — so the motion handlers below need not re-check the focus.
+ *
+ * A tracked constraint is not necessarily in effect. The protocol guarantees
+ * the pointer is inside the constraint region whenever the client is told the
+ * constraint activated, which an empty region cannot satisfy, so the
+ * constraint is only enforced while seat->constraint_enforced is set. */
 
-	struct cg_view *view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
-	if (!view) {
-		wlr_seat_pointer_clear_focus(wlr_seat);
-	} else {
-		wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
-		wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
+/* The scene node showing a surface, or NULL if it is not on screen. */
+static struct wlr_scene_node *
+scene_node_for_surface(struct wlr_scene_node *node, struct wlr_surface *surface)
+{
+	switch (node->type) {
+	case WLR_SCENE_NODE_BUFFER: {
+		struct wlr_scene_surface *scene_surface =
+			wlr_scene_surface_try_from_buffer(wlr_scene_buffer_from_node(node));
+		return scene_surface && scene_surface->surface == surface ? node : NULL;
+	}
+	case WLR_SCENE_NODE_TREE: {
+		struct wlr_scene_node *child;
+		wl_list_for_each (child, &wlr_scene_tree_from_node(node)->children, link) {
+			struct wlr_scene_node *found = scene_node_for_surface(child, surface);
+			if (found) {
+				return found;
+			}
+		}
+		return NULL;
+	}
+	default:
+		return NULL;
+	}
+}
+
+/* The cursor position in the coordinates of a constrained surface. Looked up
+ * in the scene graph rather than derived from the seat's surface-local
+ * position, which belongs to the focused surface — not necessarily this one —
+ * and rather than cached at activation, which goes stale as soon as the view
+ * is repositioned (an output is hotplugged, a mode change re-centers it). */
+static bool
+constraint_cursor_position(struct cg_seat *seat, struct wlr_pointer_constraint_v1 *constraint, double *sx, double *sy)
+{
+	struct wlr_scene_node *node = scene_node_for_surface(&seat->server->scene->tree.node, constraint->surface);
+	int lx, ly;
+	if (!node || !wlr_scene_node_coords(node, &lx, &ly)) {
+		return false;
+	}
+	*sx = seat->cursor->x - lx;
+	*sy = seat->cursor->y - ly;
+	return true;
+}
+
+/* On deactivation, warp the cursor to the client's cursor-position hint so it
+ * reappears where the client last drew its own cursor. The hint is in surface
+ * coordinates. */
+static void
+warp_to_constraint_cursor_hint(struct cg_seat *seat)
+{
+	struct wlr_pointer_constraint_v1 *constraint = seat->active_constraint;
+
+	/* Only a constraint that was in effect has a cursor to restore. */
+	if (!seat->constraint_enforced || !constraint->current.cursor_hint.enabled) {
+		return;
 	}
 
+	double cursor_sx, cursor_sy;
+	if (!constraint_cursor_position(seat, constraint, &cursor_sx, &cursor_sy)) {
+		return;
+	}
+	double sx = constraint->current.cursor_hint.x;
+	double sy = constraint->current.cursor_hint.y;
+	if (!wlr_cursor_warp(seat->cursor, NULL, seat->cursor->x + sx - cursor_sx, seat->cursor->y + sy - cursor_sy)) {
+		/* The hint maps outside the output layout: the cursor did not
+		 * move, so leave the surface-local position alone too. */
+		return;
+	}
+	if (seat->seat->pointer_state.focused_surface == constraint->surface) {
+		/* Fix up the seat's surface-local position without sending a motion event. */
+		wlr_seat_pointer_warp(seat->seat, sx, sy);
+	}
+}
+
+/* The region a constraint confines the pointer to: its own region intersected
+ * with the surface's input region. wlroots computes this into
+ * constraint->region, but only on a commit of the surface — and at creation
+ * only for a constraint created with a region — so a constraint created
+ * without one has an empty region there until its next commit. Recompute it
+ * the same way instead of relying on, or writing to, wlroots' copy: writing to
+ * it would break the change detection that emits the set_region signal. */
+static void
+constraint_effective_region(struct wlr_pointer_constraint_v1 *constraint, pixman_region32_t *region)
+{
+	if (pixman_region32_not_empty(&constraint->current.region)) {
+		pixman_region32_intersect(region, &constraint->surface->input_region, &constraint->current.region);
+	} else {
+		pixman_region32_copy(region, &constraint->surface->input_region);
+	}
+}
+
+/* The point of the region nearest to (sx, sy), half a pixel inside the
+ * region's integer extents so the result still passes a floored
+ * pixman_region32_contains_point() test. Returns false for an empty region. */
+static bool
+region_nearest_point(pixman_region32_t *region, double sx, double sy, double *nx, double *ny)
+{
+	int nboxes;
+	pixman_box32_t *boxes = pixman_region32_rectangles(region, &nboxes);
+	double best = INFINITY;
+	for (int i = 0; i < nboxes; i++) {
+		double x = fmax(boxes[i].x1 + 0.5, fmin(sx, boxes[i].x2 - 0.5));
+		double y = fmax(boxes[i].y1 + 0.5, fmin(sy, boxes[i].y2 - 0.5));
+		double distance = (x - sx) * (x - sx) + (y - sy) * (y - sy);
+		if (distance < best) {
+			best = distance;
+			*nx = x;
+			*ny = y;
+		}
+	}
+	return nboxes > 0;
+}
+
+/* Both a locked and a confined pointer must be inside the constraint region
+ * while the constraint is in effect; warp the cursor to the nearest point
+ * inside the region if it is outside. sx/sy are the cursor's surface-local
+ * coordinates and are updated on warp. Returns false if the cursor could not
+ * be placed inside the region — it is empty, or the point nearest to the
+ * cursor lies outside the output layout — in which case the cursor did not
+ * move. */
+static bool
+constraint_warp_into_region(struct cg_seat *seat, pixman_region32_t *region, double *sx, double *sy)
+{
+	if (pixman_region32_contains_point(region, (int) floor(*sx), (int) floor(*sy), NULL)) {
+		return true;
+	}
+
+	double nx = 0, ny = 0;
+	if (!region_nearest_point(region, *sx, *sy, &nx, &ny)) {
+		/* An empty region has no inside to warp to. */
+		return false;
+	}
+	if (!wlr_cursor_warp(seat->cursor, NULL, seat->cursor->x + nx - *sx, seat->cursor->y + ny - *sy)) {
+		return false;
+	}
+	*sx = nx;
+	*sy = ny;
+	return true;
+}
+
+/* Put the cursor inside the active constraint's effective region and keep the
+ * seat's surface-local position in sync with it. Returns false if the region
+ * cannot hold the cursor, in which case the constraint must not be enforced:
+ * a pointer outside the region cannot be confined by it, and every
+ * wlr_region_confine() from there would fail. */
+static bool
+constraint_enforce_region(struct cg_seat *seat, bool send_motion, uint32_t time_msec)
+{
+	struct wlr_pointer_constraint_v1 *constraint = seat->active_constraint;
+
+	double sx, sy;
+	if (!constraint_cursor_position(seat, constraint, &sx, &sy)) {
+		return false;
+	}
+
+	if (!constraint_warp_into_region(seat, &seat->constraint_region, &sx, &sy)) {
+		return false;
+	}
+	/* Compare against the seat's surface-local position, not the cursor's
+	 * layout position: when the surface moved under a stationary cursor,
+	 * no warp happens but sx/sy still changed, and a stale surface-local
+	 * position would misdirect every clamp in constrain_delta(). */
+	struct wlr_seat_pointer_state *pointer_state = &seat->seat->pointer_state;
+	if (pointer_state->focused_surface != constraint->surface ||
+	    (pointer_state->sx == sx && pointer_state->sy == sy)) {
+		return true;
+	}
+	if (send_motion) {
+		/* zwp_confined_pointer_v1.set_region: "If warped, a
+		 * wl_pointer.motion event will be emitted." Sending the motion
+		 * updates the seat's surface-local position too — warping that
+		 * silently first would make the motion look like a duplicate
+		 * and drop it, leaving the client uncorrected. */
+		wlr_seat_pointer_notify_motion(seat->seat, time_msec, sx, sy);
+	} else {
+		wlr_seat_pointer_warp(seat->seat, sx, sy);
+	}
+	return true;
+}
+
+static void
+handle_constraint_sync_idle(void *data)
+{
+	struct cg_seat *seat = data;
+	seat->constraint_sync_idle = NULL;
+
+	if (!seat->active_constraint || seat->constraint_enforced == seat->constraint_notified) {
+		return;
+	}
+	seat->constraint_notified = seat->constraint_enforced;
+	if (seat->constraint_notified) {
+		wlr_pointer_constraint_v1_send_activated(seat->active_constraint);
+	} else {
+		/* This destroys a oneshot constraint, which runs
+		 * handle_constraint_destroy() and detaches us. */
+		wlr_pointer_constraint_v1_send_deactivated(seat->active_constraint);
+	}
+}
+
+/* Tell the client whether its constraint is in effect, from an idle callback.
+ * Deactivating a oneshot constraint destroys it, and a region update that can
+ * cause that is emitted from inside the surface commit whose synced state
+ * wlroots is still iterating over — freeing the constraint there would pull an
+ * entry out from under that loop. The idle runs before the client is flushed,
+ * so it sees no delay, and a burst of region updates collapses into at most
+ * one event. */
+static void
+constraint_sync_client(struct cg_seat *seat)
+{
+	if (seat->constraint_sync_idle || seat->constraint_enforced == seat->constraint_notified) {
+		return;
+	}
+	struct wl_event_loop *loop = wl_display_get_event_loop(seat->server->wl_display);
+	seat->constraint_sync_idle = wl_event_loop_add_idle(loop, handle_constraint_sync_idle, seat);
+	if (!seat->constraint_sync_idle) {
+		wlr_log(WLR_ERROR, "Cannot notify a client of its pointer constraint's state");
+	}
+}
+
+/* Drop all of our state for the active constraint. An inactive constraint has
+ * none, so the listeners live in cg_seat rather than in a per-constraint
+ * allocation and are only linked while a constraint is active. */
+static void
+constraint_detach(struct cg_seat *seat)
+{
+	seat->active_constraint = NULL;
+	seat->constraint_enforced = false;
+	seat->constraint_notified = false;
+	pixman_region32_clear(&seat->constraint_region);
+	if (seat->constraint_sync_idle) {
+		wl_event_source_remove(seat->constraint_sync_idle);
+		seat->constraint_sync_idle = NULL;
+	}
+	wl_list_remove(&seat->constraint_set_region.link);
+	wl_list_init(&seat->constraint_set_region.link);
+	wl_list_remove(&seat->constraint_destroy.link);
+	wl_list_init(&seat->constraint_destroy.link);
+}
+
+/* Re-evaluate whether the active constraint can be enforced from the cursor's
+ * and the surface's current positions, and tell the client when the answer
+ * changes. send_motion asks for the wl_pointer.motion event that
+ * zwp_confined_pointer_v1.set_region mandates for a warp it causes. */
+static void
+constraint_update(struct cg_seat *seat, bool send_motion, uint32_t time_msec)
+{
+	struct wlr_pointer_constraint_v1 *constraint = seat->active_constraint;
+	if (!constraint) {
+		return;
+	}
+
+	if (seat->constraint_enforced && constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+		/* The lock region only gates activation — the protocol calls it
+		 * "where the pointer must be in order for the lock to
+		 * activate" — so a pointer that is already locked stays pinned
+		 * whatever happens to the region. */
+		return;
+	}
+
+	send_motion = send_motion && seat->constraint_enforced;
+	seat->constraint_enforced = constraint_enforce_region(seat, send_motion, time_msec);
+	constraint_sync_client(seat);
+}
+
+static uint32_t
+now_msec(void)
+{
+	struct timespec now = {0};
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (uint32_t) (now.tv_sec * 1000 + now.tv_nsec / 1000000);
+}
+
+/* wlroots recomputed the constraint's effective region: a committed set_region
+ * request or a changed input region altered it. Re-validate the cursor
+ * position so a confined pointer cannot end up — and then be stuck — outside
+ * the new region. */
+static void
+handle_constraint_set_region(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, constraint_set_region);
+
+	constraint_effective_region(seat->active_constraint, &seat->constraint_region);
+	constraint_update(seat, true, now_msec());
+}
+
+static void
+handle_constraint_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, constraint_destroy);
+
+	/* The resource is going away: apply the hint, but send nothing. */
+	warp_to_constraint_cursor_hint(seat);
+	constraint_detach(seat);
+}
+
+static void
+constraint_set_active(struct cg_seat *seat, struct wlr_pointer_constraint_v1 *constraint)
+{
+	if (seat->active_constraint == constraint) {
+		return;
+	}
+
+	if (seat->active_constraint) {
+		struct wlr_pointer_constraint_v1 *prev = seat->active_constraint;
+		bool notified = seat->constraint_notified;
+		warp_to_constraint_cursor_hint(seat);
+		/* send_deactivated() destroys a oneshot constraint
+		 * synchronously; detach our state first so the destroy signal
+		 * finds no listener of ours left. */
+		constraint_detach(seat);
+		if (notified) {
+			wlr_pointer_constraint_v1_send_deactivated(prev);
+		}
+	}
+
+	if (!constraint) {
+		return;
+	}
+
+	seat->active_constraint = constraint;
+	seat->constraint_set_region.notify = handle_constraint_set_region;
+	wl_signal_add(&constraint->events.set_region, &seat->constraint_set_region);
+	seat->constraint_destroy.notify = handle_constraint_destroy;
+	wl_signal_add(&constraint->events.destroy, &seat->constraint_destroy);
+
+	constraint_effective_region(constraint, &seat->constraint_region);
+	constraint_update(seat, false, 0);
+}
+
+void
+handle_pointer_constraint(struct wl_listener *listener, void *data)
+{
+	struct cg_server *server = wl_container_of(listener, server, new_constraint);
+	struct wlr_pointer_constraint_v1 *constraint = data;
+	struct cg_seat *seat = server->seat;
+
+	if (seat->seat->pointer_state.focused_surface == constraint->surface) {
+		constraint_set_active(seat, constraint);
+	}
+}
+
+/* The views moved — an output was hotplugged, a mode or scale change
+ * re-centered them — and wlroots warped the cursor to keep it inside the
+ * layout. Both the constrained surface and the cursor may have moved, so the
+ * constraint has to be enforced again from their new positions: a confined
+ * pointer left outside its region would otherwise stay wedged there for as
+ * long as the constraint lives. */
+void
+seat_revalidate_pointer_constraint(struct cg_seat *seat)
+{
+	if (!seat || !seat->active_constraint) {
+		return;
+	}
+
+	constraint_effective_region(seat->active_constraint, &seat->constraint_region);
+	constraint_update(seat, true, now_msec());
+}
+
+static void
+handle_pointer_focus_change(struct wl_listener *listener, void *data)
+{
+	struct cg_seat *seat = wl_container_of(listener, seat, pointer_focus_change);
+	struct wlr_seat_pointer_focus_change_event *event = data;
+
+	/* Constraints follow pointer focus. */
+	struct wlr_pointer_constraint_v1 *constraint = NULL;
+	if (event->new_surface) {
+		constraint = wlr_pointer_constraints_v1_constraint_for_surface(seat->server->pointer_constraints,
+									       event->new_surface, seat->seat);
+	}
+	constraint_set_active(seat, constraint);
+}
+
+/* Whether the active constraint pins the cursor in place. */
+static bool
+constraint_locks_cursor(struct cg_seat *seat)
+{
+	return seat->constraint_enforced && seat->active_constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED;
+}
+
+/* Clamp a cursor motion to what the active constraint allows. dx/dy are in
+ * layout coordinates, which have the same scale as the constrained surface's
+ * coordinates. */
+static void
+constrain_delta(struct cg_seat *seat, double *dx, double *dy)
+{
+	if (!seat->constraint_enforced) {
+		return;
+	}
+	if (constraint_locks_cursor(seat)) {
+		/* Locked: the cursor stays pinned; the client follows the
+		 * relative stream sent by process_cursor_motion(). */
+		*dx = *dy = 0;
+		return;
+	}
+
+	/* Confined: clamp the target to the constraint region, sliding along
+	 * its edges. The seat's surface-local position is the constrained
+	 * surface's — the active constraint always belongs to the focused
+	 * surface — and every warp of ours keeps it in sync with the cursor. */
+	struct wlr_seat_pointer_state *pointer_state = &seat->seat->pointer_state;
+	double sx = pointer_state->sx;
+	double sy = pointer_state->sy;
+	double sx_confined, sy_confined;
+	if (wlr_region_confine(&seat->constraint_region, sx, sy, sx + *dx, sy + *dy, &sx_confined, &sy_confined)) {
+		*dx = sx_confined - sx;
+		*dy = sy_confined - sy;
+		return;
+	}
+
+	/* wlr_region_confine() cannot clamp from a start point the region does
+	 * not contain, and the cursor can be left outside it after all: the
+	 * surface moved out from under it, or the region shrank away from it
+	 * between two of our checks. Head back to the nearest point inside
+	 * rather than freezing until the constraint dies. */
+	double nx = 0, ny = 0;
+	if (region_nearest_point(&seat->constraint_region, sx, sy, &nx, &ny)) {
+		*dx = nx - sx;
+		*dy = ny - sy;
+	} else {
+		*dx = *dy = 0;
+	}
+}
+
+/* Bring the pointer focus, and the client's view of the pointer, in line with
+ * the cursor. scene_changed tells apart the two ways this is reached: a cursor
+ * motion, or a change in what is on screen with the cursor standing still. */
+static void
+process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, double dy, double dx_unaccel,
+		      double dy_unaccel, bool scene_changed)
+{
+	struct wlr_seat *wlr_seat = seat->seat;
+
+	/* Send the relative motion before any focus change below: a surface
+	 * that is entered — and whose constraint is activated — by this very
+	 * motion must not receive the traversal delta as its first event. */
 	if (dx != 0 || dy != 0) {
 		wlr_relative_pointer_manager_v1_send_relative_motion(seat->server->relative_pointer_manager, wlr_seat,
 								     (uint64_t) time_msec * 1000, dx, dy, dx_unaccel,
 								     dy_unaccel);
+	}
+
+	if (!scene_changed && constraint_locks_cursor(seat)) {
+		/* The cursor is pinned — constrain_delta() zeroed the motion —
+		 * so nothing under it changed, the focus cannot move, and a
+		 * locked pointer receives no wl_pointer.motion anyway. The
+		 * relative stream above is all the client gets. */
+		wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
+		return;
+	}
+
+	double sx, sy;
+	struct wlr_surface *surface = NULL;
+	struct cg_view *view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
+
+	/* Entering the surface activates its constraint (see
+	 * handle_pointer_focus_change()); warp the pointer into the constraint
+	 * region first, so the client is never told of an out-of-region
+	 * position — a lock in particular guarantees the pointer is inside the
+	 * region when it activates. The warp moves the cursor, so look up what
+	 * is topmost again: the constrained surface may well be occluded at the
+	 * position we warped to. */
+	if (view && surface != wlr_seat->pointer_state.focused_surface) {
+		struct wlr_pointer_constraint_v1 *next = wlr_pointer_constraints_v1_constraint_for_surface(
+			seat->server->pointer_constraints, surface, wlr_seat);
+		if (next) {
+			pixman_region32_t region;
+			pixman_region32_init(&region);
+			constraint_effective_region(next, &region);
+			double cursor_x = seat->cursor->x;
+			double cursor_y = seat->cursor->y;
+			constraint_warp_into_region(seat, &region, &sx, &sy);
+			pixman_region32_fini(&region);
+			if (seat->cursor->x != cursor_x || seat->cursor->y != cursor_y) {
+				view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx,
+						       &sy);
+			}
+		}
+	}
+
+	if (!view) {
+		wlr_seat_pointer_clear_focus(wlr_seat);
+	} else if (surface != wlr_seat->pointer_state.focused_surface) {
+		double pre_enter_x = seat->cursor->x;
+		double pre_enter_y = seat->cursor->y;
+		wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
+		if (seat->cursor->x != pre_enter_x || seat->cursor->y != pre_enter_y) {
+			/* Entering the surface deactivated the previous
+			 * constraint, whose cursor-position hint warped the
+			 * cursor; rebase on the warped position so the motion
+			 * below does not undo the warp. */
+			view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
+			if (!view) {
+				wlr_seat_pointer_clear_focus(wlr_seat);
+			} else if (surface != wlr_seat->pointer_state.focused_surface) {
+				wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
+			}
+		}
+	}
+	if (view) {
+		/* A locked pointer receives no motion events at all — not even
+		 * if the surface moved under the pinned cursor and sx/sy
+		 * changed. Read the constraint after the enter: entering the
+		 * surface may have just activated it. */
+		if (constraint_locks_cursor(seat)) {
+			/* Keep the seat's surface-local position in sync all the
+			 * same. An enter for the already-focused surface is a
+			 * no-op in wlroots, so a warp between the two enters
+			 * above would leave it at the pre-warp coordinates — and
+			 * every later motion would be deduplicated against
+			 * them. */
+			wlr_seat_pointer_warp(wlr_seat, sx, sy);
+		} else {
+			wlr_seat_pointer_notify_motion(wlr_seat, time_msec, sx, sy);
+		}
 	}
 
 	struct cg_drag_icon *drag_icon;
@@ -681,11 +1205,48 @@ handle_cursor_motion_absolute(struct wl_listener *listener, void *data)
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->pointer->base, event->x, event->y, &lx, &ly);
 
-	double dx = lx - seat->cursor->x;
-	double dy = ly - seat->cursor->y;
+	/* The synthesized relative motion is the distance the device travelled,
+	 * which is only the distance to the cursor as long as the cursor is
+	 * free to follow it: a constraint can hold the cursor back. Difference
+	 * against this device's own previous absolute position instead, and
+	 * fall back to the cursor until it has one. */
+	struct cg_pointer *pointer = pointer_from_wlr_pointer(seat, event->pointer);
+	double dx, dy;
+	if (pointer && pointer->last_abs_valid) {
+		dx = lx - pointer->last_abs_x;
+		dy = ly - pointer->last_abs_y;
+	} else if (!seat->constraint_enforced) {
+		dx = lx - seat->cursor->x;
+		dy = ly - seat->cursor->y;
+	} else {
+		/* Nothing meaningful to synthesize: the device has no history,
+		 * and the cursor is not where the device is. */
+		dx = dy = 0;
+	}
+	if (pointer) {
+		pointer->last_abs_x = lx;
+		pointer->last_abs_y = ly;
+		pointer->last_abs_valid = true;
+	}
 
-	wlr_cursor_warp_absolute(seat->cursor, &event->pointer->base, event->x, event->y);
-	process_cursor_motion(seat, event->time_msec, dx, dy, dx, dy);
+	if (seat->constraint_enforced) {
+		/* Turn the absolute target into a motion the constraint can
+		 * clamp, then warp to the closest point the layout and the
+		 * device's output mapping allow: a target inside the constraint
+		 * region can still fall outside those, and dropping the event
+		 * instead would wedge the pointer. */
+		double move_x = lx - seat->cursor->x;
+		double move_y = ly - seat->cursor->y;
+		constrain_delta(seat, &move_x, &move_y);
+		if (move_x != 0 || move_y != 0) {
+			wlr_cursor_warp_closest(seat->cursor, &event->pointer->base, seat->cursor->x + move_x,
+						seat->cursor->y + move_y);
+		}
+	} else {
+		wlr_cursor_warp_absolute(seat->cursor, &event->pointer->base, event->x, event->y);
+	}
+
+	process_cursor_motion(seat, event->time_msec, dx, dy, dx, dy, false);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
@@ -695,9 +1256,17 @@ handle_cursor_motion_relative(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, cursor_motion_relative);
 	struct wlr_pointer_motion_event *event = data;
 
-	wlr_cursor_move(seat->cursor, &event->pointer->base, event->delta_x, event->delta_y);
+	/* Constrain the motion the cursor makes, but pass the raw deltas on to
+	 * process_cursor_motion() so the relative stream stays unclamped. */
+	double dx = event->delta_x;
+	double dy = event->delta_y;
+	constrain_delta(seat, &dx, &dy);
+	if (dx != 0 || dy != 0) {
+		wlr_cursor_move(seat->cursor, &event->pointer->base, dx, dy);
+	}
+
 	process_cursor_motion(seat, event->time_msec, event->delta_x, event->delta_y, event->unaccel_dx,
-			      event->unaccel_dy);
+			      event->unaccel_dy, false);
 	wlr_idle_notifier_v1_notify_activity(seat->server->idle, seat->seat);
 }
 
@@ -802,6 +1371,16 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&seat->cursor_button.link);
 	wl_list_remove(&seat->cursor_axis.link);
 	wl_list_remove(&seat->cursor_frame.link);
+	wl_list_remove(&seat->pointer_focus_change.link);
+	/* wlroots destroys any surviving constraint after us (its seat destroy
+	 * listeners were added later); unlink so its destroy signal does not
+	 * run our handler on the freed seat. */
+	wl_list_remove(&seat->constraint_set_region.link);
+	wl_list_remove(&seat->constraint_destroy.link);
+	if (seat->constraint_sync_idle) {
+		wl_event_source_remove(seat->constraint_sync_idle);
+	}
+	pixman_region32_fini(&seat->constraint_region);
 	wl_list_remove(&seat->touch_down.link);
 	wl_list_remove(&seat->touch_up.link);
 	wl_list_remove(&seat->touch_motion.link);
@@ -869,6 +1448,14 @@ seat_create(struct cg_server *server, struct wlr_backend *backend)
 	wl_signal_add(&seat->cursor->events.axis, &seat->cursor_axis);
 	seat->cursor_frame.notify = handle_cursor_frame;
 	wl_signal_add(&seat->cursor->events.frame, &seat->cursor_frame);
+
+	seat->pointer_focus_change.notify = handle_pointer_focus_change;
+	wl_signal_add(&seat->seat->pointer_state.events.focus_change, &seat->pointer_focus_change);
+	/* Only linked while a constraint is active; keep them initialized so
+	 * removal is always safe. */
+	wl_list_init(&seat->constraint_set_region.link);
+	wl_list_init(&seat->constraint_destroy.link);
+	pixman_region32_init(&seat->constraint_region);
 
 	seat->touch_down.notify = handle_touch_down;
 	wl_signal_add(&seat->cursor->events.touch_down, &seat->touch_down);
@@ -983,7 +1570,9 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, NULL, 0, NULL);
 	}
 
-	process_cursor_motion(seat, -1, 0, 0, 0, 0);
+	/* The newly focused view was raised over the cursor: re-resolve what the
+	 * cursor is over, even while a lock pins it in place. */
+	process_cursor_motion(seat, -1, 0, 0, 0, 0, true);
 }
 
 void

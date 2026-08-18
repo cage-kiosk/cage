@@ -40,6 +40,7 @@ endif
 wlroots        = dependency('wlroots-0.20', fallback: ['wlroots', 'wlroots'])
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
+pixman         = dependency('pixman-1')
 math           = cc.find_library('m')
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
@@ -113,6 +114,7 @@ executable(
     wayland_server,
     wlroots,
     xkbcommon,
+    pixman,
     math,
   ],
   install: true,

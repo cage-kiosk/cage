@@ -346,6 +346,28 @@ main(int argc, char *argv[])
 	}
 
 	wl_display_set_default_max_buffer_size(server.wl_display, 1024 * 1024);
+	/* The error paths below can be taken before any given listener has been
+	 * registered, and unlinking one that was never linked crashes. Keep the
+	 * links initialized so the teardown at the end can unlink them all
+	 * unconditionally: several protocol implementations assert an empty
+	 * listener list when the display is destroyed, and would abort rather
+	 * than let cage exit with an error. */
+	wl_list_init(&server.output_layout_change.link);
+	wl_list_init(&server.new_output.link);
+	wl_list_init(&server.cursor_shape_manager_set_shape.link);
+	wl_list_init(&server.new_idle_inhibitor_v1.link);
+	wl_list_init(&server.new_xdg_toplevel.link);
+	wl_list_init(&server.new_xdg_popup.link);
+	wl_list_init(&server.xdg_toplevel_decoration.link);
+	wl_list_init(&server.output_manager_apply.link);
+	wl_list_init(&server.output_manager_test.link);
+	wl_list_init(&server.new_virtual_keyboard.link);
+	wl_list_init(&server.new_virtual_pointer.link);
+	wl_list_init(&server.new_constraint.link);
+#if CAGE_HAS_XWAYLAND
+	wl_list_init(&server.new_xwayland_surface.link);
+#endif
+
 	server.display_destroy.notify = handle_display_destroy;
 	wl_display_add_destroy_listener(server.wl_display, &server.display_destroy);
 
@@ -595,6 +617,15 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
+	server.pointer_constraints = wlr_pointer_constraints_v1_create(server.wl_display);
+	if (!server.pointer_constraints) {
+		wlr_log(WLR_ERROR, "Unable to create the pointer constraints manager");
+		ret = 1;
+		goto end;
+	}
+	server.new_constraint.notify = handle_pointer_constraint;
+	wl_signal_add(&server.pointer_constraints->events.new_constraint, &server.new_constraint);
+
 	server.foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(server.wl_display);
 	if (!server.foreign_toplevel_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the foreign toplevel manager");
@@ -667,13 +698,19 @@ main(int argc, char *argv[])
 	wl_display_run(server.wl_display);
 
 #if CAGE_HAS_XWAYLAND
-	if (xwayland) {
-		wl_list_remove(&server.new_xwayland_surface.link);
-	}
+	/* wlr_xwayland_destroy() asserts its new_surface listener list is empty,
+	 * so unlink ahead of it — and leave the link initialized for the
+	 * teardown below, which unlinks it again on the error paths. */
+	wl_list_remove(&server.new_xwayland_surface.link);
+	wl_list_init(&server.new_xwayland_surface.link);
 	wlr_xwayland_destroy(xwayland);
 #endif
 	wl_display_destroy_clients(server.wl_display);
 
+end:
+#if CAGE_HAS_XWAYLAND
+	wl_list_remove(&server.new_xwayland_surface.link);
+#endif
 #if WLR_HAS_DRM_BACKEND
 	if (server.drm_lease_v1) {
 		wl_list_remove(&server.drm_lease_request.link);
@@ -681,6 +718,7 @@ main(int argc, char *argv[])
 #endif
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
+	wl_list_remove(&server.new_constraint.link);
 	wl_list_remove(&server.output_manager_apply.link);
 	wl_list_remove(&server.output_manager_test.link);
 	wl_list_remove(&server.xdg_toplevel_decoration.link);
@@ -691,7 +729,6 @@ main(int argc, char *argv[])
 	wl_list_remove(&server.new_output.link);
 	wl_list_remove(&server.output_layout_change.link);
 
-end:
 	if (pid != 0)
 		app_ret = cleanup_primary_client(pid);
 	if (!ret && server.return_app_code)
