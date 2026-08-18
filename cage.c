@@ -265,6 +265,7 @@ usage(FILE *file, const char *cage)
 		" -h\t Display this help message\n"
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
+		" -o <name> Use only the output with this name, e.g. DP-1 (overrides -m)\n"
 		" -s\t Allow VT switching\n"
 		" -v\t Show the version number and exit\n"
 		" -x\t Disable XWayland\n"
@@ -279,7 +280,7 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 	server->enable_xwayland = true;
 
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:svx")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:o:svx")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -296,6 +297,13 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 			} else if (strcmp(optarg, "extend") == 0) {
 				server->output_mode = CAGE_MULTI_OUTPUT_MODE_EXTEND;
 			}
+			break;
+		case 'o':
+			if (optarg[0] == '\0') {
+				wlr_log(WLR_ERROR, "-o requires a non-empty output name");
+				return false;
+			}
+			server->output_name = optarg;
 			break;
 		case 's':
 			server->allow_vt_switch = true;
@@ -332,6 +340,10 @@ main(int argc, char *argv[])
 	}
 
 	wlr_log_init(server.log_level, NULL);
+
+	if (server.output_name && server.output_mode == CAGE_MULTI_OUTPUT_MODE_LAST) {
+		wlr_log(WLR_INFO, "-m last has no effect when -o is given");
+	}
 
 	/* Wayland requires XDG_RUNTIME_DIR to be set. */
 	if (!getenv("XDG_RUNTIME_DIR")) {
@@ -646,6 +658,12 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
+	if (server.output_name && wl_list_empty(&server.outputs)) {
+		wlr_log(WLR_ERROR, "No connected output is named '%s'", server.output_name);
+		ret = 1;
+		goto teardown;
+	}
+
 	if (setenv("WAYLAND_DISPLAY", socket, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "Unable to set WAYLAND_DISPLAY. Clients may not be able to connect");
 	} else {
@@ -665,6 +683,8 @@ main(int argc, char *argv[])
 
 	seat_center_cursor(server.seat);
 	wl_display_run(server.wl_display);
+
+teardown:
 
 #if CAGE_HAS_XWAYLAND
 	if (xwayland) {
