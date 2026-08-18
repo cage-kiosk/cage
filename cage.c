@@ -199,8 +199,25 @@ cleanup_primary_client(pid_t pid)
 {
 	int status;
 
+	wlr_log(WLR_DEBUG, "Sending SIGTERM to child with pid %d", pid);
+	kill(pid, SIGTERM);
+
+	/* 100 ms in nanoseconds */
+	struct timespec ts = {0, 100000000};
+
+	/* 10 sec timeout with 100ms intervals */
+	for(int i = 0; i < 100; i++) {
+		if(waitpid(pid, &status, WNOHANG) > 0) {
+			goto done;
+		}
+		nanosleep(&ts, NULL);
+	}
+
+	wlr_log(WLR_INFO, "Child did not exit after 10s, sending SIGKILL");
+	kill(pid, SIGKILL);
 	waitpid(pid, &status, 0);
 
+done:
 	if (WIFEXITED(status)) {
 		wlr_log(WLR_DEBUG, "Child exited normally with exit status %d", WEXITSTATUS(status));
 		return WEXITSTATUS(status);
@@ -666,6 +683,14 @@ main(int argc, char *argv[])
 	seat_center_cursor(server.seat);
 	wl_display_run(server.wl_display);
 
+	if (pid != 0) {
+		app_ret = cleanup_primary_client(pid);
+	}
+
+	if (!ret && server.return_app_code) {
+		ret = app_ret;
+	}
+
 #if CAGE_HAS_XWAYLAND
 	if (xwayland) {
 		wl_list_remove(&server.new_xwayland_surface.link);
@@ -692,11 +717,6 @@ main(int argc, char *argv[])
 	wl_list_remove(&server.output_layout_change.link);
 
 end:
-	if (pid != 0)
-		app_ret = cleanup_primary_client(pid);
-	if (!ret && server.return_app_code)
-		ret = app_ret;
-
 	wl_event_source_remove(sigint_source);
 	wl_event_source_remove(sigterm_source);
 	if (sigchld_source) {
