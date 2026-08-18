@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/log.h>
@@ -60,6 +61,9 @@ struct cg_server {
 	struct wlr_output_manager_v1 *output_manager_v1;
 	struct wl_listener output_manager_apply;
 	struct wl_listener output_manager_test;
+
+	struct wlr_output_power_manager_v1 *output_power_manager_v1;
+	struct wl_listener output_power_manager_set_mode;
 
 #if WLR_HAS_DRM_BACKEND
 	struct wlr_drm_lease_v1_manager *drm_lease_v1;
