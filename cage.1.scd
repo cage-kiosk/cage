@@ -16,6 +16,9 @@ activities outside the scope of the running application are prevented.
 
 # OPTIONS
 
+*-c*
+	Enable clone mode for all attached screens
+
 *-d*
 	Don't draw client side decorations when possible.
 
