@@ -1,1 +1,2 @@
 option('man-pages', type: 'feature', value: 'auto', description: 'Generate and install man pages')
+option('tests', type: 'feature', value: 'disabled', description: 'Build the test clients and register the test suite')

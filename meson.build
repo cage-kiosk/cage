@@ -40,6 +40,7 @@ endif
 wlroots        = dependency('wlroots-0.20', fallback: ['wlroots', 'wlroots'])
 wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
+pixman         = dependency('pixman-1')
 math           = cc.find_library('m')
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
@@ -106,23 +107,34 @@ if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
   cage_sources += 'xwayland.c'
 endif
 
-executable(
+cage = executable(
   meson.project_name(),
   cage_sources,
   dependencies: [
     wayland_server,
     wlroots,
     xkbcommon,
+    pixman,
     math,
   ],
   install: true,
 )
+
+tests_opt = get_option('tests')
+wayland_client = dependency('wayland-client', required: tests_opt)
+wayland_protos = dependency('wayland-protocols', version: '>=1.14', required: tests_opt)
+wayland_scanner = find_program('wayland-scanner', native: true, required: tests_opt)
+have_tests = wayland_client.found() and wayland_protos.found() and wayland_scanner.found()
+if have_tests
+  subdir('tests')
+endif
 
 summary = [
   '',
   'Cage @0@'.format(version),
   '',
   '    xwayland: @0@'.format(have_xwayland),
+  '    tests: @0@'.format(have_tests),
   ''
 ]
 message('\n'.join(summary))
