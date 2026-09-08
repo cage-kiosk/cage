@@ -25,11 +25,13 @@
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_drm.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
+#include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -379,7 +381,29 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	wlr_renderer_init_wl_display(server.renderer, server.wl_display);
+	if (!wlr_renderer_init_wl_shm(server.renderer, server.wl_display)) {
+		wlr_log(WLR_ERROR, "Unable to initialize wlr renderer with shm");
+		ret = 1;
+		goto end;
+	}
+
+	struct wlr_linux_dmabuf_v1 *linux_dmabuf = NULL;
+	if (wlr_renderer_get_texture_formats(server.renderer, WLR_BUFFER_CAP_DMABUF) != 0 &&
+	    wlr_renderer_get_drm_fd(server.renderer) >= 0) {
+		if (wlr_drm_create(server.wl_display, server.renderer) == NULL) {
+			wlr_log(WLR_ERROR, "Unable to initialize wlr_drm");
+			ret = 1;
+			goto end;
+		}
+		linux_dmabuf = wlr_linux_dmabuf_v1_create_with_renderer(server.wl_display, 4, server.renderer);
+		if (linux_dmabuf == NULL) {
+			wlr_log(WLR_ERROR, "Unable to initialize wlr_linux_dmabuf_v1");
+			ret = 1;
+			goto end;
+		}
+	} else {
+		wlr_log(WLR_DEBUG, "Not initialising dmabufs");
+	}
 
 	wl_list_init(&server.views);
 	wl_list_init(&server.outputs);
@@ -398,6 +422,10 @@ main(int argc, char *argv[])
 		wlr_log(WLR_ERROR, "Unable to create scene");
 		ret = 1;
 		goto end;
+	}
+
+	if (linux_dmabuf) {
+		wlr_scene_set_linux_dmabuf_v1(server.scene, linux_dmabuf);
 	}
 
 	server.scene_output_layout = wlr_scene_attach_output_layout(server.scene, server.output_layout);
