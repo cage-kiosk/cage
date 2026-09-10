@@ -60,7 +60,12 @@ view_extends_output_layout(struct cg_view *view, struct wlr_box *layout_box)
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
-	return (layout_box->height < height || layout_box->width < width);
+	if (view->server->clone_mode) {
+		struct wlr_box confine_box = view->server->seat->clone_confine_box;
+		return (confine_box.height < height || confine_box.width < width);
+	} else {
+		return (layout_box->height < height || layout_box->width < width);
+	}
 }
 
 static void
@@ -73,7 +78,12 @@ view_maximize(struct cg_view *view, struct wlr_box *layout_box)
 		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
 	}
 
-	view->impl->maximize(view, layout_box->width, layout_box->height);
+	if (view->server->clone_mode) {
+		struct wlr_box confine_box = view->server->seat->clone_confine_box;
+		view->impl->maximize(view, confine_box.width, confine_box.height);
+	} else {
+		view->impl->maximize(view, layout_box->width, layout_box->height);
+	}
 }
 
 static void
@@ -82,8 +92,14 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
-	view->lx = (layout_box->width - width) / 2;
-	view->ly = (layout_box->height - height) / 2;
+	if (view->server->clone_mode) {
+		struct wlr_box confine_box = view->server->seat->clone_confine_box;
+		view->lx = (confine_box.width - width) / 2;
+		view->ly = (confine_box.height - height) / 2;
+	} else {
+		view->lx = (layout_box->width - width) / 2;
+		view->ly = (layout_box->height - height) / 2;
+	}
 
 	if (view->scene_tree) {
 		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
