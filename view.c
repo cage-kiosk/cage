@@ -110,6 +110,10 @@ view_position_all(struct cg_server *server)
 	wl_list_for_each (view, &server->views, link) {
 		view_position(view);
 	}
+
+	/* The views moved under the cursor: an active pointer constraint has to
+	 * be enforced again from their new positions. */
+	seat_revalidate_pointer_constraint(server->seat);
 }
 
 void

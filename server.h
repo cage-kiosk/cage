@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/log.h>
@@ -67,6 +68,9 @@ struct cg_server {
 #endif
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
+
+	struct wlr_pointer_constraints_v1 *pointer_constraints;
+	struct wl_listener new_constraint;
 
 	struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
 

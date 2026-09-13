@@ -43,8 +43,11 @@ jobs:
         run: |
           meson setup --fatal-meson-warnings --wrap-mode=nodownload \
             build-${{ matrix.CC }}-${{matrix.xwayland }} \
-            -Dwlroots:xwayland=${{ matrix.xwayland }}
+            -Dwlroots:xwayland=${{ matrix.xwayland }} -Dtests=enabled
           ninja -C build-${{ matrix.CC }}-${{matrix.xwayland }}
+
+      - name: Run tests
+        run: meson test -C build-${{ matrix.CC }}-${{matrix.xwayland }} --print-errorlogs
 
   format:
     runs-on: ubuntu-latest
