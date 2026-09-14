@@ -13,6 +13,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -214,7 +215,7 @@ output_destroy(struct cg_output *output)
 
 	free(output);
 
-	if (wl_list_empty(&server->outputs) && was_nested_output) {
+	if (wl_list_empty(&server->outputs) && (was_nested_output || server->output_name)) {
 		server_terminate(server);
 	} else if (server->output_mode == CAGE_MULTI_OUTPUT_MODE_LAST && !wl_list_empty(&server->outputs)) {
 		struct cg_output *prev = wl_container_of(server->outputs.next, prev, link);
@@ -243,6 +244,16 @@ handle_new_output(struct wl_listener *listener, void *data)
 			wlr_drm_lease_v1_manager_offer_output(server->drm_lease_v1, wlr_output);
 		}
 #endif
+		return;
+	}
+
+	if (server->output_name && strcmp(wlr_output->name, server->output_name) != 0) {
+		wlr_log(WLR_INFO, "Ignoring output '%s': -o selected '%s'", wlr_output->name, server->output_name);
+		if (wlr_output->enabled) {
+			struct wlr_output_state state = {0};
+			wlr_output_state_set_enabled(&state, false);
+			wlr_output_commit_state(wlr_output, &state);
+		}
 		return;
 	}
 
