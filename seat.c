@@ -26,6 +26,8 @@
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
@@ -135,11 +137,30 @@ update_capabilities(struct cg_seat *seat)
 	}
 }
 
+/* Map an input device without a name to the sole connected output, if
+ * there is exactly one. Some panels combine the screen and the touch
+ * controller (e.g. the Raspberry Pi 10" DSI display) and report no output
+ * name; without a mapping wlroots never applies the output transform to
+ * their events, which misaligns touch on rotated outputs. */
+void
+map_device_to_sole_output(struct cg_seat *seat, struct wlr_input_device *device)
+{
+	if (wl_list_length(&seat->server->outputs) != 1) {
+		return;
+	}
+
+	struct cg_output *output = wl_container_of(seat->server->outputs.next, output, link);
+	wlr_log(WLR_INFO,
+		"Input device %s has no output name; mapping it to the sole output %s\n",
+		device->name, output->wlr_output->name);
+	wlr_cursor_map_input_to_output(seat->cursor, device, output->wlr_output);
+}
+
 static void
 map_input_device_to_output(struct cg_seat *seat, struct wlr_input_device *device, const char *output_name)
 {
 	if (!output_name) {
-		wlr_log(WLR_INFO, "Input device %s cannot be mapped to an output device\n", device->name);
+		map_device_to_sole_output(seat, device);
 		return;
 	}
 
@@ -207,6 +228,12 @@ handle_pointer_destroy(struct wl_listener *listener, void *data)
 static void
 handle_new_pointer(struct cg_seat *seat, struct wlr_pointer *wlr_pointer)
 {
+	if (seat->server->touch_only) {
+		/* Touch-only seat: skip pointer devices entirely so the seat never
+		 * advertises the pointer capability and no cursor is drawn. */
+		return;
+	}
+
 	struct cg_pointer *pointer = calloc(1, sizeof(struct cg_pointer));
 	if (!pointer) {
 		wlr_log(WLR_ERROR, "Cannot allocate pointer");
@@ -987,10 +1014,20 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 }
 
 void
-seat_center_cursor(struct cg_seat *seat)
+seat_init_cursor(struct cg_seat *seat)
 {
-	/* Place the cursor in the center of the output layout. */
+	/* Place the cursor in the center of the output layout, or at the
+	 * position given with -c. Kiosk setups usually want the cursor out of
+	 * the way of on-screen controls (e.g. cage -c 960,1199). */
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(seat->server->output_layout, NULL, &layout_box);
-	wlr_cursor_warp(seat->cursor, NULL, layout_box.width / 2, layout_box.height / 2);
+
+	int x = layout_box.width / 2;
+	int y = layout_box.height / 2;
+	if (seat->server->initial_cursor_set) {
+		x = seat->server->initial_cursor_x;
+		y = seat->server->initial_cursor_y;
+	}
+
+	wlr_cursor_warp(seat->cursor, NULL, x, y);
 }
