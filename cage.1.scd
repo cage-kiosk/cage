@@ -33,6 +33,22 @@ activities outside the scope of the running application are prevented.
 *-s*
 	Allow VT switching
 
+*-t* <transform>
+	Output transform applied to all outputs. Supported values are
+	*normal*, *90*, *180*, *270*, *flipped*, *90flipped*, *180flipped*,
+	*270flipped* (aliases: *left*, *right*). Use this to correct a
+	physically rotated panel.
+
+*-T*
+	Create a touch-only seat: no pointer capability is advertised and no
+	cursor is drawn. Useful for touch kiosks where a persistent cursor or
+	hover state is unwanted.
+
+*-c* <X>,<Y>
+	Place the initial cursor at position X,Y in layout coordinates
+	(default: the center of the output layout). Use this to keep the
+	cursor out of the way of the application's on-screen controls.
+
 *-v*
 	Show the version number and exit.
 
