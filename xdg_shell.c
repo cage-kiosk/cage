@@ -174,7 +174,11 @@ maximize(struct cg_view *view, int output_width, int output_height)
 {
 	struct cg_xdg_shell_view *xdg_shell_view = xdg_shell_view_from_view(view);
 	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, output_width, output_height);
-	wlr_xdg_toplevel_set_maximized(xdg_shell_view->xdg_toplevel, true);
+	/* A fullscreen toplevel already fills the output, don't report it as
+	 * maximized as well: some clients (e.g. Wine) only accept a configure
+	 * whose states match the state they requested. */
+	wlr_xdg_toplevel_set_maximized(xdg_shell_view->xdg_toplevel,
+				       !xdg_shell_view->xdg_toplevel->requested.fullscreen);
 }
 
 static void
@@ -201,6 +205,7 @@ set_fullscreen(struct cg_xdg_shell_view *xdg_shell_view, bool fullscreen)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
 	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
+	wlr_xdg_toplevel_set_maximized(xdg_shell_view->xdg_toplevel, !fullscreen);
 	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, fullscreen);
 }
 
