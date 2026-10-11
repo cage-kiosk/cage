@@ -42,6 +42,8 @@ wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
 
+libinput = dependency('libinput')
+
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
 version = '@0@'.format(meson.project_version())
@@ -114,6 +116,7 @@ executable(
     wlroots,
     xkbcommon,
     math,
+    libinput,
   ],
   install: true,
 )
