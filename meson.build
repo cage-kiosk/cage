@@ -42,6 +42,8 @@ wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
 
+subdir('protocols')
+
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
 version = '@0@'.format(meson.project_version())
@@ -108,7 +110,7 @@ endif
 
 executable(
   meson.project_name(),
-  cage_sources,
+  cage_sources + wl_protos_src,
   dependencies: [
     wayland_server,
     wlroots,
