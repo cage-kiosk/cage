@@ -16,6 +16,7 @@
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_subcompositor.h>
 
 #include "output.h"
 #include "seat.h"
@@ -214,4 +215,28 @@ view_from_wlr_surface(struct wlr_surface *surface)
 {
 	assert(surface);
 	return surface->data;
+}
+
+struct cg_view *
+view_from_wlr_surface_descendant(struct wlr_surface *surface)
+{
+	while (surface) {
+		if (wlr_subsurface_try_from_wlr_surface(surface)) {
+			surface = wlr_surface_get_root_surface(surface);
+			continue;
+		}
+		struct wlr_xdg_surface *xdg_surface = wlr_xdg_surface_try_from_wlr_surface(surface);
+		if (xdg_surface && xdg_surface->role == WLR_XDG_SURFACE_ROLE_POPUP && xdg_surface->popup) {
+			if (!xdg_surface->popup->parent) {
+				return NULL;
+			}
+			surface = wlr_surface_get_root_surface(xdg_surface->popup->parent);
+			continue;
+		}
+		break;
+	}
+	if (!surface) {
+		return NULL;
+	}
+	return view_from_wlr_surface(surface);
 }
