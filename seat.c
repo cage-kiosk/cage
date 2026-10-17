@@ -36,6 +36,7 @@
 #include <wlr/xwayland.h>
 #endif
 
+#include "layer_shell_v1.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -84,6 +85,12 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device, uint3
 				struct cg_view *current = seat_get_focus(seat);
 				if (current != view && (!current || !view_is_transient_for(current, view))) {
 					seat_set_focus(seat, view);
+				}
+			} else {
+				struct cg_layer_surface *layer_surface = layer_surface_from_wlr_surface_descendant(surface);
+				if (layer_surface && layer_surface->layer_surface->current.keyboard_interactive !=
+							     ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
+					seat_set_focus_layer(seat, layer_surface->layer_surface);
 				}
 			}
 		}
@@ -908,12 +915,25 @@ seat_get_focus(struct cg_seat *seat)
 	if (!prev_surface) {
 		return NULL;
 	}
+
+	if (seat->focused_layer && seat->focused_layer->surface == prev_surface) {
+		return NULL;
+	}
+
 	return view_from_wlr_surface(prev_surface);
 }
 
 void
 seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 {
+	if (seat->focused_layer) {
+		if (seat->focused_layer->current.keyboard_interactive ==
+		    ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE) {
+			return;
+		}
+		seat_set_focus_layer(seat, NULL);
+	}
+
 	struct cg_server *server = seat->server;
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct cg_view *prev_view = seat_get_focus(seat);
@@ -959,6 +979,34 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 
 	process_cursor_motion(seat, -1, 0, 0, 0, 0);
+}
+
+void
+seat_set_focus_layer(struct cg_seat *seat, struct wlr_layer_surface_v1 *layer)
+{
+	if (seat->focused_layer == layer) {
+		return;
+	}
+
+	seat->focused_layer = layer;
+
+	if (!layer) {
+		struct cg_view *view = seat_get_focus(seat);
+		if (view) {
+			seat_set_focus(seat, view);
+		}
+		return;
+	}
+
+	if (layer->current.keyboard_interactive != ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
+		struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat->seat);
+		if (keyboard) {
+			wlr_seat_keyboard_notify_enter(seat->seat, layer->surface, keyboard->keycodes,
+						       keyboard->num_keycodes, &keyboard->modifiers);
+		} else {
+			wlr_seat_keyboard_notify_enter(seat->seat, layer->surface, NULL, 0, NULL);
+		}
+	}
 }
 
 void

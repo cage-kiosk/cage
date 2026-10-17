@@ -8,6 +8,7 @@
 #include <wlr/types/wlr_drm_lease_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
@@ -54,6 +55,9 @@ struct cg_server {
 
 	struct wl_listener new_virtual_keyboard;
 	struct wl_listener new_virtual_pointer;
+
+	struct wlr_layer_shell_v1 *layer_shell_v1;
+	struct wl_listener new_layer_shell_v1_surface;
 #if CAGE_HAS_XWAYLAND
 	struct wl_listener new_xwayland_surface;
 #endif
@@ -84,5 +88,6 @@ struct cg_server {
 };
 
 void server_terminate(struct cg_server *server);
+void server_get_usable_layout_box(struct cg_server *server, struct wlr_box *usable_box);
 
 #endif

@@ -55,6 +55,7 @@
 #endif
 
 #include "idle_inhibit_v1.h"
+#include "layer_shell_v1.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -513,6 +514,15 @@ main(int argc, char *argv[])
 	server.new_xdg_popup.notify = handle_new_xdg_popup;
 	wl_signal_add(&xdg_shell->events.new_popup, &server.new_xdg_popup);
 
+	server.layer_shell_v1 = wlr_layer_shell_v1_create(server.wl_display, 5);
+	if (!server.layer_shell_v1) {
+		wlr_log(WLR_ERROR, "Unable to create the layer shell");
+		ret = 1;
+		goto end;
+	}
+	server.new_layer_shell_v1_surface.notify = handle_layer_shell_v1_surface_new;
+	wl_signal_add(&server.layer_shell_v1->events.new_surface, &server.new_layer_shell_v1_surface);
+
 	struct wlr_xdg_decoration_manager_v1 *xdg_decoration_manager =
 		wlr_xdg_decoration_manager_v1_create(server.wl_display);
 	if (!xdg_decoration_manager) {
@@ -709,6 +719,7 @@ main(int argc, char *argv[])
 #endif
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
+	wl_list_remove(&server.new_layer_shell_v1_surface.link);
 	wl_list_remove(&server.output_manager_apply.link);
 	wl_list_remove(&server.output_manager_test.link);
 	wl_list_remove(&server.xdg_toplevel_decoration.link);

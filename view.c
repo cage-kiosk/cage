@@ -83,8 +83,8 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
-	view->lx = (layout_box->width - width) / 2;
-	view->ly = (layout_box->height - height) / 2;
+	view->lx = layout_box->x + (layout_box->width - width) / 2;
+	view->ly = layout_box->y + (layout_box->height - height) / 2;
 
 	if (view->scene_tree) {
 		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
@@ -92,10 +92,46 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 }
 
 void
+server_get_usable_layout_box(struct cg_server *server, struct wlr_box *usable_box)
+{
+	struct wlr_box layout_box;
+	wlr_output_layout_get_box(server->output_layout, NULL, &layout_box);
+	*usable_box = layout_box;
+
+	struct cg_output *output;
+	wl_list_for_each (output, &server->outputs, link) {
+		if (!output->wlr_output->enabled) {
+			continue;
+		}
+		struct wlr_box output_box;
+		wlr_output_layout_get_box(server->output_layout, output->wlr_output, &output_box);
+		int top_margin = output->usable_area.y;
+		int left_margin = output->usable_area.x;
+		int bottom_margin = output_box.height - (output->usable_area.y + output->usable_area.height);
+		int right_margin = output_box.width - (output->usable_area.x + output->usable_area.width);
+
+		if (output_box.y == layout_box.y && top_margin > 0) {
+			usable_box->y += top_margin;
+			usable_box->height -= top_margin;
+		}
+		if (output_box.x == layout_box.x && left_margin > 0) {
+			usable_box->x += left_margin;
+			usable_box->width -= left_margin;
+		}
+		if (output_box.y + output_box.height == layout_box.y + layout_box.height && bottom_margin > 0) {
+			usable_box->height -= bottom_margin;
+		}
+		if (output_box.x + output_box.width == layout_box.x + layout_box.width && right_margin > 0) {
+			usable_box->width -= right_margin;
+		}
+	}
+}
+
+void
 view_position(struct cg_view *view)
 {
 	struct wlr_box layout_box;
-	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
+	server_get_usable_layout_box(view->server, &layout_box);
 
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
 		view_maximize(view, &layout_box);
