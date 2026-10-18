@@ -98,6 +98,7 @@ cage_sources = [
   'layer_shell_v1.c',
   'output.c',
   'seat.c',
+  'text_input.c',
   'view.c',
   'xdg_shell.c',
   configure_file(input: 'config.h.in',

@@ -14,6 +14,8 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/util/log.h>
 
+#include "text_input.h"
+
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
 #endif
@@ -58,6 +60,8 @@ struct cg_server {
 
 	struct wlr_layer_shell_v1 *layer_shell_v1;
 	struct wl_listener new_layer_shell_v1_surface;
+
+	struct cg_text_input_relay text_input_relay;
 #if CAGE_HAS_XWAYLAND
 	struct wl_listener new_xwayland_surface;
 #endif

@@ -59,6 +59,7 @@
 #include "output.h"
 #include "seat.h"
 #include "server.h"
+#include "text_input.h"
 #include "view.h"
 #include "xdg_shell.h"
 #if CAGE_HAS_XWAYLAND
@@ -485,6 +486,7 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+	text_input_relay_init(&server, &server.text_input_relay);
 
 	server.idle = wlr_idle_notifier_v1_create(server.wl_display);
 	if (!server.idle) {
@@ -717,6 +719,7 @@ main(int argc, char *argv[])
 		wl_list_remove(&server.drm_lease_request.link);
 	}
 #endif
+	text_input_relay_finish(&server.text_input_relay);
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
 	wl_list_remove(&server.new_layer_shell_v1_surface.link);

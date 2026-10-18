@@ -40,6 +40,7 @@
 #include "output.h"
 #include "seat.h"
 #include "server.h"
+#include "text_input.h"
 #include "view.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
@@ -978,6 +979,8 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, NULL, 0, NULL);
 	}
 
+	text_input_relay_set_focus(&server->text_input_relay, view->wlr_surface);
+
 	process_cursor_motion(seat, -1, 0, 0, 0, 0);
 }
 
@@ -994,6 +997,8 @@ seat_set_focus_layer(struct cg_seat *seat, struct wlr_layer_surface_v1 *layer)
 		struct cg_view *view = seat_get_focus(seat);
 		if (view) {
 			seat_set_focus(seat, view);
+		} else {
+			text_input_relay_set_focus(&seat->server->text_input_relay, NULL);
 		}
 		return;
 	}
@@ -1006,6 +1011,9 @@ seat_set_focus_layer(struct cg_seat *seat, struct wlr_layer_surface_v1 *layer)
 		} else {
 			wlr_seat_keyboard_notify_enter(seat->seat, layer->surface, NULL, 0, NULL);
 		}
+		text_input_relay_set_focus(&seat->server->text_input_relay, layer->surface);
+	} else {
+		text_input_relay_set_focus(&seat->server->text_input_relay, NULL);
 	}
 }
 

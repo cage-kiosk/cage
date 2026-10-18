@@ -21,6 +21,7 @@
 #include "output.h"
 #include "seat.h"
 #include "server.h"
+#include "text_input.h"
 #include "view.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
@@ -235,6 +236,8 @@ view_destroy(struct cg_view *view)
 	if (!empty) {
 		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
 		seat_set_focus(server->seat, prev);
+	} else {
+		text_input_relay_set_focus(&server->text_input_relay, NULL);
 	}
 }
 
