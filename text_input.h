@@ -9,6 +9,7 @@
 #ifndef CG_TEXT_INPUT_H
 #define CG_TEXT_INPUT_H
 
+#include <stdbool.h>
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_input_method_v2.h>
 #include <wlr/types/wlr_text_input_v3.h>
@@ -23,6 +24,8 @@ struct cg_text_input_relay {
 
 	struct wl_list text_inputs; // struct cg_text_input.link
 	struct wlr_input_method_v2 *input_method;
+	bool input_method_active;
+	struct wl_event_source *deactivate_timer;
 
 	struct wl_listener text_input_new;
 	struct wl_listener text_input_manager_destroy;

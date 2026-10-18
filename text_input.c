@@ -109,6 +109,11 @@ handle_im_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&relay->input_method_destroy.link);
 	relay->input_method = NULL;
 
+	if (relay->deactivate_timer) {
+		wl_event_source_timer_update(relay->deactivate_timer, 0);
+	}
+	relay->input_method_active = false;
+
 	wlr_log(WLR_INFO, "Input method disconnected");
 
 	struct cg_text_input *text_input;
@@ -151,8 +156,19 @@ handle_text_input_enable(struct wl_listener *listener, void *data)
 	if (text_input->relay->input_method == NULL) {
 		return;
 	}
-	wlr_log(WLR_INFO, "Text input v3 enabled -> activating input method");
-	wlr_input_method_v2_send_activate(text_input->relay->input_method);
+
+	if (text_input->relay->deactivate_timer) {
+		wl_event_source_timer_update(text_input->relay->deactivate_timer, 0);
+	}
+
+	if (!text_input->relay->input_method_active) {
+		text_input->relay->input_method_active = true;
+		wlr_log(WLR_INFO, "Text input v3 enabled -> activating input method");
+		wlr_input_method_v2_send_activate(text_input->relay->input_method);
+	} else {
+		wlr_log(WLR_DEBUG, "Text input v3 enabled -> input method already active");
+	}
+
 	relay_send_im_state(text_input->relay, text_input->input);
 }
 
@@ -169,15 +185,32 @@ handle_text_input_commit(struct wl_listener *listener, void *data)
 	relay_send_im_state(text_input->relay, text_input->input);
 }
 
+static int
+handle_deactivate_timer(void *data)
+{
+	struct cg_text_input_relay *relay = data;
+	if (relay->input_method && relay->input_method_active) {
+		wlr_log(WLR_INFO, "Deactivating input method (debounced)");
+		relay->input_method_active = false;
+		wlr_input_method_v2_send_deactivate(relay->input_method);
+		struct cg_text_input *text_input = relay_get_focused_text_input(relay);
+		if (text_input) {
+			relay_send_im_state(relay, text_input->input);
+		}
+	}
+	return 0;
+}
+
 static void
 relay_disable_text_input(struct cg_text_input_relay *relay, struct cg_text_input *text_input)
 {
 	if (relay->input_method == NULL) {
 		return;
 	}
-	wlr_log(WLR_INFO, "Text input v3 disabled -> deactivating input method");
-	wlr_input_method_v2_send_deactivate(relay->input_method);
-	relay_send_im_state(relay, text_input->input);
+	if (relay->deactivate_timer && relay->input_method_active) {
+		wlr_log(WLR_INFO, "Text input v3 disabled -> starting 100ms debounce timer");
+		wl_event_source_timer_update(relay->deactivate_timer, 100);
+	}
 }
 
 static void
@@ -333,7 +366,11 @@ void
 text_input_relay_init(struct cg_server *server, struct cg_text_input_relay *relay)
 {
 	relay->server = server;
+	relay->input_method_active = false;
 	wl_list_init(&relay->text_inputs);
+
+	struct wl_event_loop *loop = wl_display_get_event_loop(server->wl_display);
+	relay->deactivate_timer = wl_event_loop_add_timer(loop, handle_deactivate_timer, relay);
 
 	relay->text_input_manager = wlr_text_input_manager_v3_create(server->wl_display);
 	if (relay->text_input_manager) {
@@ -359,6 +396,11 @@ text_input_relay_init(struct cg_server *server, struct cg_text_input_relay *rela
 void
 text_input_relay_finish(struct cg_text_input_relay *relay)
 {
+	if (relay->deactivate_timer) {
+		wl_event_source_remove(relay->deactivate_timer);
+		relay->deactivate_timer = NULL;
+	}
+
 	if (relay->text_input_manager) {
 		wl_list_remove(&relay->text_input_new.link);
 		wl_list_remove(&relay->text_input_manager_destroy.link);
@@ -390,6 +432,17 @@ void
 text_input_relay_set_focus(struct cg_text_input_relay *relay, struct wlr_surface *surface)
 {
 	wlr_log(WLR_INFO, "Text input relay set focus: surface=%p", surface);
+
+	if (!surface) {
+		if (relay->deactivate_timer) {
+			wl_event_source_timer_update(relay->deactivate_timer, 0);
+		}
+		if (relay->input_method && relay->input_method_active) {
+			relay->input_method_active = false;
+			wlr_log(WLR_INFO, "Focus lost -> deactivating input method");
+			wlr_input_method_v2_send_deactivate(relay->input_method);
+		}
+	}
 
 	struct cg_text_input *text_input;
 	wl_list_for_each (text_input, &relay->text_inputs, link) {
