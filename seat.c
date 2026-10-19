@@ -265,10 +265,12 @@ handle_keybinding(struct cg_server *server, xkb_keysym_t sym)
 #endif
 	if (server->allow_vt_switch && sym >= XKB_KEY_XF86Switch_VT_1 && sym <= XKB_KEY_XF86Switch_VT_12) {
 		if (wlr_backend_is_multi(server->backend)) {
+#if WLR_HAS_SESSION
 			if (server->session) {
 				unsigned vt = sym - XKB_KEY_XF86Switch_VT_1 + 1;
 				wlr_session_change_vt(server->session, vt);
 			}
+#endif
 		}
 	} else {
 		return false;
