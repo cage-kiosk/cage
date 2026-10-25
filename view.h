@@ -61,5 +61,6 @@ void view_destroy(struct cg_view *view);
 void view_init(struct cg_view *view, struct cg_server *server, enum cg_view_type type, const struct cg_view_impl *impl);
 
 struct cg_view *view_from_wlr_surface(struct wlr_surface *surface);
+struct cg_view *view_from_wlr_surface_descendant(struct wlr_surface *surface);
 
 #endif
