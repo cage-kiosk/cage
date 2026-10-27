@@ -10,7 +10,6 @@
 
 #include "config.h"
 
-#include <assert.h>
 #include <linux/input-event-codes.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,11 +17,13 @@
 #include <wlr/backend.h>
 #include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
+#include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_keyboard_group.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
@@ -31,6 +32,7 @@
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -46,19 +48,9 @@
 
 static void drag_icon_update_position(struct cg_drag_icon *drag_icon);
 
-/* XDG toplevels may have nested surfaces, such as popup windows for context
- * menus or tooltips. This function tests if any of those are underneath the
- * coordinates lx and ly (in output Layout Coordinates). If so, it sets the
- * surface pointer to that wlr_surface and the sx and sy coordinates to the
- * coordinates relative to that surface's top-left corner.
- *
- * This function iterates over all of our surfaces and attempts to find one
- * under the cursor. If desktop_view_at returns a view, there is also a
- * surface. There cannot be a surface without a view, either. It's both or
- * nothing.
- */
-static struct cg_view *
-desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surface **surface, double *sx, double *sy)
+/* Return the wlr_surface at the given layout coordinates, or NULL. */
+static struct wlr_surface *
+desktop_surface_at(struct cg_server *server, double lx, double ly, double *sx, double *sy)
 {
 	struct wlr_scene_node *node = wlr_scene_node_at(&server->scene->tree.node, lx, ly, sx, sy);
 	if (node == NULL || node->type != WLR_SCENE_NODE_BUFFER) {
@@ -71,21 +63,32 @@ desktop_view_at(struct cg_server *server, double lx, double ly, struct wlr_surfa
 		return NULL;
 	}
 
-	*surface = scene_surface->surface;
+	return scene_surface->surface;
+}
 
-	/* Walk up the tree until we find a node with a data pointer. When done,
-	 * we've found the node representing the view. */
-	while (!node->data) {
-		if (!node->parent) {
-			node = NULL;
-			break;
-		}
-
-		node = &node->parent->node;
+/* Return the surface at the root of a subsurface and xdg popup tree. */
+static struct wlr_surface *
+surface_get_owner(struct wlr_surface *surface)
+{
+	surface = wlr_surface_get_root_surface(surface);
+	struct wlr_xdg_popup *popup;
+	while ((popup = wlr_xdg_popup_try_from_wlr_surface(surface)) && popup->parent) {
+		surface = wlr_surface_get_root_surface(popup->parent);
 	}
+	return surface;
+}
 
-	assert(node != NULL);
-	return node->data;
+static bool
+layer_is_exclusive(struct wlr_layer_surface_v1 *layer)
+{
+	return layer->current.layer >= ZWLR_LAYER_SHELL_V1_LAYER_TOP &&
+	       layer->current.keyboard_interactive == ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE;
+}
+
+static bool
+seat_has_exclusive_layer(struct cg_seat *seat)
+{
+	return seat->focused_layer && layer_is_exclusive(seat->focused_layer);
 }
 
 static void
@@ -96,17 +99,22 @@ press_cursor_button(struct cg_seat *seat, struct wlr_input_device *device, uint3
 
 	if (state == WLR_BUTTON_PRESSED) {
 		double sx, sy;
-		struct wlr_surface *surface;
-		struct cg_view *view = desktop_view_at(server, lx, ly, &surface, &sx, &sy);
-		struct cg_view *current = seat_get_focus(seat);
-		if (view == current) {
+		struct wlr_surface *surface = desktop_surface_at(server, lx, ly, &sx, &sy);
+		if (!surface) {
 			return;
 		}
 
-		/* Focus that client if the button was pressed and
-		   it has no open dialogs. */
-		if (view && !view_is_transient_for(current, view)) {
-			seat_set_focus(seat, view);
+		struct wlr_surface *owner = surface_get_owner(surface);
+		struct cg_view *view = view_from_wlr_surface(owner);
+		struct wlr_layer_surface_v1 *layer_surface = wlr_layer_surface_v1_try_from_wlr_surface(owner);
+		if (view) {
+			/* Focus that client if it has no open dialogs. */
+			struct cg_view *current = seat_get_focus(seat);
+			if (!current || !view_is_transient_for(current, view)) {
+				seat_set_focus(seat, view);
+			}
+		} else if (layer_surface && layer_surface->current.keyboard_interactive) {
+			seat_set_focus_layer(seat, layer_surface);
 		}
 	}
 }
@@ -534,11 +542,10 @@ handle_touch_down(struct wl_listener *listener, void *data)
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->touch->base, event->x, event->y, &lx, &ly);
 
 	double sx, sy;
-	struct wlr_surface *surface;
-	struct cg_view *view = desktop_view_at(seat->server, lx, ly, &surface, &sx, &sy);
+	struct wlr_surface *surface = desktop_surface_at(seat->server, lx, ly, &sx, &sy);
 
 	uint32_t serial = 0;
-	if (view) {
+	if (surface) {
 		serial = wlr_seat_touch_notify_down(seat->seat, surface, event->time_msec, event->touch_id, sx, sy);
 	}
 
@@ -585,10 +592,9 @@ handle_touch_motion(struct wl_listener *listener, void *data)
 	wlr_cursor_absolute_to_layout_coords(seat->cursor, &event->touch->base, event->x, event->y, &lx, &ly);
 
 	double sx, sy;
-	struct wlr_surface *surface;
-	struct cg_view *view = desktop_view_at(seat->server, lx, ly, &surface, &sx, &sy);
+	struct wlr_surface *surface = desktop_surface_at(seat->server, lx, ly, &sx, &sy);
 
-	if (view) {
+	if (surface) {
 		wlr_seat_touch_point_focus(seat->seat, surface, event->time_msec, event->touch_id, sx, sy);
 		wlr_seat_touch_notify_motion(seat->seat, event->time_msec, event->touch_id, sx, sy);
 	} else {
@@ -652,8 +658,8 @@ process_cursor_motion(struct cg_seat *seat, uint32_t time_msec, double dx, doubl
 	struct wlr_seat *wlr_seat = seat->seat;
 	struct wlr_surface *surface = NULL;
 
-	struct cg_view *view = desktop_view_at(seat->server, seat->cursor->x, seat->cursor->y, &surface, &sx, &sy);
-	if (!view) {
+	surface = desktop_surface_at(seat->server, seat->cursor->x, seat->cursor->y, &sx, &sy);
+	if (!surface) {
 		wlr_seat_pointer_clear_focus(wlr_seat);
 	} else {
 		wlr_seat_pointer_notify_enter(wlr_seat, surface, sx, sy);
@@ -780,7 +786,8 @@ handle_start_drag(struct wl_listener *listener, void *data)
 	}
 	drag_icon->seat = seat;
 	drag_icon->wlr_drag_icon = wlr_drag_icon;
-	drag_icon->scene_tree = wlr_scene_subsurface_tree_create(&seat->server->scene->tree, wlr_drag_icon->surface);
+	drag_icon->scene_tree =
+		wlr_scene_subsurface_tree_create(seat->server->layers.drag_icons, wlr_drag_icon->surface);
 	if (!drag_icon->scene_tree) {
 		free(drag_icon);
 		return;
@@ -931,21 +938,28 @@ seat_destroy(struct cg_seat *seat)
 struct cg_view *
 seat_get_focus(struct cg_seat *seat)
 {
-	struct wlr_surface *prev_surface = seat->seat->keyboard_state.focused_surface;
-	if (!prev_surface) {
-		return NULL;
+	return seat->focused_view;
+}
+
+static void
+seat_keyboard_notify_enter(struct cg_seat *seat, struct wlr_surface *surface)
+{
+	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat->seat);
+	if (keyboard) {
+		wlr_seat_keyboard_notify_enter(seat->seat, surface, keyboard->keycodes, keyboard->num_keycodes,
+					       &keyboard->modifiers);
+	} else {
+		wlr_seat_keyboard_notify_enter(seat->seat, surface, NULL, 0, NULL);
 	}
-	return view_from_wlr_surface(prev_surface);
 }
 
 void
 seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 {
 	struct cg_server *server = seat->server;
-	struct wlr_seat *wlr_seat = seat->seat;
-	struct cg_view *prev_view = seat_get_focus(seat);
+	struct cg_view *prev_view = seat->focused_view;
 
-	if (!view || prev_view == view) {
+	if (!view || (prev_view == view && !seat->focused_layer)) {
 		return;
 	}
 
@@ -958,34 +972,60 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 	}
 #endif
 
-	if (prev_view) {
-		view_activate(prev_view, false);
+	if (prev_view != view) {
+		if (prev_view) {
+			view_activate(prev_view, false);
+		}
+
+		/* Move the view to the front, but only if it isn't a
+		   fullscreen view. */
+		if (!view_is_primary(view)) {
+			wl_list_remove(&view->link);
+			wl_list_insert(&server->views, &view->link);
+		}
+
+		view_activate(view, true);
+		char *title = view_get_title(view);
+		struct cg_output *output;
+		wl_list_for_each (output, &server->outputs, link) {
+			output_set_window_title(output, title);
+		}
+		free(title);
+
+		seat->focused_view = view;
 	}
 
-	/* Move the view to the front, but only if it isn't a
-	   fullscreen view. */
-	if (!view_is_primary(view)) {
-		wl_list_remove(&view->link);
-		wl_list_insert(&server->views, &view->link);
+	/* An exclusive layer surface keeps the keyboard until it goes away. */
+	if (seat_has_exclusive_layer(seat)) {
+		return;
 	}
 
-	view_activate(view, true);
-	char *title = view_get_title(view);
-	struct cg_output *output;
-	wl_list_for_each (output, &server->outputs, link) {
-		output_set_window_title(output, title);
-	}
-	free(title);
-
-	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(wlr_seat);
-	if (keyboard) {
-		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, keyboard->keycodes, keyboard->num_keycodes,
-					       &keyboard->modifiers);
-	} else {
-		wlr_seat_keyboard_notify_enter(wlr_seat, view->wlr_surface, NULL, 0, NULL);
-	}
-
+	seat->focused_layer = NULL;
+	seat_keyboard_notify_enter(seat, view->wlr_surface);
 	process_cursor_motion(seat, -1, 0, 0, 0, 0);
+}
+
+void
+seat_set_focus_layer(struct cg_seat *seat, struct wlr_layer_surface_v1 *layer)
+{
+	if (seat->focused_layer == layer) {
+		return;
+	}
+
+	/* Only another exclusive surface can take the keyboard from an exclusive one. */
+	if (layer && seat_has_exclusive_layer(seat) && !layer_is_exclusive(layer)) {
+		return;
+	}
+
+	seat->focused_layer = layer;
+
+	if (layer) {
+		seat_keyboard_notify_enter(seat, layer->surface);
+	} else if (seat->focused_view) {
+		seat_keyboard_notify_enter(seat, seat->focused_view->wlr_surface);
+	} else {
+		wlr_seat_keyboard_notify_clear_focus(seat->seat);
+	}
 }
 
 void

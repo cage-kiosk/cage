@@ -34,7 +34,9 @@
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 
+#include "layer_shell_v1.h"
 #include "output.h"
+#include "seat.h"
 #include "server.h"
 #include "view.h"
 #if CAGE_HAS_XWAYLAND
@@ -95,6 +97,18 @@ output_layout_remove(struct cg_output *output)
 	wlr_output_layout_remove(output->server->output_layout, output->wlr_output);
 }
 
+/* Layer surfaces are bound to their output; closing them lets clients
+ * recreate them on an output that is still in use. */
+static void
+output_destroy_layers(struct cg_output *output)
+{
+	struct cg_layer_surface *layer, *tmp;
+	wl_list_for_each_safe (layer, tmp, &output->layer_surfaces, link) {
+		layer->output = NULL;
+		wlr_layer_surface_v1_destroy(layer->layer_surface);
+	}
+}
+
 static void
 output_enable(struct cg_output *output)
 {
@@ -128,6 +142,7 @@ output_disable(struct cg_output *output)
 	struct wlr_output_state state = {0};
 	wlr_output_state_set_enabled(&state, false);
 	wlr_output_commit_state(wlr_output, &state);
+	output_destroy_layers(output);
 	output_layout_remove(output);
 }
 
@@ -178,6 +193,11 @@ handle_output_layout_change(struct wl_listener *listener, void *data)
 {
 	struct cg_server *server = wl_container_of(listener, server, output_layout_change);
 
+	struct cg_output *output;
+	wl_list_for_each (output, &server->outputs, link) {
+		arrange_layers(output);
+	}
+
 	view_position_all(server);
 	update_output_manager_config(server);
 }
@@ -204,11 +224,18 @@ output_destroy(struct cg_output *output)
 
 	output->wlr_output->data = NULL;
 
+	output_destroy_layers(output);
+
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->commit.link);
 	wl_list_remove(&output->request_state.link);
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
+
+	wlr_scene_node_destroy(&output->layers.shell_background->node);
+	wlr_scene_node_destroy(&output->layers.shell_bottom->node);
+	wlr_scene_node_destroy(&output->layers.shell_top->node);
+	wlr_scene_node_destroy(&output->layers.shell_overlay->node);
 
 	output_layout_remove(output);
 
@@ -261,6 +288,17 @@ handle_new_output(struct wl_listener *listener, void *data)
 	wlr_output->data = output;
 	output->server = server;
 
+	output->layers.shell_background = wlr_scene_tree_create(server->layers.shell_background);
+	output->layers.shell_bottom = wlr_scene_tree_create(server->layers.shell_bottom);
+	output->layers.shell_top = wlr_scene_tree_create(server->layers.shell_top);
+	output->layers.shell_overlay = wlr_scene_tree_create(server->layers.shell_overlay);
+	if (!output->layers.shell_background || !output->layers.shell_bottom || !output->layers.shell_top ||
+	    !output->layers.shell_overlay) {
+		wlr_log(WLR_ERROR, "Failed to allocate output layers");
+		return;
+	}
+
+	wl_list_init(&output->layer_surfaces);
 	wl_list_insert(&server->outputs, &output->link);
 
 	output->commit.notify = handle_output_commit;
@@ -382,6 +420,7 @@ output_config_apply(struct cg_server *server, struct wlr_output_configuration_v1
 		if (head->state.enabled) {
 			output_layout_add(output, head->state.x, head->state.y);
 		} else {
+			output_destroy_layers(output);
 			output_layout_remove(output);
 		}
 	}
@@ -393,6 +432,100 @@ out:
 	}
 	free(states);
 	return ok;
+}
+
+static void
+arrange_surface(struct wlr_scene_tree *tree, const struct wlr_box *full_area, struct wlr_box *usable_area,
+		bool exclusive)
+{
+	struct wlr_scene_node *node;
+	wl_list_for_each (node, &tree->children, link) {
+		struct cg_layer_surface *surface = node->data;
+		/* NULL while the surface is being destroyed. */
+		if (!surface || !surface->layer_surface->initialized) {
+			continue;
+		}
+
+		if ((surface->layer_surface->current.exclusive_zone > 0) != exclusive) {
+			continue;
+		}
+
+		wlr_scene_layer_surface_v1_configure(surface->scene, full_area, usable_area);
+	}
+}
+
+void
+arrange_layers(struct cg_output *output)
+{
+	struct cg_server *server = output->server;
+
+	struct wlr_box output_box;
+	wlr_output_layout_get_box(server->output_layout, output->wlr_output, &output_box);
+	if (wlr_box_empty(&output_box)) {
+		return;
+	}
+
+	struct wlr_scene_tree *layers[] = {
+		output->layers.shell_overlay,
+		output->layers.shell_top,
+		output->layers.shell_bottom,
+		output->layers.shell_background,
+	};
+	size_t nlayers = sizeof(layers) / sizeof(layers[0]);
+
+	for (size_t i = 0; i < nlayers; i++) {
+		wlr_scene_node_set_position(&layers[i]->node, output_box.x, output_box.y);
+	}
+
+	struct wlr_box usable_area = {0};
+	wlr_output_effective_resolution(output->wlr_output, &usable_area.width, &usable_area.height);
+	const struct wlr_box full_area = usable_area;
+
+	for (size_t i = 0; i < nlayers; i++) {
+		arrange_surface(layers[i], &full_area, &usable_area, true);
+	}
+	for (size_t i = 0; i < nlayers; i++) {
+		arrange_surface(layers[i], &full_area, &usable_area, false);
+	}
+
+	struct cg_layer_surface *surface;
+	wl_list_for_each (surface, &output->layer_surfaces, link) {
+		int lx, ly;
+		wlr_scene_node_coords(&surface->tree->node, &lx, &ly);
+		wlr_scene_node_set_position(&surface->popups->node, lx, ly);
+	}
+
+	if (!wlr_box_equal(&usable_area, &output->usable_area)) {
+		output->usable_area = usable_area;
+		view_position_all(server);
+	}
+
+	/* Exclusive keyboard interactivity only applies above the shell. */
+	struct wlr_scene_tree *layers_above_shell[] = {
+		output->layers.shell_overlay,
+		output->layers.shell_top,
+	};
+	struct cg_layer_surface *topmost = NULL;
+	for (size_t i = 0; i < sizeof(layers_above_shell) / sizeof(layers_above_shell[0]) && !topmost; i++) {
+		struct wlr_scene_node *node;
+		wl_list_for_each_reverse (node, &layers_above_shell[i]->children, link) {
+			struct cg_layer_surface *layer = node->data;
+			if (layer && layer->layer_surface->surface->mapped &&
+			    layer->layer_surface->current.keyboard_interactive ==
+				    ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE) {
+				topmost = layer;
+				break;
+			}
+		}
+	}
+
+	struct cg_seat *seat = server->seat;
+	if (topmost) {
+		seat_set_focus_layer(seat, topmost->layer_surface);
+	} else if (seat->focused_layer && seat->focused_layer->current.keyboard_interactive ==
+						  ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
+		seat_set_focus_layer(seat, NULL);
+	}
 }
 
 void

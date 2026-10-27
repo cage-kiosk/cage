@@ -31,6 +31,7 @@
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
@@ -55,6 +56,7 @@
 #endif
 
 #include "idle_inhibit_v1.h"
+#include "layer_shell_v1.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
@@ -428,6 +430,30 @@ main(int argc, char *argv[])
 		wlr_scene_set_linux_dmabuf_v1(server.scene, linux_dmabuf);
 	}
 
+	/* Stacking order, bottom to top. */
+	server.layers.shell_background = wlr_scene_tree_create(&server.scene->tree);
+	server.layers.shell_bottom = wlr_scene_tree_create(&server.scene->tree);
+	server.layers.views = wlr_scene_tree_create(&server.scene->tree);
+	server.layers.shell_top = wlr_scene_tree_create(&server.scene->tree);
+#if CAGE_HAS_XWAYLAND
+	server.layers.unmanaged = wlr_scene_tree_create(&server.scene->tree);
+	if (!server.layers.unmanaged) {
+		wlr_log(WLR_ERROR, "Unable to create scene layers");
+		ret = 1;
+		goto end;
+	}
+#endif
+	server.layers.shell_overlay = wlr_scene_tree_create(&server.scene->tree);
+	server.layers.popup = wlr_scene_tree_create(&server.scene->tree);
+	server.layers.drag_icons = wlr_scene_tree_create(&server.scene->tree);
+	if (!server.layers.shell_background || !server.layers.shell_bottom || !server.layers.views ||
+	    !server.layers.shell_top || !server.layers.shell_overlay || !server.layers.popup ||
+	    !server.layers.drag_icons) {
+		wlr_log(WLR_ERROR, "Unable to create scene layers");
+		ret = 1;
+		goto end;
+	}
+
 	server.scene_output_layout = wlr_scene_attach_output_layout(server.scene, server.output_layout);
 
 	struct wlr_compositor *compositor = wlr_compositor_create(server.wl_display, 6, server.renderer);
@@ -546,6 +572,15 @@ main(int argc, char *argv[])
 		ret = 1;
 		goto end;
 	}
+
+	server.layer_shell_v1 = wlr_layer_shell_v1_create(server.wl_display, 5);
+	if (!server.layer_shell_v1) {
+		wlr_log(WLR_ERROR, "Unable to create the layer shell");
+		ret = 1;
+		goto end;
+	}
+	server.new_layer_shell_v1_surface.notify = handle_layer_shell_v1_surface_new;
+	wl_signal_add(&server.layer_shell_v1->events.new_surface, &server.new_layer_shell_v1_surface);
 
 	if (!wlr_export_dmabuf_manager_v1_create(server.wl_display)) {
 		wlr_log(WLR_ERROR, "Unable to create the export DMABUF manager");
@@ -709,6 +744,7 @@ main(int argc, char *argv[])
 #endif
 	wl_list_remove(&server.new_virtual_pointer.link);
 	wl_list_remove(&server.new_virtual_keyboard.link);
+	wl_list_remove(&server.new_layer_shell_v1_surface.link);
 	wl_list_remove(&server.output_manager_apply.link);
 	wl_list_remove(&server.output_manager_test.link);
 	wl_list_remove(&server.xdg_toplevel_decoration.link);

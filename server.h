@@ -42,6 +42,19 @@ struct cg_server {
 	struct wlr_scene_output_layout *scene_output_layout;
 
 	struct wlr_scene *scene;
+	struct {
+		struct wlr_scene_tree *shell_background;
+		struct wlr_scene_tree *shell_bottom;
+		struct wlr_scene_tree *views;
+		struct wlr_scene_tree *shell_top;
+#if CAGE_HAS_XWAYLAND
+		struct wlr_scene_tree *unmanaged;
+#endif
+		struct wlr_scene_tree *shell_overlay;
+		struct wlr_scene_tree *popup;
+		struct wlr_scene_tree *drag_icons;
+	} layers;
+
 	/* Includes disabled outputs; depending on the output_mode
 	 * some outputs may be disabled. */
 	struct wl_list outputs; // cg_output::link
@@ -54,6 +67,9 @@ struct cg_server {
 
 	struct wl_listener new_virtual_keyboard;
 	struct wl_listener new_virtual_pointer;
+
+	struct wlr_layer_shell_v1 *layer_shell_v1;
+	struct wl_listener new_layer_shell_v1_surface;
 #if CAGE_HAS_XWAYLAND
 	struct wl_listener new_xwayland_surface;
 #endif

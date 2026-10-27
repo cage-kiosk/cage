@@ -39,8 +39,11 @@ endif
 
 wlroots        = dependency('wlroots-0.20', fallback: ['wlroots', 'wlroots'])
 wayland_server = dependency('wayland-server')
+wayland_protos = dependency('wayland-protocols')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
+
+subdir('protocols')
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
@@ -93,6 +96,7 @@ endif
 cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
+  'layer_shell_v1.c',
   'output.c',
   'seat.c',
   'view.c',
@@ -108,7 +112,7 @@ endif
 
 executable(
   meson.project_name(),
-  cage_sources,
+  cage_sources + wl_protos_src,
   dependencies: [
     wayland_server,
     wlroots,
