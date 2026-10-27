@@ -128,6 +128,10 @@ view_unmap(struct cg_view *view)
 	wlr_scene_node_destroy(&view->popups->node);
 	wlr_scene_node_destroy(&view->scene_tree->node);
 
+	if (view->server->seat->focused_view == view) {
+		view->server->seat->focused_view = NULL;
+	}
+
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
 }
@@ -205,9 +209,9 @@ view_destroy(struct cg_view *view)
 
 	view->impl->destroy(view);
 
-	/* If there is a previous view in the list, focus that. */
-	bool empty = wl_list_empty(&server->views);
-	if (!empty) {
+	/* If the focused view went away and there is a previous view in the
+	 * list, focus that. */
+	if (!server->seat->focused_view && !wl_list_empty(&server->views)) {
 		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
 		seat_set_focus(server->seat, prev);
 	}

@@ -922,11 +922,7 @@ seat_destroy(struct cg_seat *seat)
 struct cg_view *
 seat_get_focus(struct cg_seat *seat)
 {
-	struct wlr_surface *prev_surface = seat->seat->keyboard_state.focused_surface;
-	if (!prev_surface) {
-		return NULL;
-	}
-	return view_from_wlr_surface(prev_surface);
+	return seat->focused_view;
 }
 
 void
@@ -934,7 +930,7 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 {
 	struct cg_server *server = seat->server;
 	struct wlr_seat *wlr_seat = seat->seat;
-	struct cg_view *prev_view = seat_get_focus(seat);
+	struct cg_view *prev_view = seat->focused_view;
 
 	if (!view || prev_view == view) {
 		return;
@@ -967,6 +963,8 @@ seat_set_focus(struct cg_seat *seat, struct cg_view *view)
 		output_set_window_title(output, title);
 	}
 	free(title);
+
+	seat->focused_view = view;
 
 	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(wlr_seat);
 	if (keyboard) {
