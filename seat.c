@@ -15,9 +15,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-server-core.h>
+#include <libinput.h>
 #include <wlr/backend.h>
 #include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
+#include <wlr/backend/libinput.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
@@ -212,6 +214,17 @@ handle_new_pointer(struct cg_seat *seat, struct wlr_pointer *wlr_pointer)
 		wlr_log(WLR_ERROR, "Cannot allocate pointer");
 		return;
 	}
+
+	struct wlr_input_device *device = &wlr_pointer->base;
+
+	if (wlr_input_device_is_libinput(device)) {
+		struct libinput_device *ldev = wlr_libinput_get_device_handle(device);
+		if (libinput_device_config_tap_get_finger_count(ldev) > 0) {
+			libinput_device_config_tap_set_enabled(ldev, LIBINPUT_CONFIG_TAP_ENABLED);
+		}
+
+	}
+
 
 	pointer->seat = seat;
 	pointer->pointer = wlr_pointer;
