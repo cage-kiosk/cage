@@ -64,14 +64,20 @@ view_extends_output_layout(struct cg_view *view, struct wlr_box *layout_box)
 }
 
 static void
+view_update_position(struct cg_view *view)
+{
+	if (view->scene_tree) {
+		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
+		wlr_scene_node_set_position(&view->popups->node, view->lx, view->ly);
+	}
+}
+
+static void
 view_maximize(struct cg_view *view, struct wlr_box *layout_box)
 {
 	view->lx = layout_box->x;
 	view->ly = layout_box->y;
-
-	if (view->scene_tree) {
-		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
-	}
+	view_update_position(view);
 
 	view->impl->maximize(view, layout_box->width, layout_box->height);
 }
@@ -84,10 +90,7 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 
 	view->lx = (layout_box->width - width) / 2;
 	view->ly = (layout_box->height - height) / 2;
-
-	if (view->scene_tree) {
-		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
-	}
+	view_update_position(view);
 }
 
 void
@@ -122,6 +125,7 @@ view_unmap(struct cg_view *view)
 	wlr_foreign_toplevel_handle_v1_destroy(view->foreign_toplevel_handle);
 	view->foreign_toplevel_handle = NULL;
 
+	wlr_scene_node_destroy(&view->popups->node);
 	wlr_scene_node_destroy(&view->scene_tree->node);
 
 	view->wlr_surface->data = NULL;
@@ -134,6 +138,7 @@ handle_surface_request_activate(struct wl_listener *listener, void *data)
 	struct cg_view *view = wl_container_of(listener, view, request_activate);
 
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
+	wlr_scene_node_raise_to_top(&view->popups->node);
 	seat_set_focus(view->server->seat, view);
 }
 
@@ -147,10 +152,17 @@ handle_surface_request_close(struct wl_listener *listener, void *data)
 void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
-	view->scene_tree = wlr_scene_subsurface_tree_create(&view->server->scene->tree, surface);
+	struct wlr_scene_tree *parent = view->server->layers.views;
+#if CAGE_HAS_XWAYLAND
+	if (view->type == CAGE_XWAYLAND_VIEW && !xwayland_view_should_manage(view))
+		parent = view->server->layers.unmanaged;
+#endif
+	view->scene_tree = wlr_scene_subsurface_tree_create(parent, surface);
 	if (!view->scene_tree)
 		goto fail;
-	view->scene_tree->node.data = view;
+	view->popups = wlr_scene_tree_create(view->server->layers.popup);
+	if (!view->popups)
+		goto fail;
 
 	view->wlr_surface = surface;
 	surface->data = view;

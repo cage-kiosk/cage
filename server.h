@@ -42,6 +42,15 @@ struct cg_server {
 	struct wlr_scene_output_layout *scene_output_layout;
 
 	struct wlr_scene *scene;
+	struct {
+		struct wlr_scene_tree *views;
+#if CAGE_HAS_XWAYLAND
+		struct wlr_scene_tree *unmanaged;
+#endif
+		struct wlr_scene_tree *popup;
+		struct wlr_scene_tree *drag_icons;
+	} layers;
+
 	/* Includes disabled outputs; depending on the output_mode
 	 * some outputs may be disabled. */
 	struct wl_list outputs; // cg_output::link

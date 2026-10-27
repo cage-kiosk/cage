@@ -428,6 +428,24 @@ main(int argc, char *argv[])
 		wlr_scene_set_linux_dmabuf_v1(server.scene, linux_dmabuf);
 	}
 
+	/* Stacking order, bottom to top. */
+	server.layers.views = wlr_scene_tree_create(&server.scene->tree);
+#if CAGE_HAS_XWAYLAND
+	server.layers.unmanaged = wlr_scene_tree_create(&server.scene->tree);
+	if (!server.layers.unmanaged) {
+		wlr_log(WLR_ERROR, "Unable to create scene layers");
+		ret = 1;
+		goto end;
+	}
+#endif
+	server.layers.popup = wlr_scene_tree_create(&server.scene->tree);
+	server.layers.drag_icons = wlr_scene_tree_create(&server.scene->tree);
+	if (!server.layers.views || !server.layers.popup || !server.layers.drag_icons) {
+		wlr_log(WLR_ERROR, "Unable to create scene layers");
+		ret = 1;
+		goto end;
+	}
+
 	server.scene_output_layout = wlr_scene_attach_output_layout(server.scene, server.output_layout);
 
 	struct wlr_compositor *compositor = wlr_compositor_create(server.wl_display, 6, server.renderer);
