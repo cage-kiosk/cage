@@ -58,7 +58,8 @@ update_output_manager_config(struct cg_server *server)
 		struct wlr_box output_box;
 
 		wlr_output_layout_get_box(server->output_layout, wlr_output, &output_box);
-		if (!wlr_box_empty(&output_box)) {
+		config_head->state.enabled = !wlr_box_empty(&output_box);
+		if (config_head->state.enabled) {
 			config_head->state.x = output_box.x;
 			config_head->state.y = output_box.y;
 		}
@@ -95,6 +96,12 @@ output_layout_remove(struct cg_output *output)
 	wlr_output_layout_remove(output->server->output_layout, output->wlr_output);
 }
 
+static inline bool
+output_is_disabled(struct cg_output *output)
+{
+	return !wlr_output_layout_get(output->server->output_layout, output->wlr_output);
+}
+
 static void
 output_enable(struct cg_output *output)
 {
@@ -119,15 +126,17 @@ static void
 output_disable(struct cg_output *output)
 {
 	struct wlr_output *wlr_output = output->wlr_output;
-	if (!wlr_output->enabled) {
+	if (output_is_disabled(output)) {
 		wlr_log(WLR_DEBUG, "Not disabling already disabled output %s", wlr_output->name);
 		return;
 	}
 
 	wlr_log(WLR_DEBUG, "Disabling output %s", wlr_output->name);
-	struct wlr_output_state state = {0};
-	wlr_output_state_set_enabled(&state, false);
-	wlr_output_commit_state(wlr_output, &state);
+	if (wlr_output->enabled) {
+		struct wlr_output_state state = {0};
+		wlr_output_state_set_enabled(&state, false);
+		wlr_output_commit_state(wlr_output, &state);
+	}
 	output_layout_remove(output);
 }
 
@@ -312,6 +321,31 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	view_position_all(output->server);
 	update_output_manager_config(output->server);
+}
+
+void
+output_set_power(struct cg_output *output, bool on)
+{
+	struct wlr_output *wlr_output = output->wlr_output;
+
+	if (output_is_disabled(output)) {
+		wlr_log(WLR_DEBUG, "Not changing power state of disabled output %s", wlr_output->name);
+		return;
+	}
+
+	if (wlr_output->enabled == on) {
+		return;
+	}
+
+	wlr_log(WLR_DEBUG, "Powering %s output %s", on ? "on" : "off", wlr_output->name);
+
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
+	wlr_output_state_set_enabled(&state, on);
+	if (!wlr_output_commit_state(wlr_output, &state)) {
+		wlr_log(WLR_ERROR, "Failed to power %s output %s", on ? "on" : "off", wlr_output->name);
+	}
+	wlr_output_state_finish(&state);
 }
 
 void
