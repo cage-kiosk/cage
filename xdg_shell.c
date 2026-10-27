@@ -200,7 +200,9 @@ set_fullscreen(struct cg_xdg_shell_view *xdg_shell_view, bool fullscreen)
 	 */
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(xdg_shell_view->view.server->output_layout, NULL, &layout_box);
-	wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
+	if (!wlr_box_empty(&layout_box)) {
+		wlr_xdg_toplevel_set_size(xdg_shell_view->xdg_toplevel, layout_box.width, layout_box.height);
+	}
 	wlr_xdg_toplevel_set_fullscreen(xdg_shell_view->xdg_toplevel, fullscreen);
 }
 
