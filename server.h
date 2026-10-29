@@ -72,6 +72,7 @@ struct cg_server {
 
 	struct wlr_xcursor_manager *xcursor_manager;
 
+	bool clone_mode;
 	struct wlr_cursor_shape_manager_v1 *cursor_shape_manager_v1;
 	struct wl_listener cursor_shape_manager_set_shape;
 
