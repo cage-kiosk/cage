@@ -64,7 +64,7 @@ is_primary(struct cg_view *view)
 static bool
 is_transient_for(struct cg_view *child, struct cg_view *parent)
 {
-	if (parent->type != CAGE_XDG_SHELL_VIEW) {
+	if (parent->type != CAGE_XWAYLAND_VIEW) {
 		return false;
 	}
 	struct cg_xwayland_view *_child = xwayland_view_from_view(child);
