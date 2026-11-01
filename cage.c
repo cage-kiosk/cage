@@ -321,6 +321,30 @@ int
 main(int argc, char *argv[])
 {
 	struct cg_server server = {.log_level = WLR_INFO};
+
+	/* Initialize the link nodes of every listener that the shared
+	 * cleanup below wl_list_remove()s. Startup failures "goto end"
+	 * from any point after this, so each node must be removable even
+	 * when its wl_signal_add() was never reached: removing a
+	 * zero-initialized node dereferences NULL, while removing a
+	 * self-initialized node is a safe no-op. */
+	wl_list_init(&server.new_virtual_pointer.link);
+	wl_list_init(&server.new_virtual_keyboard.link);
+	wl_list_init(&server.output_manager_apply.link);
+	wl_list_init(&server.output_manager_test.link);
+	wl_list_init(&server.xdg_toplevel_decoration.link);
+	wl_list_init(&server.new_xdg_toplevel.link);
+	wl_list_init(&server.new_xdg_popup.link);
+	wl_list_init(&server.cursor_shape_manager_set_shape.link);
+	wl_list_init(&server.new_idle_inhibitor_v1.link);
+	wl_list_init(&server.new_output.link);
+	wl_list_init(&server.output_layout_change.link);
+#if WLR_HAS_DRM_BACKEND
+	wl_list_init(&server.drm_lease_request.link);
+#endif
+#if CAGE_HAS_XWAYLAND
+	wl_list_init(&server.new_xwayland_surface.link);
+#endif
 	struct wl_event_source *sigchld_source = NULL;
 	pid_t pid = 0;
 	int ret = 0, app_ret = 0;
@@ -632,6 +656,7 @@ main(int argc, char *argv[])
 
 #if CAGE_HAS_XWAYLAND
 	struct wlr_xwayland *xwayland = NULL;
+	bool xwayland_listener_added = false;
 	if (server.enable_xwayland) {
 		xwayland = wlr_xwayland_create(server.wl_display, compositor, true);
 		if (!xwayland) {
@@ -639,6 +664,7 @@ main(int argc, char *argv[])
 		} else {
 			server.new_xwayland_surface.notify = handle_xwayland_surface_new;
 			wl_signal_add(&xwayland->events.new_surface, &server.new_xwayland_surface);
+			xwayland_listener_added = true;
 
 			if (setenv("DISPLAY", xwayland->display_name, true) < 0) {
 				wlr_log_errno(WLR_ERROR,
@@ -697,11 +723,39 @@ main(int argc, char *argv[])
 #if CAGE_HAS_XWAYLAND
 	if (xwayland) {
 		wl_list_remove(&server.new_xwayland_surface.link);
+		xwayland_listener_added = false;
 	}
 	wlr_xwayland_destroy(xwayland);
 #endif
 	wl_display_destroy_clients(server.wl_display);
 
+end:
+	if (pid != 0)
+		app_ret = cleanup_primary_client(pid);
+	if (!ret && server.return_app_code)
+		ret = app_ret;
+
+	wl_event_source_remove(sigint_source);
+	wl_event_source_remove(sigterm_source);
+	if (sigchld_source) {
+		wl_event_source_remove(sigchld_source);
+	}
+	seat_destroy(server.seat);
+
+	/* Detach the listeners registered in main() before destroying the
+	 * display: wl_display_destroy() destroys the wlroots objects that
+	 * own these signals, and those objects assert that their listener
+	 * lists are empty. Error paths jump here directly, so every
+	 * listener must be removed in this shared cleanup; the link nodes
+	 * were wl_list_init()ed up front, so removing a listener that was
+	 * never registered is a safe no-op. */
+#if CAGE_HAS_XWAYLAND
+	if (xwayland_listener_added) {
+		/* Only reached on error paths; the normal path detached it
+		 * above, before wl_display_destroy_clients(). */
+		wl_list_remove(&server.new_xwayland_surface.link);
+	}
+#endif
 #if WLR_HAS_DRM_BACKEND
 	if (server.drm_lease_v1) {
 		wl_list_remove(&server.drm_lease_request.link);
@@ -719,18 +773,6 @@ main(int argc, char *argv[])
 	wl_list_remove(&server.new_output.link);
 	wl_list_remove(&server.output_layout_change.link);
 
-end:
-	if (pid != 0)
-		app_ret = cleanup_primary_client(pid);
-	if (!ret && server.return_app_code)
-		ret = app_ret;
-
-	wl_event_source_remove(sigint_source);
-	wl_event_source_remove(sigterm_source);
-	if (sigchld_source) {
-		wl_event_source_remove(sigchld_source);
-	}
-	seat_destroy(server.seat);
 	/* This function is not null-safe, but we only ever get here
 	   with a proper wl_display. */
 	wl_display_destroy(server.wl_display);

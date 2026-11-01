@@ -106,7 +106,7 @@ if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
   cage_sources += 'xwayland.c'
 endif
 
-executable(
+cage_exe = executable(
   meson.project_name(),
   cage_sources,
   dependencies: [
@@ -117,6 +117,10 @@ executable(
   ],
   install: true,
 )
+
+test('exit-path', find_program('tests/exit-path-test.sh'),
+  args: cage_exe)
+test('listener-consistency', find_program('tests/listener-consistency.sh'))
 
 summary = [
   '',
