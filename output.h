@@ -18,6 +18,8 @@ struct cg_output {
 	struct wl_listener frame;
 
 	struct wl_list link; // cg_server::outputs
+
+	bool dpms_powered_off;
 };
 
 void handle_output_manager_apply(struct wl_listener *listener, void *data);
@@ -25,5 +27,6 @@ void handle_output_manager_test(struct wl_listener *listener, void *data);
 void handle_output_layout_change(struct wl_listener *listener, void *data);
 void handle_new_output(struct wl_listener *listener, void *data);
 void output_set_window_title(struct cg_output *output, const char *title);
+void handle_output_power_manager_set_mode(struct wl_listener *listener, void *data);
 
 #endif
