@@ -64,14 +64,20 @@ view_extends_output_layout(struct cg_view *view, struct wlr_box *layout_box)
 }
 
 static void
+view_update_position(struct cg_view *view)
+{
+	if (view->scene_tree) {
+		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
+		wlr_scene_node_set_position(&view->popups->node, view->lx, view->ly);
+	}
+}
+
+static void
 view_maximize(struct cg_view *view, struct wlr_box *layout_box)
 {
 	view->lx = layout_box->x;
 	view->ly = layout_box->y;
-
-	if (view->scene_tree) {
-		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
-	}
+	view_update_position(view);
 
 	view->impl->maximize(view, layout_box->width, layout_box->height);
 }
@@ -82,12 +88,9 @@ view_center(struct cg_view *view, struct wlr_box *layout_box)
 	int width, height;
 	view->impl->get_geometry(view, &width, &height);
 
-	view->lx = (layout_box->width - width) / 2;
-	view->ly = (layout_box->height - height) / 2;
-
-	if (view->scene_tree) {
-		wlr_scene_node_set_position(&view->scene_tree->node, view->lx, view->ly);
-	}
+	view->lx = layout_box->x + (layout_box->width - width) / 2;
+	view->ly = layout_box->y + (layout_box->height - height) / 2;
+	view_update_position(view);
 }
 
 void
@@ -95,6 +98,25 @@ view_position(struct cg_view *view)
 {
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
+
+	/* With a single output, keep views out of the area reserved by
+	 * layer-shell exclusive zones. With multiple outputs, views span the
+	 * whole layout. */
+	struct cg_output *output, *active = NULL;
+	int n = 0;
+	wl_list_for_each (output, &view->server->outputs, link) {
+		if (wlr_output_layout_get(view->server->output_layout, output->wlr_output)) {
+			active = output;
+			n++;
+		}
+	}
+	if (n == 1 && !wlr_box_empty(&active->usable_area)) {
+		struct wlr_box output_box;
+		wlr_output_layout_get_box(view->server->output_layout, active->wlr_output, &output_box);
+		layout_box = active->usable_area;
+		layout_box.x += output_box.x;
+		layout_box.y += output_box.y;
+	}
 
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
 		view_maximize(view, &layout_box);
@@ -122,7 +144,12 @@ view_unmap(struct cg_view *view)
 	wlr_foreign_toplevel_handle_v1_destroy(view->foreign_toplevel_handle);
 	view->foreign_toplevel_handle = NULL;
 
+	wlr_scene_node_destroy(&view->popups->node);
 	wlr_scene_node_destroy(&view->scene_tree->node);
+
+	if (view->server->seat->focused_view == view) {
+		view->server->seat->focused_view = NULL;
+	}
 
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
@@ -134,6 +161,7 @@ handle_surface_request_activate(struct wl_listener *listener, void *data)
 	struct cg_view *view = wl_container_of(listener, view, request_activate);
 
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
+	wlr_scene_node_raise_to_top(&view->popups->node);
 	seat_set_focus(view->server->seat, view);
 }
 
@@ -147,10 +175,17 @@ handle_surface_request_close(struct wl_listener *listener, void *data)
 void
 view_map(struct cg_view *view, struct wlr_surface *surface)
 {
-	view->scene_tree = wlr_scene_subsurface_tree_create(&view->server->scene->tree, surface);
+	struct wlr_scene_tree *parent = view->server->layers.views;
+#if CAGE_HAS_XWAYLAND
+	if (view->type == CAGE_XWAYLAND_VIEW && !xwayland_view_should_manage(view))
+		parent = view->server->layers.unmanaged;
+#endif
+	view->scene_tree = wlr_scene_subsurface_tree_create(parent, surface);
 	if (!view->scene_tree)
 		goto fail;
-	view->scene_tree->node.data = view;
+	view->popups = wlr_scene_tree_create(view->server->layers.popup);
+	if (!view->popups)
+		goto fail;
 
 	view->wlr_surface = surface;
 	surface->data = view;
@@ -193,9 +228,9 @@ view_destroy(struct cg_view *view)
 
 	view->impl->destroy(view);
 
-	/* If there is a previous view in the list, focus that. */
-	bool empty = wl_list_empty(&server->views);
-	if (!empty) {
+	/* If the focused view went away and there is a previous view in the
+	 * list, focus that. */
+	if (!server->seat->focused_view && !wl_list_empty(&server->views)) {
 		struct cg_view *prev = wl_container_of(server->views.next, prev, link);
 		seat_set_focus(server->seat, prev);
 	}

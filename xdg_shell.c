@@ -375,7 +375,7 @@ handle_new_xdg_popup(struct wl_listener *listener, void *data)
 	}
 	switch (parent->role) {
 	case WLR_XDG_SURFACE_ROLE_TOPLEVEL:;
-		parent_scene_tree = view->scene_tree;
+		parent_scene_tree = view->popups;
 		break;
 	case WLR_XDG_SURFACE_ROLE_POPUP:
 		parent_scene_tree = parent->data;
