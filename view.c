@@ -96,6 +96,12 @@ view_position(struct cg_view *view)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(view->server->output_layout, NULL, &layout_box);
 
+	/* With no outputs there is no size to give: keep the view as it is until
+	 * the next output layout change positions it again. */
+	if (wlr_box_empty(&layout_box)) {
+		return;
+	}
+
 	if (view_is_primary(view) || view_extends_output_layout(view, &layout_box)) {
 		view_maximize(view, &layout_box);
 	} else {
