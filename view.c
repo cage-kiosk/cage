@@ -112,17 +112,31 @@ view_position_all(struct cg_server *server)
 	}
 }
 
+static void
+handle_surface_destroy(struct wl_listener *listener, void *data)
+{
+	struct cg_view *view = wl_container_of(listener, view, surface_destroy);
+	/* wlroots is about to free scene_tree via the subsurface tree listener
+	 * (registered before us). Null it out so view_unmap() skips the destroy. */
+	view->scene_tree = NULL;
+}
+
 void
 view_unmap(struct cg_view *view)
 {
 	wl_list_remove(&view->link);
+	/* Always registered in view_map() before any unmap can fire. */
+	wl_list_remove(&view->surface_destroy.link);
 
 	wl_list_remove(&view->request_activate.link);
 	wl_list_remove(&view->request_close.link);
 	wlr_foreign_toplevel_handle_v1_destroy(view->foreign_toplevel_handle);
 	view->foreign_toplevel_handle = NULL;
 
-	wlr_scene_node_destroy(&view->scene_tree->node);
+	if (view->scene_tree) {
+		wlr_scene_node_destroy(&view->scene_tree->node);
+		view->scene_tree = NULL;
+	}
 
 	view->wlr_surface->data = NULL;
 	view->wlr_surface = NULL;
@@ -151,6 +165,12 @@ view_map(struct cg_view *view, struct wlr_surface *surface)
 	if (!view->scene_tree)
 		goto fail;
 	view->scene_tree->node.data = view;
+
+	/* Register after wlr_scene_subsurface_tree_create() so our listener fires
+	 * after wlroots' internal one, which frees scene_tree on surface destroy.
+	 * This lets us null scene_tree before view_unmap() tries to use it. */
+	view->surface_destroy.notify = handle_surface_destroy;
+	wl_signal_add(&surface->events.destroy, &view->surface_destroy);
 
 	view->wlr_surface = surface;
 	surface->data = view;
