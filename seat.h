@@ -1,6 +1,7 @@
 #ifndef CG_SEAT_H
 #define CG_SEAT_H
 
+#include <pixman.h>
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
@@ -30,6 +31,24 @@ struct cg_seat {
 	struct wl_listener cursor_button;
 	struct wl_listener cursor_axis;
 	struct wl_listener cursor_frame;
+
+	/* The constraint of the pointer-focused surface, if it has one. It is
+	 * only enforced — and only reported to the client as active — while its
+	 * effective region can hold the cursor. */
+	struct wlr_pointer_constraint_v1 *active_constraint;
+	/* The effective region of the active constraint (its region intersected
+	 * with the surface's input region), in surface coordinates. Ours to
+	 * compute: constraint->region is wlroots' own state. */
+	pixman_region32_t constraint_region;
+	bool constraint_enforced;
+	/* Whether the client has been sent an activated event that no
+	 * deactivated event has followed yet. It trails constraint_enforced
+	 * until constraint_sync_idle runs. */
+	bool constraint_notified;
+	struct wl_event_source *constraint_sync_idle;
+	struct wl_listener constraint_set_region;
+	struct wl_listener constraint_destroy;
+	struct wl_listener pointer_focus_change;
 
 	int32_t touch_id;
 	double touch_lx;
@@ -62,6 +81,15 @@ struct cg_pointer {
 	struct cg_seat *seat;
 	struct wlr_pointer *pointer;
 
+	/* Reference for synthesizing relative motion from this device's
+	 * absolute events: a constraint can keep the cursor from following the
+	 * device, so consecutive absolute positions must be differenced
+	 * directly instead of against the cursor. The reference is per device:
+	 * differencing positions of two different absolute devices would turn
+	 * their distance into a spurious delta. */
+	double last_abs_x, last_abs_y;
+	bool last_abs_valid;
+
 	struct wl_listener destroy;
 };
 
@@ -90,6 +118,8 @@ void seat_destroy(struct cg_seat *seat);
 struct cg_view *seat_get_focus(struct cg_seat *seat);
 void seat_set_focus(struct cg_seat *seat, struct cg_view *view);
 void seat_center_cursor(struct cg_seat *seat);
+void seat_revalidate_pointer_constraint(struct cg_seat *seat);
 
 void handle_request_set_shape(struct wl_listener *listener, void *data);
+void handle_pointer_constraint(struct wl_listener *listener, void *data);
 #endif
