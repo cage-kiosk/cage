@@ -30,6 +30,11 @@ activities outside the scope of the running application are prevented.
 	*last* Cage uses only the last connected monitor.
 	*extend* Cage extends the display across all connected monitors.
 
+*-o* <name>
+	Use only the output with the given name, for example _DP-1_. All other
+	outputs are switched off. If no connected output matches, Cage exits with
+	an error. Overrides *-m*.
+
 *-s*
 	Allow VT switching
 
