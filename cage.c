@@ -268,6 +268,10 @@ usage(FILE *file, const char *cage)
 		" -m extend Extend the display across all connected outputs (default)\n"
 		" -m last Use only the last connected output\n"
 		" -s\t Allow VT switching\n"
+		" -t TRANS Output transform: normal, 90, 180, 270, flipped,\n"
+		"         90flipped, 180flipped, 270flipped (aliases: left, right)\n"
+		" -T\t Touch-only seat: no pointer capability, no cursor\n"
+		" -c X,Y\t Place the initial cursor at position X,Y (default: center)\n"
 		" -v\t Show the version number and exit\n"
 		" -x\t Disable XWayland\n"
 		"\n"
@@ -276,12 +280,41 @@ usage(FILE *file, const char *cage)
 }
 
 static bool
+parse_transform(const char *arg, enum wl_output_transform *transform)
+{
+	struct {
+		const char *name;
+		enum wl_output_transform value;
+	} transforms[] = {
+		{ "normal", WL_OUTPUT_TRANSFORM_NORMAL },
+		{ "90", WL_OUTPUT_TRANSFORM_90 },
+		{ "180", WL_OUTPUT_TRANSFORM_180 },
+		{ "270", WL_OUTPUT_TRANSFORM_270 },
+		{ "flipped", WL_OUTPUT_TRANSFORM_FLIPPED },
+		{ "90flipped", WL_OUTPUT_TRANSFORM_FLIPPED_90 },
+		{ "180flipped", WL_OUTPUT_TRANSFORM_FLIPPED_180 },
+		{ "270flipped", WL_OUTPUT_TRANSFORM_FLIPPED_270 },
+		{ "left", WL_OUTPUT_TRANSFORM_270 },
+		{ "right", WL_OUTPUT_TRANSFORM_90 },
+	};
+
+	for (size_t i = 0; i < sizeof(transforms) / sizeof(transforms[0]); i++) {
+		if (strcmp(arg, transforms[i].name) == 0) {
+			*transform = transforms[i].value;
+			return true;
+		}
+	}
+	return false;
+}
+
+static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	server->enable_xwayland = true;
+	server->output_transform = WL_OUTPUT_TRANSFORM_NORMAL;
 
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:svx")) != -1) {
+	while ((c = getopt(argc, argv, "dDhm:svxt:Tc:")) != -1) {
 		switch (c) {
 		case 'd':
 			server->xdg_decoration = true;
@@ -302,6 +335,28 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 		case 's':
 			server->allow_vt_switch = true;
 			break;
+		case 't':
+			if (!parse_transform(optarg, &server->output_transform)) {
+				fprintf(stderr, "Invalid transform: %s\n", optarg);
+				usage(stderr, argv[0]);
+				return false;
+			}
+			break;
+		case 'T':
+			server->touch_only = true;
+			break;
+		case 'c': {
+			int x, y;
+			if (sscanf(optarg, "%d,%d", &x, &y) != 2) {
+				fprintf(stderr, "Invalid cursor position: %s (expected X,Y)\n", optarg);
+				usage(stderr, argv[0]);
+				return false;
+			}
+			server->initial_cursor_x = x;
+			server->initial_cursor_y = y;
+			server->initial_cursor_set = true;
+			break;
+		}
 		case 'v':
 			fprintf(stdout, "Cage version " CAGE_VERSION "\n");
 			exit(0);
@@ -691,7 +746,7 @@ main(int argc, char *argv[])
 		goto end;
 	}
 
-	seat_center_cursor(server.seat);
+	seat_init_cursor(server.seat);
 	wl_display_run(server.wl_display);
 
 #if CAGE_HAS_XWAYLAND

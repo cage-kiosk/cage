@@ -4,6 +4,7 @@
 #include "config.h"
 
 #include <wayland-server-core.h>
+#include <wayland-server-protocol.h>
 #include <wlr/config.h>
 #include <wlr/types/wlr_drm_lease_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
@@ -38,6 +39,7 @@ struct cg_server {
 	struct wl_list inhibitors;
 
 	enum cg_multi_output_mode output_mode;
+	enum wl_output_transform output_transform;
 	struct wlr_output_layout *output_layout;
 	struct wlr_scene_output_layout *scene_output_layout;
 
@@ -80,6 +82,10 @@ struct cg_server {
 	bool enable_xwayland;
 	bool return_app_code;
 	bool terminated;
+	bool touch_only;
+	int initial_cursor_x;
+	int initial_cursor_y;
+	bool initial_cursor_set;
 	enum wlr_log_importance log_level;
 };
 

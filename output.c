@@ -28,6 +28,8 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_output_management_v1.h>
+#include <wlr/types/wlr_pointer.h>
+#include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_output_swapchain_manager.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
@@ -35,6 +37,7 @@
 #include <wlr/util/region.h>
 
 #include "output.h"
+#include "seat.h"
 #include "server.h"
 #include "view.h"
 #if CAGE_HAS_XWAYLAND
@@ -280,6 +283,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	struct wlr_output_state state = {0};
 	wlr_output_state_set_enabled(&state, true);
+	wlr_output_state_set_transform(&state, server->output_transform);
 	if (!wl_list_empty(&wlr_output->modes)) {
 		struct wlr_output_mode *preferred_mode = wlr_output_preferred_mode(wlr_output);
 		if (preferred_mode) {
@@ -312,6 +316,25 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	view_position_all(output->server);
 	update_output_manager_config(output->server);
+
+	/* Input devices that arrived before this output were never mapped, as
+	 * they had no output to map to. Map the unnamed ones now (covers touch
+	 * controllers of combined display panels on rotated outputs). */
+	struct cg_seat *seat = server->seat;
+	if (seat) {
+		struct cg_touch *touch;
+		wl_list_for_each (touch, &seat->touch, link) {
+			if (touch->touch->output_name == NULL) {
+				map_device_to_sole_output(seat, &touch->touch->base);
+			}
+		}
+		struct cg_pointer *pointer;
+		wl_list_for_each (pointer, &seat->pointers, link) {
+			if (pointer->pointer->output_name == NULL) {
+				map_device_to_sole_output(seat, &pointer->pointer->base);
+			}
+		}
+	}
 }
 
 void
