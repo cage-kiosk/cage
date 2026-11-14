@@ -178,6 +178,13 @@ handle_output_layout_change(struct wl_listener *listener, void *data)
 {
 	struct cg_server *server = wl_container_of(listener, server, output_layout_change);
 
+	if (server->background) {
+		struct wlr_box box;
+		wlr_output_layout_get_box(server->output_layout, NULL, &box);
+		wlr_scene_node_set_position(&server->background->node, box.x, box.y);
+		wlr_scene_rect_set_size(server->background, box.width, box.height);
+	}
+
 	view_position_all(server);
 	update_output_manager_config(server);
 }

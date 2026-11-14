@@ -262,6 +262,7 @@ usage(FILE *file, const char *cage)
 	fprintf(file,
 		"Usage: %s [OPTIONS] [--] [APPLICATION...]\n"
 		"\n"
+		" -b RRGGBB Background color shown where no view is drawn (default black)\n"
 		" -d\t Don't draw client side decorations, when possible\n"
 		" -D\t Enable debug logging\n"
 		" -h\t Display this help message\n"
@@ -276,13 +277,37 @@ usage(FILE *file, const char *cage)
 }
 
 static bool
+parse_color(const char *s, float color[4])
+{
+	if (s[0] == '#') {
+		s++;
+	}
+	if (strlen(s) != 6 || strspn(s, "0123456789abcdefABCDEF") != 6) {
+		return false;
+	}
+	unsigned long rgb = strtoul(s, NULL, 16);
+	color[0] = ((rgb >> 16) & 0xff) / 255.0f;
+	color[1] = ((rgb >> 8) & 0xff) / 255.0f;
+	color[2] = (rgb & 0xff) / 255.0f;
+	color[3] = 1.0f;
+	return true;
+}
+
+static bool
 parse_args(struct cg_server *server, int argc, char *argv[])
 {
 	server->enable_xwayland = true;
 
 	int c;
-	while ((c = getopt(argc, argv, "dDhm:svx")) != -1) {
+	while ((c = getopt(argc, argv, "b:dDhm:svx")) != -1) {
 		switch (c) {
+		case 'b':
+			if (!parse_color(optarg, server->background_color)) {
+				fprintf(stderr, "Invalid background color: %s (expected RRGGBB)\n", optarg);
+				return false;
+			}
+			server->has_background = true;
+			break;
 		case 'd':
 			server->xdg_decoration = true;
 			break;
@@ -429,6 +454,17 @@ main(int argc, char *argv[])
 	}
 
 	server.scene_output_layout = wlr_scene_attach_output_layout(server.scene, server.output_layout);
+
+	if (server.has_background) {
+		/* Sized to the output layout in handle_output_layout_change. */
+		server.background = wlr_scene_rect_create(&server.scene->tree, 0, 0, server.background_color);
+		if (!server.background) {
+			wlr_log(WLR_ERROR, "Unable to create background");
+			ret = 1;
+			goto end;
+		}
+		wlr_scene_node_lower_to_bottom(&server.background->node);
+	}
 
 	struct wlr_compositor *compositor = wlr_compositor_create(server.wl_display, 6, server.renderer);
 	if (!compositor) {
