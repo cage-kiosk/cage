@@ -42,6 +42,10 @@ struct cg_server {
 	struct wlr_scene_output_layout *scene_output_layout;
 
 	struct wlr_scene *scene;
+	/* Optional solid color under all views; NULL unless -b is given. */
+	struct wlr_scene_rect *background;
+	float background_color[4];
+	bool has_background;
 	/* Includes disabled outputs; depending on the output_mode
 	 * some outputs may be disabled. */
 	struct wl_list outputs; // cg_output::link

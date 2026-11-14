@@ -16,6 +16,11 @@ activities outside the scope of the running application are prevented.
 
 # OPTIONS
 
+*-b* <RRGGBB>
+	Fill the screen with this color (hex, optional leading #) wherever no
+	view is drawn, for example before the application shows its first
+	frame. Without this option the background is black.
+
 *-d*
 	Don't draw client side decorations when possible.
 
