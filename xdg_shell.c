@@ -15,6 +15,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
+#include "seat.h"
 #include "server.h"
 #include "view.h"
 #include "xdg_shell.h"
@@ -100,7 +101,11 @@ popup_unconstrain(struct wlr_xdg_popup *popup)
 	struct wlr_output *wlr_output =
 		wlr_output_layout_output_at(output_layout, view->lx + popup_box->x, view->ly + popup_box->y);
 	struct wlr_box output_box;
-	wlr_output_layout_get_box(output_layout, wlr_output, &output_box);
+	if (server->clone_mode) {
+		output_box = server->seat->clone_confine_box;
+	} else {
+		wlr_output_layout_get_box(output_layout, wlr_output, &output_box);
+	}
 
 	struct wlr_box output_toplevel_box = {
 		.x = output_box.x - view->lx,
