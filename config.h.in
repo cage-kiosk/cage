@@ -2,6 +2,7 @@
 #define CG_CONFIG_H
 
 #mesondefine CAGE_HAS_XWAYLAND
+#mesondefine CAGE_HAS_SYSTEMD
 
 #mesondefine CAGE_VERSION
 

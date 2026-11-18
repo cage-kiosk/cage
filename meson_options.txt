@@ -1,1 +1,2 @@
 option('man-pages', type: 'feature', value: 'auto', description: 'Generate and install man pages')
+option('systemd', type: 'feature', value: 'disabled', description: 'Notify status to systemd')
