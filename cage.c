@@ -592,11 +592,14 @@ main(int argc, char *argv[])
 	}
 #endif
 
-	if (!wlr_gamma_control_manager_v1_create(server.wl_display)) {
+	struct wlr_gamma_control_manager_v1 *gamma_control_manager =
+		wlr_gamma_control_manager_v1_create(server.wl_display);
+	if (!gamma_control_manager) {
 		wlr_log(WLR_ERROR, "Unable to create the gamma control manager");
 		ret = 1;
 		goto end;
 	}
+	wlr_scene_set_gamma_control_manager_v1(server.scene, gamma_control_manager);
 
 	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard =
 		wlr_virtual_keyboard_manager_v1_create(server.wl_display);
