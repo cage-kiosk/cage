@@ -42,6 +42,16 @@ wayland_server = dependency('wayland-server')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
 
+
+wayland_scanner = find_program('wayland-scanner')
+wlr_output_power_mgmt_proto_h = custom_target(
+  'wlr-output-power-management-unstable-v1-protocol.h',
+  output: 'wlr-output-power-management-unstable-v1-protocol.h',
+  input: 'protocols/wlr-output-power-management-unstable-v1.xml',
+  command: [wayland_scanner, 'server-header', '@INPUT@', '@OUTPUT@'],
+)
+
+
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
 version = '@0@'.format(meson.project_version())
@@ -94,12 +104,14 @@ cage_sources = [
   'cage.c',
   'idle_inhibit_v1.c',
   'output.c',
+  'output_power_manager_v1.c',
   'seat.c',
   'view.c',
   'xdg_shell.c',
   configure_file(input: 'config.h.in',
                  output: 'config.h',
                  configuration: conf_data),
+  wlr_output_power_mgmt_proto_h,
 ]
 
 if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
